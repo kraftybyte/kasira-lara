@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__laravel-boost__application-info",
+      "mcp__laravel-boost__database-schema",
+      "Bash(mkdir -p .vscode)",
+      "Bash(mkdir -p resources/views/vendor/filament-panels/components/layout)",
+      "Bash(vendor/bin/pint --dirty --format agent)",
+      "Bash(vendor/bin/pint --format agent)",
+      "Bash(php artisan *)"
+    ],
+    "additionalDirectories": [
+      "/Users/macbook/Kasira-Laravel",
+      "/Users/macbook/Kasira-Laravel/resources/views/vendor/filament-panels/components"
+    ]
+  }
+}

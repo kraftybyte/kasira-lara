@@ -1,0 +1,241 @@
+<x-filament-panels::page
+    x-data="{
+        tableParam: {{ request('table') ? request('table') : 'null' }}
+    }"
+    x-init="if (tableParam) { setTimeout(() => { const tables = {{ Js::from($this->tables) }}; const table = tables.find(t => t.id == tableParam); $dispatch('showOrderDetails', { tableId: tableParam, tableName: table ? table.name : 'Meja' }) }, 100) }"
+>
+
+    @php
+        $tenant = filament()->getTenant();
+    @endphp
+
+    {{-- Header --}}
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Manajemen Meja</h1>
+            <p class="mt-1 text-sm text-gray-500">Kelola meja dan pantau pesanan customer</p>
+        </div>
+        <div class="flex gap-2">
+            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/tables') }}"
+                class="btn btn-secondary btn-md">
+                <x-heroicon-o-cog-6-tooth class="h-4 w-4" />
+                Manage Meja
+            </a>
+            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos') }}"
+                class="btn btn-primary btn-md">
+                <x-heroicon-o-shopping-cart class="h-4 w-4" />
+                Buka POS
+            </a>
+        </div>
+    </div>
+
+    {{-- Quick Stats --}}
+    <div class="mb-8 grid grid-cols-3 gap-4">
+        <div class="card-hover flex items-center gap-4 p-4">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500 text-white">
+                <x-heroicon-o-check-circle class="h-6 w-6" />
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->availableTables->count() }}</p>
+                <p class="text-sm text-gray-500">Tersedia</p>
+            </div>
+        </div>
+
+        <div class="card-hover flex items-center gap-4 p-4">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-red-500 text-white">
+                <x-heroicon-o-user-group class="h-6 w-6" />
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->activeTables->count() }}</p>
+                <p class="text-sm text-gray-500">Terpakai</p>
+            </div>
+        </div>
+
+        <div class="card-hover flex items-center gap-4 p-4">
+            <div class="flex h-12 w-12 items-center justify-center rounded-2xl bg-amber-500 text-white">
+                <x-heroicon-o-calendar class="h-6 w-6" />
+            </div>
+            <div>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->reservedTables->count() }}</p>
+                <p class="text-sm text-gray-500">Dipesan</p>
+            </div>
+        </div>
+    </div>
+
+    {{-- Tables Grid --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+
+        {{-- Active Tables --}}
+        @foreach($this->activeTables as $table)
+            @php
+                $tableOrders = $this->tableOrders[$table->id] ?? collect();
+                $paidOrders = $tableOrders->where('status', 'completed');
+                $servedOrders = $paidOrders->filter(fn($o) => $o->served_at);
+                $unservedOrders = $paidOrders->filter(fn($o) => !$o->served_at);
+                $unpaidOrders = $tableOrders->where('status', 'pending');
+                $totalUnpaid = $unpaidOrders->where('payment_method', 'cash')->sum('grand_total');
+                $totalPaid = $paidOrders->sum('grand_total');
+            @endphp
+            <div class="card-hover overflow-hidden p-0">
+                {{-- Header --}}
+                <div class="bg-linear-to-br from-red-500 to-red-600 p-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                                <x-heroicon-o-archive-box class="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold">{{ $table->name }}</h3>
+                                <p class="text-sm text-red-100">{{ $tableOrders->count() }} pesanan</p>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Terpakai</span>
+                    </div>
+                </div>
+
+                {{-- Content - Summary Only --}}
+                <div class="p-4 space-y-3">
+                    {{-- Quick Stats --}}
+                    <div class="grid grid-cols-3 gap-2 text-center">
+                        @if($servedOrders->count() > 0)
+                            <div class="rounded-lg bg-green-50 p-2 dark:bg-green-500/10">
+                                <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ $servedOrders->count() }}</p>
+                                <p class="text-[10px] text-green-600 dark:text-green-400">Disajikan</p>
+                            </div>
+                        @endif
+                        @if($unservedOrders->count() > 0)
+                            <div class="rounded-lg bg-blue-50 p-2 dark:bg-blue-500/10">
+                                <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ $unservedOrders->count() }}</p>
+                                <p class="text-[10px] text-blue-600 dark:text-blue-400">Siap</p>
+                            </div>
+                        @endif
+                        @if($unpaidOrders->count() > 0)
+                            <div class="rounded-lg bg-amber-50 p-2 dark:bg-amber-500/10">
+                                <p class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ $unpaidOrders->count() }}</p>
+                                <p class="text-[10px] text-amber-600 dark:text-amber-400">Tunda</p>
+                            </div>
+                        @endif
+                    </div>
+
+                    {{-- Total --}}
+                    @if($totalPaid > 0)
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-800">
+                            <span class="text-xs text-gray-600 dark:text-gray-400">Total</span>
+                            <span class="text-sm font-bold text-green-600 dark:text-green-400">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
+                        </div>
+                    @endif
+
+                    {{-- Actions --}}
+                    <div class="flex gap-2">
+                        <button
+                            wire:click="$dispatch('showOrderDetails', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
+                            class="btn btn-secondary btn-md flex-1">
+                            <x-heroicon-o-eye class="h-4 w-4" />
+                            Lihat
+                        </button>
+                        <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos?table=' . $table->id) }}"
+                            class="btn btn-primary btn-md">
+                            <x-heroicon-o-plus class="h-4 w-4" />
+                        </a>
+                        <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
+                            class="btn btn-secondary btn-md">
+                            <x-heroicon-o-qr-code class="h-4 w-4" />
+                        </button>
+                        @if($this->hasUnpaidOrders($table->id))
+                            <button
+                                wire:click="closeTable({{ $table->id }})"
+                                class="btn btn-danger btn-md">
+                                <x-heroicon-o-x-circle class="h-4 w-4" />
+                            </button>
+                        @else
+                            <button
+                                wire:click="closeTable({{ $table->id }})"
+                                class="btn btn-danger btn-md">
+                                <x-heroicon-o-x-circle class="h-4 w-4" />
+                            </button>
+                        @endif
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- Available Tables --}}
+        @foreach($this->availableTables as $table)
+            <div class="card-hover overflow-hidden p-0">
+                <div class="bg-linear-to-br from-emerald-500 to-emerald-600 p-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                                <x-heroicon-o-archive-box class="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold">{{ $table->name }}</h3>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Kosong</span>
+                    </div>
+                </div>
+                <div class="p-3">
+                    <p class="py-8 text-center text-sm text-gray-500">Siap digunakan</p>
+                    <div class="flex gap-2">
+                        <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos?table=' . $table->id) }}"
+                            class="btn btn-secondary btn-md flex-1">
+                            <x-heroicon-o-plus class="h-4 w-4" />
+                            Mulai
+                        </a>
+                        <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
+                            class="btn btn-secondary btn-md">
+                            <x-heroicon-o-qr-code class="h-4 w-4" />
+                        </button>
+                    </div>
+                </div>
+            </div>
+        @endforeach
+
+        {{-- Reserved Tables --}}
+        @foreach($this->reservedTables as $table)
+            <div class="card-hover overflow-hidden p-0">
+                <div class="bg-linear-to-br from-amber-500 to-amber-600 p-4 text-white">
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20">
+                                <x-heroicon-o-calendar class="h-6 w-6" />
+                            </div>
+                            <div>
+                                <h3 class="text-lg font-bold">{{ $table->name }}</h3>
+                            </div>
+                        </div>
+                        <span class="rounded-full bg-white/20 px-3 py-1 text-xs font-semibold">Dipesan</span>
+                    </div>
+                </div>
+                <div class="p-4">
+                    @if($table->notes)
+                        <p class="mb-3 text-sm text-gray-500">{{ $table->notes }}</p>
+                    @endif
+                    <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
+                        class="btn btn-secondary btn-md w-full">
+                        <x-heroicon-o-qr-code class="h-4 w-4" />
+                        QR Code
+                    </button>
+                </div>
+            </div>
+        @endforeach
+
+    </div>
+
+    {{-- Empty State --}}
+    @if($this->tables->isEmpty())
+        <div class="rounded-2xl border-2 border-dashed border-gray-200 p-12 text-center dark:border-gray-700">
+            <x-heroicon-o-archive-box class="mx-auto h-16 w-16 text-gray-300" />
+            <h3 class="mt-4 text-lg font-semibold text-gray-900 dark:text-white">Belum ada meja</h3>
+            <p class="mt-2 text-sm text-gray-500">Tambahkan meja baru untuk mulai</p>
+        </div>
+    @endif
+
+    {{-- QR Code Modal --}}
+    @livewire(\App\Livewire\TableQrModal::class)
+
+    {{-- Order Details Modal --}}
+    @livewire(\App\Livewire\OrderDetailsModal::class)
+
+</x-filament-panels::page>
