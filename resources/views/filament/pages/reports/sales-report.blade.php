@@ -265,18 +265,19 @@
                             </td>
                             <td class="px-4 py-3">
                                 @php
-                                    $badges = [
-                                        'cash' => 'badge-success',
-                                        'qris' => 'badge-info',
-                                        'transfer' => 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-400',
-                                    ];
+                                    $badgeClass = match($sale->payment_method) {
+                                        'cash' => 'badge badge-success',
+                                        'qris' => 'badge badge-info',
+                                        'transfer' => 'badge badge-transfer',
+                                        default => 'badge badge-warning',
+                                    };
                                     $labels = [
                                         'cash' => 'Tunai',
                                         'qris' => 'QRIS',
                                         'transfer' => 'Transfer',
                                     ];
                                 @endphp
-                                <span class="badge {{ $badges[$sale->payment_method] ?? 'badge-warning' }}">
+                                <span class="{{ $badgeClass }}">
                                     {{ $labels[$sale->payment_method] ?? ucfirst($sale->payment_method) }}
                                 </span>
                             </td>
