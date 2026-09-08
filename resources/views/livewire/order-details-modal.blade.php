@@ -15,7 +15,7 @@
                 x-transition:leave="ease-in duration-150"
                 x-transition:leave-start="opacity-100"
                 x-transition:leave-end="opacity-0"
-                class="absolute inset-0 bg-gray-800/80 backdrop-blur-sm"
+                class="absolute inset-0 bg-black/80"
                 x-on:click="show = false"
             ></div>
 

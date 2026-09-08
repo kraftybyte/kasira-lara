@@ -583,7 +583,7 @@
 
     </div>
     @if ($showCheckout)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/60 p-4 backdrop-blur-sm" wire:keydown.escape="closeCheckout">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" wire:keydown.escape="closeCheckout">
             <div class="flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900 max-h-[92vh]">
 
                 {{-- HEADER --}}
@@ -791,7 +791,7 @@
         },
         skip() { if (this.timer) clearInterval(this.timer), this.timer = null; this.show = false; }
     }" x-on:payment-success.window="openPopup($event.detail)">
-        <div x-show="show" x-cloak x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-md">
+        <div x-show="show" x-cloak x-transition.opacity class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4">
             <div x-show="show" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="scale-95 opacity-0" x-transition:enter-end="scale-100 opacity-100" class="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900">
 
                 <div class="relative overflow-hidden px-6 pb-7 pt-8 text-center gradient-bg-soft">
@@ -845,7 +845,7 @@
 
     {{-- ADD CUSTOMER MODAL --}}
     @if ($showAddCustomer)
-        <div class="fixed inset-0 z-50 flex items-center justify-center bg-gray-950/70 p-4 backdrop-blur-sm" wire:keydown.escape="closeAddCustomer">
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" wire:keydown.escape="closeAddCustomer">
             <div class="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900" x-on:click.stop>
                 <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
                     <div class="flex items-center gap-3">
