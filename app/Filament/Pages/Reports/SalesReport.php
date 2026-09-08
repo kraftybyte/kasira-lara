@@ -154,12 +154,75 @@ class SalesReport extends Page
     public function getAverageTransactionProperty(): float
     {
         $count = $this->totalSales;
-
         if ($count === 0) {
             return 0;
         }
-
         return $this->totalRevenue / $count;
+    }
+
+    public function getTotalProfitProperty(): float
+    {
+        $tenant = $this->tenant;
+        if (!$tenant) {
+            return 0;
+        }
+
+        $saleIds = $this->sales->pluck('id');
+        if ($saleIds->isEmpty()) {
+            return 0;
+        }
+
+        // Calculate profit from sale items
+        $totalCost = \App\Models\SaleItem::query()
+            ->whereIn('sale_id', $saleIds)
+            ->get()
+            ->sum(function ($item) {
+                $product = $item->product;
+                if (!$product) {
+                    return 0;
+                }
+                // Cost = product cost_price * quantity
+                return (float) $product->cost_price * (float) $item->quantity;
+            });
+
+        return max(0, $this->totalRevenue - $totalCost);
+    }
+
+    public function getProfitMarginProperty(): float
+    {
+        if ($this->totalRevenue <= 0) {
+            return 0;
+        }
+        return ($this->totalProfit / $this->totalRevenue) * 100;
+    }
+
+    public function exportToPdf(): Response
+    {
+        $tenant = $this->tenant;
+        if (!$tenant) {
+            return response()->json(['error' => 'Tenant not found'], 400);
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-pdf', [
+            'tenant' => $tenant,
+            'dateRange' => $this->dateRange,
+            'startDate' => $this->startDate,
+            'endDate' => $this->endDate,
+            'sales' => $this->sales,
+            'stats' => [
+                'totalRevenue' => $this->totalRevenue,
+                'totalProfit' => $this->totalProfit,
+                'profitMargin' => $this->profitMargin,
+                'totalSales' => $this->totalSales,
+                'averageTransaction' => $this->averageTransaction,
+                'topProducts' => $this->topProducts,
+                'salesByPayment' => $this->salesByPaymentMethod,
+            ],
+        ]);
+
+        $pdf->setPaper('A4', 'landscape');
+
+        return $pdf->download("laporan-penjualan-{$tenant->name}-{$this->startDate}.pdf");
     }
 
     public function getSalesByPaymentMethodProperty(): array

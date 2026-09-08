@@ -6,7 +6,7 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Laporan Penjualan</h1>
             <div class="mt-1.5 flex items-center gap-3">
                 <span class="badge-info">
-                    🏪 {{ $this->tenant?->name ?? 'Tenant' }}
+                    {{ $this->tenant?->name ?? 'Tenant' }}
                 </span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
                     {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}
@@ -36,12 +36,17 @@
             </x-filament::input.wrapper>
         </div>
 
-        <button type="button" wire:click="exportToCsv" wire:loading.attr="disabled" class="btn btn-secondary btn-md ml-auto">
-            <x-heroicon-s-arrow-down-tray wire:target="exportToCsv" wire:loading class="h-4 w-4 animate-spin" />
-            <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading.remove class="h-4 w-4" />
-            <span wire:loading wire:target="exportToCsv">Mengekspor...</span>
-            <span wire:loading.remove wire:target="exportToCsv">Export CSV</span>
-        </button>
+	        <button type="button" wire:click="exportToPdf" wire:loading.attr="disabled" class="btn btn-secondary btn-md">
+	            <x-heroicon-o-document-arrow-down class="h-4 w-4" wire:loading.remove />
+	            <svg wire:loading class="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8 8 8 8-8 0 018-8 8 8 0 01-8 8z"></path></svg>
+	            PDF
+	        </button>
+	        <button type="button" wire:click="exportToCsv" wire:loading.attr="disabled" class="btn btn-secondary btn-md ml-2">
+	            <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading class="h-4 w-4 animate-spin" />
+	            <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading.remove class="h-4 w-4" />
+	            <span wire:loading wire:target="exportToCsv">Generate...</span>
+	            <span wire:loading.remove wire:target="exportToCsv">Export CSV</span>
+	        </button>
     </div>
 
     {{-- Stats Grid --}}

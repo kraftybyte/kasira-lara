@@ -6,7 +6,7 @@
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Laporan Bahan Baku</h1>
             <div class="mt-1.5 flex items-center gap-3">
                 <span class="badge-info">
-                    🏪 {{ $this->tenant?->name ?? 'Tenant' }}
+                    {{ $this->tenant?->name ?? 'Tenant' }}
                 </span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
                     {{ \Carbon\Carbon::parse($startDate)->format('d M Y') }} - {{ \Carbon\Carbon::parse($endDate)->format('d M Y') }}
