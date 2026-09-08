@@ -24,7 +24,7 @@ class AdminPanelProvider extends PanelProvider
     public function panel(Panel $panel): Panel
     {
         return $panel
-            ->sidebarWidth('6rem')
+            ->sidebarWidth('280px')
             ->sidebarCollapsibleOnDesktop(false)
             ->default()
             ->id('admin')
