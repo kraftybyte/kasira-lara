@@ -1611,3 +1611,62 @@ textarea.fi-fo-field-wrp textarea {
     background: var(--gray-200);
     border-radius: 2px;
 }
+
+/* =========================================================
+   31. SALES REPORT - CONSISTENT STYLING
+========================================================= */
+
+.fi-page .table-header th {
+    background: var(--gray-50);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--muted);
+    padding: 12px 16px;
+}
+
+.fi-page .table-row {
+    border-bottom: 1px solid var(--gray-100);
+    transition: background-color 150ms ease;
+    font-size: 14px;
+}
+
+.fi-page .table-row:hover {
+    background: rgba(239, 68, 68, 0.02);
+}
+
+.fi-page .section-header {
+    border-bottom: 1px solid var(--border);
+    padding: 14px 16px;
+    border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+}
+
+.fi-page .section-header h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--text);
+}
+
+.fi-page .stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.fi-page .card-hover {
+    border-radius: var(--radius-lg);
+    transition: all 200ms ease;
+}
+
+.fi-page .card-hover:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.fi-page .card {
+    border-radius: var(--radius-lg);
+}
