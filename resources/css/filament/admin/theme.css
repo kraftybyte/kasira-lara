@@ -1670,3 +1670,16 @@ textarea.fi-fo-field-wrp textarea {
 .fi-page .card {
     border-radius: var(--radius-lg);
 }
+
+/* Consistent Border Radius for Buttons */
+.fi-page .btn {
+    border-radius: var(--radius-sm) !important;
+}
+
+.fi-page input[type="text"],
+.fi-page input[type="search"],
+.fi-page input[type="date"],
+.fi-page input[type="number"],
+.fi-page select {
+    border-radius: var(--radius-sm) !important;
+}

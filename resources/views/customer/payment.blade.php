@@ -29,12 +29,20 @@
     <div class="max-w-md mx-auto bg-white min-h-screen">
 
         {{-- Header --}}
-        <div class="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
             <div class="px-4 py-4">
                 <div class="text-center">
-                    <p class="text-sm text-gray-500">Order {{ $sale->invoice_number }}</p>
-                    <h1 class="text-xl font-bold text-gray-900">Pembayaran</h1>
-                    <p class="text-sm text-gray-500">Meja {{ $table->name }}</p>
+                    <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-3 shadow-lg shadow-red-500/25">
+                        <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                    </div>
+                    <p class="text-xs text-gray-500 font-medium">{{ $sale->invoice_number }}</p>
+                    <h1 class="text-xl font-bold text-gray-900 mt-1">Pembayaran</h1>
+                    <div class="flex items-center justify-center gap-1.5 mt-1">
+                        <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                        <p class="text-xs text-gray-500">Meja {{ $table->name }}</p>
+                    </div>
                 </div>
             </div>
         </div>

@@ -17,7 +17,7 @@
 
     {{-- Date Range --}}
     <div class="mb-6 flex flex-wrap items-center gap-3">
-        <div class="flex rounded-xl border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
             @foreach(['today' => 'Hari Ini', 'yesterday' => 'Kemarin', 'week' => 'Minggu Ini', 'month' => 'Bulan Ini'] as $key => $label)
                 <button type="button" wire:click="setDateRange('{{ $key }}')"
                     class="btn btn-sm {{ $dateRange === $key ? 'btn-primary' : 'btn-ghost' }}">
@@ -116,7 +116,7 @@
         {{-- Top Products --}}
         <div class="card overflow-hidden">
             <div class="section-header">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">🏆 Produk Terlaris</h3>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Produk Terlaris</h3>
             </div>
             <div class="p-5">
                 @if($this->topProducts->count() > 0)
@@ -151,7 +151,7 @@
         {{-- Ingredient Usage --}}
         <div class="card overflow-hidden">
             <div class="section-header">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">📦 Penggunaan Bahan Baku</h3>
+                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Penggunaan Bahan Baku</h3>
             </div>
             <div class="p-5">
                 @if($this->ingredientUsage->count() > 0)
@@ -222,7 +222,19 @@
     {{-- Transactions Table --}}
     <div class="card overflow-hidden">
         <div class="section-header">
-            <h3 class="text-base font-semibold text-gray-900 dark:text-white">📋 Detail Transaksi</h3>
+            <h3>Detail Transaksi</h3>
+            <div class="flex items-center gap-3">
+                {{-- Search --}}
+                <div class="relative">
+                    <input
+                        type="text"
+                        wire:model.live.debounce.300ms="tableSearch"
+                        placeholder=".    Cari data"
+                        class="h-8 rounded-lg border border-gray-200 bg-white px-3 pl-9 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                    />
+                    <x-heroicon-o-magnifying-glass class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+                </div>
+            </div>
         </div>
 
         <div class="overflow-x-auto">
@@ -298,6 +310,17 @@
                 </tbody>
             </table>
         </div>
-    </div>
+
+        {{-- Pagination --}}
+        @if($this->sales->hasPages())
+            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-gray-700">
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    Menampilkan {{ $this->sales->firstItem() ?? 0 }} - {{ $this->sales->lastItem() ?? 0 }} dari {{ $this->sales->total() }} transaksi
+                </p>
+                <div class="flex items-center gap-1">
+                    {{ $this->sales->links() }}
+                </div>
+            </div>
+        @endif
 
 </x-filament-panels::page>

@@ -23,8 +23,6 @@ class IngredientResource extends Resource
 
     protected static ?string $pluralLabel = 'Bahan Baku';
 
-    protected static string|UnitEnum|null $navigationGroup = 'Stock';
-
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
     protected static ?string $navigationLabel = 'Bahan Baku';

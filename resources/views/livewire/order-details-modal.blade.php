@@ -83,11 +83,15 @@
                                             @endphp
                                             <span class="text-[10px] font-medium text-amber-600">{{ $elapsedStr }}</span>
                                         @endif
-                                        <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full
-                                            @if($order['payment_method'] === 'qris') bg-sky-200 text-sky-800
-                                            @elseif($order['payment_method'] === 'transfer') bg-purple-200 text-purple-800
-                                            @elseif($order['payment_method'] === 'cash') bg-green-200 text-green-800
-                                            @else bg-gray-200 text-gray-800 @endif">
+                                        @php
+                                            $badgeClass = match($order['payment_method']) {
+                                                'qris' => 'bg-sky-200 text-sky-800',
+                                                'transfer' => 'bg-purple-200 text-purple-800',
+                                                'cash' => 'bg-green-200 text-green-800',
+                                                default => 'bg-gray-200 text-gray-800',
+                                            };
+                                        @endphp
+                                        <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full {{ $badgeClass }}">
                                             {{ strtoupper($order['payment_method']) }}
                                         </span>
                                     </div>

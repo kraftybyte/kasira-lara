@@ -31,26 +31,29 @@
     <div id="app" class="max-w-md mx-auto bg-white min-h-screen flex flex-col">
 
         {{-- Header --}}
-        <div class="sticky top-0 z-50 bg-white border-b border-gray-100">
+        <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
             <div class="px-4 py-3">
                 <div class="flex items-center justify-between">
                     <div class="flex items-center gap-3">
-                        <button onclick="goBack()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                        <button onclick="goBack()" class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
                             <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
                             </svg>
                         </button>
                         <div>
                             <h1 class="text-lg font-bold text-gray-900" id="page-title">{{ $tenant->name }}</h1>
-                            <p class="text-xs text-gray-500">Meja {{ $table->name }}</p>
+                            <div class="flex items-center gap-1.5">
+                                <div class="w-1.5 h-1.5 rounded-full bg-primary"></div>
+                                <p class="text-xs text-gray-500">Meja {{ $table->name }}</p>
+                            </div>
                         </div>
                     </div>
                     <div class="relative">
-                        <button onclick="toggleCart()" class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center relative">
-                            <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <button onclick="toggleCart()" class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 text-white flex items-center justify-center relative shadow-lg shadow-red-500/25 hover:shadow-red-500/40 transition-all active:scale-95">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                             </svg>
-                            <span id="cart-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-primary text-white text-xs rounded-full flex items-center justify-center font-bold">0</span>
+                            <span id="cart-badge" class="hidden absolute -top-1 -right-1 w-5 h-5 bg-gray-900 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">0</span>
                         </button>
                     </div>
                 </div>
@@ -59,12 +62,12 @@
             {{-- Categories (only show on menu page) --}}
             <div id="category-tabs" class="px-4 pb-3 overflow-x-auto hide-scrollbar">
                 <div class="flex gap-2">
-                    <button onclick="filterCategory('all')" class="category-tab active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-primary text-white">
+                    <button onclick="filterCategory('all')" class="category-tab active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md shadow-red-500/20">
                         Semua
                     </button>
                     @foreach($products as $categoryId => $items)
                         @php $category = $items->first()->category @endphp
-                        <button onclick="filterCategory('{{ $categoryId }}')" class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600 hover:bg-gray-200">
+                        <button onclick="filterCategory('{{ $categoryId }}')" class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
                             {{ $category->name ?? 'Lainnya' }}
                         </button>
                     @endforeach
@@ -209,7 +212,7 @@
         </div>
 
         {{-- Cart Summary (Fixed Bottom) --}}
-        <div id="cart-summary" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
+        <div id="cart-summary" class="hidden fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] z-50">
             <form action="{{ route('customer.order.checkout', [$tenant->slug, $table->id]) }}" method="POST" id="order-form" onsubmit="return submitOrder()">
                 @csrf
                 <input type="hidden" name="items" id="cart-items">
@@ -217,7 +220,7 @@
                 <div class="max-w-md mx-auto p-4">
                     <div class="flex items-center justify-between mb-3">
                         <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 flex items-center justify-center">
                                 <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
                                 </svg>
@@ -228,11 +231,11 @@
                             </div>
                         </div>
                         <div class="text-right">
-                            <p class="text-lg font-bold text-primary">Rp <span id="cart-total">0</span></p>
+                            <p class="text-lg font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">Rp <span id="cart-total">0</span></p>
                         </div>
                     </div>
-                    <button type="submit" id="checkout-btn" class="w-full py-3 bg-gradient-to-r from-primary to-secondary text-white font-semibold rounded-xl hover:opacity-90 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed">
-                        Checkout
+                    <button type="submit" id="checkout-btn" class="w-full py-3.5 bg-gradient-to-r from-red-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
+                        Checkout Sekarang
                     </button>
                 </div>
             </form>

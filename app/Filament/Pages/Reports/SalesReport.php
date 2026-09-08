@@ -46,6 +46,10 @@ class SalesReport extends Page
 
     public ?int $paymentMethodFilter = null;
 
+    public string $tableSearch = '';
+
+    protected $paginationTheme = 'bootstrap';
+
     /*
     |--------------------------------------------------------------------------
     | MOUNT
@@ -79,12 +83,12 @@ class SalesReport extends Page
         return Carbon::parse($this->endDate)->endOfDay();
     }
 
-    public function getSalesProperty(): Collection
+    public function getSalesProperty(): \Illuminate\Contracts\Pagination\Paginator
     {
         $tenant = $this->tenant;
 
         if (! $tenant) {
-            return collect();
+            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 25);
         }
 
         $query = Sale::query()
@@ -103,10 +107,23 @@ class SalesReport extends Page
             $query->where('payment_method', $this->paymentMethodFilter);
         }
 
+        // Search filter
+        if ($this->tableSearch) {
+            $search = $this->tableSearch;
+            $query->where(function ($q) use ($search) {
+                $q->where('invoice_number', 'like', "%{$search}%")
+                    ->orWhereHas('user', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    })
+                    ->orWhereHas('customer', function ($q) use ($search) {
+                        $q->where('name', 'like', "%{$search}%");
+                    });
+            });
+        }
+
         return $query->with(['customer', 'user', 'table'])
             ->orderByDesc('created_at')
-            ->limit(500)
-            ->get();
+            ->paginate(25);
     }
 
     public function getTotalSalesProperty(): int
