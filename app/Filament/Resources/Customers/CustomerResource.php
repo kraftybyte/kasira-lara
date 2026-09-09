@@ -110,6 +110,29 @@ class CustomerResource extends Resource
                                 fn ($get): bool => (bool) $get('is_member')
                             ),
 
+                        Select::make('tier')
+                            ->label('Tier')
+                            ->options([
+                                'bronze' => 'Bronze (0% discount)',
+                                'silver' => 'Silver (5% discount)',
+                                'gold' => 'Gold (10% discount)',
+                                'platinum' => 'Platinum (15% discount)',
+                            ])
+                            ->default('bronze')
+                            ->visible(
+                                fn ($get): bool => (bool) $get('is_member')
+                            ),
+
+                        TextInput::make('tier_discount')
+                            ->label('Discount Tier (%)')
+                            ->numeric()
+                            ->suffix('%')
+                            ->default(0)
+                            ->helperText('Otomatis dari tier, atau override manual')
+                            ->visible(
+                                fn ($get): bool => (bool) $get('is_member')
+                            ),
+
                         DatePicker::make('joined_at')
                             ->label('Tanggal Bergabung')
                             ->default(now())
@@ -192,6 +215,18 @@ class CustomerResource extends Resource
                     ->badge()
                     ->placeholder('-'),
 
+                Tables\Columns\TextColumn::make('tier')
+                    ->label('Tier')
+                    ->badge()
+                    ->formatStateUsing(fn (string $state): string => ucfirst($state))
+                    ->colors([
+                        'amber' => 'bronze',
+                        'gray' => 'silver',
+                        'yellow' => 'gold',
+                        'sky' => 'platinum',
+                    ])
+                    ->placeholder('-'),
+
                 Tables\Columns\TextColumn::make('points')
                     ->label('Point')
                     ->numeric()
@@ -244,6 +279,15 @@ class CustomerResource extends Resource
                         'Silver' => 'Silver',
                         'Gold' => 'Gold',
                         'Platinum' => 'Platinum',
+                    ]),
+
+                Tables\Filters\SelectFilter::make('tier')
+                    ->label('Tier')
+                    ->options([
+                        'bronze' => 'Bronze',
+                        'silver' => 'Silver',
+                        'gold' => 'Gold',
+                        'platinum' => 'Platinum',
                     ]),
 
                 Tables\Filters\TernaryFilter::make('is_active')

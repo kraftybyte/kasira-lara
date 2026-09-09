@@ -61,7 +61,21 @@ class IngredientForm
                     ->numeric()
                     ->default(0)
                     ->minValue(0)
-                    ->nullable(),
+                    ->nullable()
+                    ->helperText('Trigger alert saat stok di bawah ini'),
+
+                TextInput::make('reorder_point')
+                    ->label('Titik Reorder')
+                    ->numeric()
+                    ->default(0)
+                    ->minValue(0)
+                    ->nullable()
+                    ->helperText('Trigger reorder otomatis'),
+
+                Toggle::make('auto_reorder')
+                    ->label('Auto Reorder')
+                    ->default(false)
+                    ->helperText('Aktifkan untuk sugesti reorder otomatis'),
 
                 TextInput::make('cost_price')
                     ->label('Harga Beli')

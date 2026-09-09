@@ -7,7 +7,8 @@
       "Bash(mkdir -p resources/views/vendor/filament-panels/components/layout)",
       "Bash(vendor/bin/pint --dirty --format agent)",
       "Bash(vendor/bin/pint --format agent)",
-      "Bash(php artisan *)"
+      "Bash(php artisan *)",
+      "Bash(gh pr *)"
     ],
     "additionalDirectories": [
       "/Users/macbook/Kasira-Laravel",

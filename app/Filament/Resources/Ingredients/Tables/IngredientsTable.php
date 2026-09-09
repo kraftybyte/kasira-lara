@@ -49,6 +49,18 @@ class IngredientsTable
                     ->sortable()
                     ->placeholder('-'),
 
+                TextColumn::make('reorder_point')
+                    ->label('Reorder Point')
+                    ->numeric(decimalPlaces: 0)
+                    ->sortable()
+                    ->placeholder('-'),
+
+                IconColumn::make('needs_reorder')
+                    ->label('Reorder')
+                    ->getStateUsing(fn ($record) => $record->needsReorder())
+                    ->icon(fn (bool $state): string => $state ? 'heroicon-o-exclamation-circle' : 'heroicon-o-check-circle')
+                    ->color(fn (bool $state): string => $state ? 'danger' : 'success'),
+
                 TextColumn::make('cost_price')
                     ->label('Harga Beli')
                     ->money('IDR')
