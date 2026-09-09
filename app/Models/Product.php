@@ -79,4 +79,24 @@ class Product extends Model
     {
         return $this->ingredients()->exists();
     }
+
+    public function modifiers(): HasMany
+    {
+        return $this->hasMany(ProductModifier::class)->where('is_active', true)->orderBy('sort_order');
+    }
+
+    public function allModifiers(): HasMany
+    {
+        return $this->hasMany(ProductModifier::class)->orderBy('sort_order');
+    }
+
+    public function addonModifiers(): HasMany
+    {
+        return $this->modifiers()->where('type', 'addon');
+    }
+
+    public function optionModifiers(): HasMany
+    {
+        return $this->modifiers()->where('type', 'option');
+    }
 }

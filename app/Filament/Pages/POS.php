@@ -87,13 +87,17 @@ class POS extends Page
 
     public string $customerSearch = '';
 
-    public ?int $tableId = null;
+    public ?string $tableId = null;
 
     public ?int $activeTableId = null;
 
     public ?int $currentBillId = null;
 
     public ?int $selectedCategoryId = null;
+
+    public bool $showModifierModal = false;
+
+    public ?int $modifierProductId = null;
 
     /*
     |--------------------------------------------------------------------------
@@ -424,6 +428,18 @@ class POS extends Page
     | OPEN CHECKOUT
     |--------------------------------------------------------------------------
     */
+
+    public function openModifierModal(int $productId): void
+    {
+        $this->modifierProductId = $productId;
+        $this->showModifierModal = true;
+    }
+
+    public function closeModifierModal(): void
+    {
+        $this->showModifierModal = false;
+        $this->modifierProductId = null;
+    }
 
     public function openCheckout(): void
     {
@@ -1805,7 +1821,7 @@ class POS extends Page
             ->where('is_active', true)
             ->where('status', 'active')
             ->with(['sales' => function ($query) {
-                $query->whereIn('status', ['pending', 'completed'])
+                $query->where('status', '!=', 'completed')
                     ->orderByDesc('created_at');
             }])
             ->orderBy('name')
@@ -1851,7 +1867,7 @@ class POS extends Page
     {
         $this->tableId = $tableId;
 
-        if (! $tableId) {
+        if (! $tableId || $tableId === 'takeaway') {
             $this->currentBillId = null;
             $this->activeTableId = null;
             $this->cart = [];
@@ -1874,10 +1890,10 @@ class POS extends Page
             return;
         }
 
-        // Always check for pending orders (status='open', 'pending' = unpaid)
+        // Always check for unpaid orders (any status except completed)
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
-            ->whereIn('status', ['open', 'pending'])
+            ->where('status', '!=', 'completed')
             ->with(['items.product'])
             ->get();
 
@@ -1953,6 +1969,7 @@ class POS extends Page
                 'subtotal' => (float) $item->subtotal,
                 'total' => (float) $item->total,
                 'sale_item_id' => $item->id,
+                'sale_id' => $sale->id,
                 'is_duration' => $isDuration,
                 'rate_type' => $item->product?->rate_type ?? 'fixed',
                 'rate' => (float) ($item->product?->rate ?? 1),
@@ -1975,6 +1992,13 @@ class POS extends Page
                 ->title('Keranjang kosong')
                 ->warning()
                 ->send();
+
+            return;
+        }
+
+        // Handle Take Away
+        if ($this->tableId === 'takeaway') {
+            $this->openCheckout();
 
             return;
         }
@@ -2122,42 +2146,34 @@ class POS extends Page
         DB::beginTransaction();
 
         try {
-            $additionalSubtotal = 0;
+            $newSubtotal = 0;
 
-            // Create new sale items
+            // Track which sale items we've processed
+            $processedItemIds = [];
+
+            // Delete all existing sale items first (fresh start)
+            SaleItem::where('sale_id', $sale->id)->delete();
+
+            // Process cart items - create fresh
             foreach ($this->cart as $item) {
-                // Check if product already exists in bill
-                $existingItem = SaleItem::where('sale_id', $sale->id)
-                    ->where('product_id', $item['product_id'])
-                    ->first();
+                $cartQuantity = (float) $item['quantity'];
 
-                if ($existingItem) {
-                    // Update quantity
-                    $newQuantity = $existingItem->quantity + $item['quantity'];
-                    $existingItem->update([
-                        'quantity' => $newQuantity,
-                        'subtotal' => $newQuantity * $existingItem->unit_price,
-                        'total' => $newQuantity * $existingItem->unit_price,
-                    ]);
-                    $additionalSubtotal += $item['subtotal'];
-                } else {
-                    // Create new item
+                if ($cartQuantity > 0) {
                     SaleItem::create([
                         'sale_id' => $sale->id,
-                        'product_id' => $item['product_id'],
+                        'product_id' => (int) $item['product_id'],
                         'product_name' => $item['product_name'],
                         'sku' => $item['sku'] ?? null,
-                        'quantity' => $item['quantity'],
-                        'unit_price' => $item['unit_price'],
-                        'subtotal' => $item['subtotal'],
-                        'total' => $item['total'],
+                        'quantity' => $cartQuantity,
+                        'unit_price' => (float) $item['unit_price'],
+                        'subtotal' => $cartQuantity * (float) $item['unit_price'],
+                        'total' => $cartQuantity * (float) $item['unit_price'],
                     ]);
-                    $additionalSubtotal += $item['subtotal'];
+                    $newSubtotal += $cartQuantity * (float) $item['unit_price'];
                 }
             }
 
             // Update sale totals
-            $newSubtotal = (float) $sale->subtotal + $additionalSubtotal;
             $sale->update([
                 'subtotal' => $newSubtotal,
                 'grand_total' => $newSubtotal,
@@ -2165,11 +2181,11 @@ class POS extends Page
 
             DB::commit();
 
-            // Reload cart
-            $this->loadBillToCart($sale->fresh(['items']));
+            // Reload cart from DB to get fresh sale_item_ids
+            $this->loadBillToCart($sale->fresh());
 
             Notification::make()
-                ->title('Item ditambahkan ke bill')
+                ->title('Bill disimpan')
                 ->success()
                 ->send();
 
@@ -2177,7 +2193,7 @@ class POS extends Page
             DB::rollBack();
 
             Notification::make()
-                ->title('Gagal menambahkan item')
+                ->title('Gagal menyimpan bill')
                 ->body($e->getMessage())
                 ->danger()
                 ->send();

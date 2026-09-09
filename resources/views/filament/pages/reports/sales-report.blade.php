@@ -50,7 +50,7 @@
     </div>
 
     {{-- Stats Grid --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
         {{-- Total Revenue --}}
         <div class="card-hover p-5">
             <div class="stat-icon bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400">
@@ -70,6 +70,18 @@
             <div class="mt-4">
                 <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Jumlah Transaksi</p>
                 <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($this->totalSales, 0, ',', '.') }}</p>
+            </div>
+        </div>
+
+        {{-- Profit --}}
+        <div class="card-hover p-5">
+            <div class="stat-icon bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
+                <x-heroicon-o-chart-bar class="h-6 w-6" />
+            </div>
+            <div class="mt-4">
+                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Profit</p>
+                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->totalProfit, 0, ',', '.') }}</p>
+                <p class="text-xs text-gray-500">Margin: {{ number_format($this->profitMargin, 1) }}%</p>
             </div>
         </div>
 

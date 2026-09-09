@@ -6,10 +6,17 @@
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
                     <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
-                        <x-heroicon-o-archive-box class="h-6 w-6" />
+                        @if($this->tableId === 'takeaway')
+                            <x-heroicon-o-shopping-bag class="h-6 w-6" />
+                        @else
+                            <x-heroicon-o-archive-box class="h-6 w-6" />
+                        @endif
                     </div>
                     <div>
-                        @if($this->activeTableId)
+                        @if($this->tableId === 'takeaway')
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">🏠 Take Away</p>
+                            <p class="text-sm text-emerald-600 dark:text-emerald-400">Bawa Pulang</p>
+                        @elseif($this->activeTableId)
                             <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $this->selectedTable?->name ?? 'Meja Aktif' }}</p>
                             <p class="text-sm text-emerald-600 dark:text-emerald-400">Bill sedang aktif</p>
                         @elseif($this->tableId)
@@ -27,7 +34,11 @@
                     @endif
                     <button type="button" wire:click="clearTable" class="btn btn-outline-danger btn-md">
                         <x-heroicon-o-x-mark class="h-4 w-4" />
-                        Tutup Meja
+                        @if($this->tableId === 'takeaway')
+                            Batal
+                        @else
+                            Tutup Meja
+                        @endif
                     </button>
                 </div>
             </div>
@@ -115,46 +126,55 @@
             </div>
 
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                <div class="p-3">
-                    <div class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+                <div class="p-2">
+                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-4 max-h-[calc(100vh-280px)] overflow-y-auto">
                         @forelse ($this->products as $product)
                             <button
                                 type="button"
                                 wire:click="addToCart({{ $product->id }})"
                                 wire:loading.attr="disabled"
-                                class="group flex flex-col overflow-hidden rounded-xl border border-gray-100 bg-white transition-all hover:shadow-lg disabled:cursor-wait disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
+                                class="group flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white transition-all hover:shadow-md disabled:cursor-wait disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
                             >
-                                {{-- Image (Standard Size) --}}
-                                <div class="relative aspect-4/3 w-full shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-700">
+                                {{-- Image (Square) --}}
+                                <div class="relative aspect-square w-full shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-700">
                                     @if ($product->image)
                                         <img src="{{ Storage::disk('public')->url($product->image) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
                                     @else
                                         <div class="flex h-full w-full items-center justify-center bg-linear-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                                            <span class="text-2xl font-bold uppercase text-gray-300">{{ substr($product->name, 0, 2) }}</span>
+                                            <span class="text-lg font-bold uppercase text-gray-300">{{ substr($product->name, 0, 2) }}</span>
                                         </div>
                                     @endif
 
                                     {{-- Badge --}}
                                     @if ($product->rate_type === 'duration')
-                                        <div class="absolute left-2 top-2">
-                                            <span class="rounded-full bg-amber-500 px-2.5 py-1 text-xs font-semibold text-white shadow">Durasi/Jam</span>
+                                        <div class="absolute left-1 top-1">
+                                            <span class="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">Per Jam</span>
                                         </div>
                                     @endif
                                     @if ($product->rate_type !== 'duration' && (float) $product->stock <= 0)
-                                        <div class="absolute left-2 top-2">
-                                            <span class="rounded-full bg-red-500 px-2.5 py-1 text-xs font-semibold text-white shadow">Habis</span>
+                                        <div class="absolute left-1 top-1">
+                                            <span class="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white shadow">Habis</span>
                                         </div>
                                     @endif
                                 </div>
 
-                                {{-- Info (Centered Layout) --}}
-                                <div class="flex flex-1 flex-col p-3">
+                                {{-- Info --}}
+                                <div class="flex flex-1 flex-col p-2">
                                     <div class="flex flex-1 flex-col items-center justify-center text-center">
-                                        <h3 class="text-sm font-semibold leading-tight text-gray-900 dark:text-white">{{ $product->name }}</h3>
-                                        <p class="mt-2 text-base font-bold text-red-500">Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</p>
+                                        <h3 class="text-xs font-medium leading-tight text-gray-900 dark:text-white">{{ $product->name }}</h3>
+                                        <p class="mt-1 flex items-center gap-1 text-sm font-bold text-red-500">
+                                            <span>Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
+                                            @if($product->rate_type === 'duration')
+                                                @if((float) $product->rate >= 60)
+                                                    <span class="text-[10px] font-medium text-amber-600">/ Jam</span>
+                                                @else
+                                                    <span class="text-[10px] font-medium text-amber-600">/ {{ (int) $product->rate }} Menit</span>
+                                                @endif
+                                            @endif
+                                        </p>
                                     </div>
-                                    <div class="mt-4 flex justify-start">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full bg-red-500 text-sm font-bold text-white shadow transition-transform duration-200 group-hover:scale-110">
+                                    <div class="mt-2 flex justify-center">
+                                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow transition-transform duration-200 group-hover:scale-110">
                                             +
                                         </span>
                                     </div>
@@ -236,12 +256,6 @@
                                     placeholder="Cari nama atau nomor HP..."
                                     class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 pl-9 pr-9 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
                                 >
-
-
-                                {{-- SEARCH ICON --}}
-                                <div class="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
-                                    <x-heroicon-o-magnifying-glass class="h-4 w-4 text-gray-400" />
-                                </div>
 
 
                                 {{-- CLEAR --}}
@@ -462,8 +476,11 @@
                             @php
                                 $cartProduct = \App\Models\Product::find($productId);
                                 $isDuration = $item['is_duration'] ?? false;
+                                $modifiers = $item['modifiers'] ?? [];
+                                $hasModifiers = count($modifiers) > 0;
+                                $hasNotes = !empty($item['notes']);
                             @endphp
-                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-center gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }}">
+                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }}">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg {{ $isDuration ? 'bg-amber-100 dark:bg-amber-500/20' : 'bg-gray-200 dark:bg-gray-700' }}">
                                     @if($cartProduct?->image)
                                         <img src="{{ Storage::disk('public')->url($cartProduct->image) }}" alt="{{ $item['product_name'] }}" class="h-full w-full object-cover">
@@ -472,14 +489,36 @@
                                     @endif
                                 </div>
                                 <div class="min-w-0 flex-1">
-                                    <p class="truncate text-xs font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
-                                    <p class="text-[11px] text-gray-500">
-                                        @if($isDuration)
-                                            <span class="text-amber-600 dark:text-amber-400">⏱ {{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
-                                        @else
-                                            Rp {{ number_format($item['unit_price'], 0, ',', '.') }} × {{ $item['quantity'] }}
-                                        @endif
-                                    </p>
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex-1 min-w-0">
+                                            <p class="truncate text-xs font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
+                                            <p class="text-[11px] text-gray-500">
+                                                @if($isDuration)
+                                                    <span class="text-amber-600 dark:text-amber-400">⏱ {{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
+                                                @else
+                                                    Rp {{ number_format($item['unit_price'], 0, ',', '.') }} × {{ $item['quantity'] }}
+                                                @endif
+                                            </p>
+                                            {{-- Show modifiers badge --}}
+                                            @if($hasModifiers || $hasNotes)
+                                                <div class="mt-1 flex flex-wrap items-center gap-1">
+                                                    @foreach($modifiers as $modifier)
+                                                        <span class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                                            {{ $modifier['name'] }}
+                                                        </span>
+                                                    @endforeach
+                                                    @if($hasNotes)
+                                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">
+                                                            📝 Catatan
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                        <button type="button" wire:click="openModifierModal({{ $productId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                                            <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
+                                        </button>
+                                    </div>
                                 </div>
                                 <div class="flex items-center gap-1">
                                     <button type="button" wire:click="decrementQuantity({{ $productId }})" class="btn-qty">
@@ -510,8 +549,9 @@
                                         <span>Produk durasi wajib pilih meja</span>
                                     </div>
                                 @endif
-                                <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-lg border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white {{ $this->cartHasDurationProducts && !$tableId ? 'border-amber-400' : '' }}">
+                                <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-lg border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white {{ $this->cartHasDurationProducts && !$tableId && $tableId !== 'takeaway' ? 'border-amber-400' : '' }}">
                                     <option value="">Pilih Meja</option>
+                                    <option value="takeaway">Take Away / Bawa Pulang</option>
                                     @foreach($this->tables as $table)
                                         <option value="{{ $table->id }}">{{ $table->name }}</option>
                                     @endforeach
@@ -541,7 +581,9 @@
                             {{-- Checkout Button for Active Table --}}
                             <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full">
                                 <x-heroicon-o-credit-card class="h-4 w-4" />
-                                @if($this->cartHasDurationProducts)
+                                @if($this->tableId === 'takeaway')
+                                    Bayar Sekarang
+                                @elseif($this->cartHasDurationProducts)
                                     Checkout - {{ $this->selectedTable?->name }}
                                 @else
                                     Bayar Sekarang
@@ -551,7 +593,9 @@
                             {{-- Save to Table Button (Required for Duration Products) --}}
                             <button type="button" wire:click="saveToTable" class="btn btn-primary btn-lg w-full">
                                 <x-heroicon-o-archive-box class="h-4 w-4" />
-                                @if($this->cartHasDurationProducts)
+                                @if($this->tableId === 'takeaway')
+                                    Bayar Sekarang
+                                @elseif($this->cartHasDurationProducts)
                                     Simpan ke Meja
                                 @else
                                     Simpan & Bayar
@@ -881,6 +925,105 @@
                         <span wire:loading.remove wire:target="saveCustomer">
                             <x-heroicon-o-check class="h-4 w-4" />
                         </span>
+                        Simpan
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    {{-- MODIFIER MODAL --}}
+    @if ($showModifierModal && $modifierProductId)
+        @php
+            $product = \App\Models\Product::with('modifiers')->find($modifierProductId);
+            $addonModifiers = $product?->addonModifiers ?? collect();
+            $optionModifiers = $product?->optionModifiers ?? collect();
+        @endphp
+        <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm" wire:keydown.escape="closeModifierModal">
+            <div class="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900" x-on:click.stop>
+                <div class="flex items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
+                    <div class="flex items-center gap-3">
+                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-blue-500 text-white">
+                            <x-heroicon-o-adjustments-horizontal class="h-5 w-5" />
+                        </div>
+                        <div>
+                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Modifier</h2>
+                            <p class="text-xs text-gray-500">{{ $product?->name ?? 'Produk' }}</p>
+                        </div>
+                    </div>
+                    <button type="button" wire:click="closeModifierModal" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800">
+                        <x-heroicon-o-x-mark class="h-5 w-5" />
+                    </button>
+                </div>
+                <div class="max-h-[60vh] space-y-4 overflow-y-auto p-6">
+                    {{-- Addon Modifiers --}}
+                    @if($addonModifiers->count() > 0)
+                        <div>
+                            <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Tambahan (Pilih beberapa)</h3>
+                            <div class="space-y-2">
+                                @foreach($addonModifiers as $modifier)
+                                    <label class="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                                        <div class="flex items-center gap-3">
+                                            <input
+                                                type="checkbox"
+                                                wire:click="toggleModifier({{ json_encode(['id' => $modifier->id, 'name' => $modifier->name, 'price' => $modifier->price_adjustment]) }})"
+                                                @if(in_array($modifier->id, array_column($selectedModifiers, 'id'))) checked @endif
+                                                class="h-4 w-4 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            >
+                                            <span class="text-sm text-gray-900 dark:text-white">{{ $modifier->name }}</span>
+                                        </div>
+                                        @if($modifier->price_adjustment > 0)
+                                            <span class="text-sm font-medium text-blue-600 dark:text-blue-400">+ Rp {{ number_format($modifier->price_adjustment, 0, ',', '.') }}</span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Option Modifiers --}}
+                    @if($optionModifiers->count() > 0)
+                        <div>
+                            <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Pilihan (Pilih satu)</h3>
+                            <div class="space-y-2">
+                                @foreach($optionModifiers as $modifier)
+                                    <label class="flex cursor-pointer items-center justify-between rounded-xl border border-gray-200 bg-gray-50 p-3 transition-colors hover:bg-gray-100 dark:border-gray-700 dark:bg-gray-800 dark:hover:bg-gray-700">
+                                        <div class="flex items-center gap-3">
+                                            <input
+                                                type="radio"
+                                                name="option_modifier"
+                                                wire:click="toggleModifier({{ json_encode(['id' => $modifier->id, 'name' => $modifier->name, 'price' => $modifier->price_adjustment]) }})"
+                                                @if(in_array($modifier->id, array_column($selectedModifiers, 'id'))) checked @endif
+                                                class="h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500"
+                                            >
+                                            <span class="text-sm text-gray-900 dark:text-white">{{ $modifier->name }}</span>
+                                        </div>
+                                        @if($modifier->price_adjustment != 0)
+                                            <span class="text-sm font-medium @if($modifier->price_adjustment > 0) text-blue-600 dark:text-blue-400 @else text-green-600 dark:text-green-400 @endif">
+                                                {{ $modifier->price_adjustment > 0 ? '+' : '' }} Rp {{ number_format($modifier->price_adjustment, 0, ',', '.') }}
+                                            </span>
+                                        @endif
+                                    </label>
+                                @endforeach
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Notes --}}
+                    <div>
+                        <h3 class="mb-3 text-sm font-semibold text-gray-900 dark:text-white">Catatan</h3>
+                        <textarea
+                            wire:model.live="modifierNotes"
+                            rows="2"
+                            placeholder="Contoh: Tidak pakai es, extra pedas..."
+                            class="w-full rounded-xl border border-gray-200 bg-gray-50 p-3 text-sm text-gray-900 placeholder-gray-400 transition-colors focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
+                        ></textarea>
+                    </div>
+                </div>
+                <div class="flex gap-3 border-t border-gray-100 p-5 dark:border-gray-700">
+                    <button type="button" wire:click="closeModifierModal" class="flex-1 rounded-xl border border-gray-200 bg-white py-3 text-sm font-semibold text-gray-700 transition-colors hover:bg-gray-50 dark:border-gray-700 dark:bg-gray-800 dark:text-gray-300 dark:hover:bg-gray-700">Batal</button>
+                    <button type="button" wire:click="saveModifiers" class="flex flex-1 items-center justify-center gap-2 rounded-xl py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5 gradient-bg-shadow">
+                        <x-heroicon-o-check class="h-4 w-4" />
                         Simpan
                     </button>
                 </div>

@@ -65,12 +65,14 @@
                                         <span class="text-xs font-semibold text-gray-900">{{ $order['invoice_number'] }}</span>
                                         @if($order['has_duration'])
                                             <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-amber-200 text-amber-800">⏱ DURASI</span>
-                                        @elseif($order['served_at'])
-                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-emerald-200 text-emerald-800">✓ SUDAH</span>
-                                        @elseif($order['status'] === 'completed')
-                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-teal-200 text-teal-800">○ SIAP</span>
-                                        @else
-                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-amber-200 text-amber-800">◐ TUNDA</span>
+                                        @elseif($order['display_status'] === 'served')
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-blue-200 text-blue-800">✓ DISAJIKAN</span>
+                                        @elseif($order['display_status'] === 'ready')
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-teal-200 text-teal-800">🍽 SIAP</span>
+                                        @elseif($order['display_status'] === 'preparing')
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-orange-200 text-orange-800">🔥 MENYIAPKAN</span>
+                                        @elseif($order['display_status'] === 'pending')
+                                            <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full bg-gray-200 text-gray-800">⏳ MENUNGGU</span>
                                         @endif
                                     </div>
                                     <div class="flex items-center gap-2">

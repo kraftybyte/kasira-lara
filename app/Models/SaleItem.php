@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class SaleItem extends Model
 {
@@ -18,6 +19,7 @@ class SaleItem extends Model
         'tax',
         'subtotal',
         'total',
+        'notes',
     ];
 
     protected function casts(): array
@@ -40,5 +42,15 @@ class SaleItem extends Model
     public function product(): BelongsTo
     {
         return $this->belongsTo(Product::class);
+    }
+
+    public function modifiers(): HasMany
+    {
+        return $this->hasMany(SaleItemModifier::class);
+    }
+
+    public function getModifiersTotalAttribute(): float
+    {
+        return (float) $this->modifiers->sum('price');
     }
 }

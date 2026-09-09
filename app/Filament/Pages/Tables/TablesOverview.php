@@ -142,18 +142,24 @@ class TablesOverview extends Page
             return;
         }
 
-        // Mark all orders as completed (finished)
-        Sale::where('table_id', $tableId)
-            ->update([
-                'status' => 'completed',
-            ]);
+        // Get all sales for this table
+        $sales = Sale::where('table_id', $tableId)->get();
 
-        // Close the table - set status to available
+        // Delete sale items first
+        foreach ($sales as $sale) {
+            $sale->items()->delete();
+            $sale->payments()->delete();
+        }
+
+        // Delete all sales for this table
+        Sale::where('table_id', $tableId)->delete();
+
+        // Reset the table to available
         $table->update(['status' => 'available']);
 
         Notification::make()
-            ->title('Meja ditutup')
-            ->body("Meja {$table->name} siap untuk pelanggan baru.")
+            ->title('Bill ditutup')
+            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
             ->success()
             ->send();
     }

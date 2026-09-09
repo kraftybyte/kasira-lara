@@ -16,6 +16,8 @@ class Ingredient extends Model
         'unit',
         'stock',
         'minimum_stock',
+        'reorder_point',
+        'auto_reorder',
         'cost_price',
         'is_active',
         'supplier_id',
@@ -26,8 +28,10 @@ class Ingredient extends Model
         return [
             'stock' => 'decimal:3',
             'minimum_stock' => 'decimal:3',
+            'reorder_point' => 'decimal:3',
             'cost_price' => 'decimal:2',
             'is_active' => 'boolean',
+            'auto_reorder' => 'boolean',
         ];
     }
 
@@ -73,5 +77,52 @@ class Ingredient extends Model
     public function isOutOfStock(): bool
     {
         return (float) $this->stock <= 0;
+    }
+
+    public function needsReorder(): bool
+    {
+        if (! $this->auto_reorder) {
+            return false;
+        }
+
+        $reorderPoint = (float) ($this->reorder_point ?? $this->minimum_stock ?? 0);
+
+        return (float) $this->stock <= $reorderPoint;
+    }
+
+    public function getSuggestedReorderQuantity(): float
+    {
+        if (! $this->needsReorder()) {
+            return 0;
+        }
+
+        $reorderPoint = (float) ($this->reorder_point ?? $this->minimum_stock ?? 0);
+        $suggestedQty = ($reorderPoint * 2) - (float) $this->stock;
+
+        return max(0, $suggestedQty);
+    }
+
+    public function getReorderUrgency(): string
+    {
+        if ($this->isOutOfStock()) {
+            return 'critical';
+        }
+
+        $reorderPoint = (float) ($this->reorder_point ?? $this->minimum_stock ?? 0);
+        if ($reorderPoint <= 0) {
+            return 'none';
+        }
+
+        $ratio = (float) $this->stock / $reorderPoint;
+
+        if ($ratio <= 0.5) {
+            return 'urgent';
+        }
+
+        if ($ratio <= 1) {
+            return 'soon';
+        }
+
+        return 'ok';
     }
 }

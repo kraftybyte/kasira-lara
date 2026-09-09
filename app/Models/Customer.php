@@ -24,6 +24,8 @@ class Customer extends Model
         'member_code',
         'is_member',
         'member_level',
+        'tier',
+        'tier_discount',
         'points',
         'total_spent',
         'total_transactions',
@@ -41,6 +43,8 @@ class Customer extends Model
             'total_spent' => 'decimal:2',
 
             'total_transactions' => 'integer',
+
+            'tier_discount' => 'decimal:2',
 
             'joined_at' => 'date',
         ];
@@ -199,6 +203,51 @@ class Customer extends Model
                 }
             }
         );
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | GENERATE MEMBER CODE
+    |--------------------------------------------------------------------------
+    */
+
+    /*
+    |--------------------------------------------------------------------------
+    | TIER BENEFITS
+    |--------------------------------------------------------------------------
+    */
+
+    public static function getTierDiscounts(): array
+    {
+        return [
+            'bronze' => 0,
+            'silver' => 5,
+            'gold' => 10,
+            'platinum' => 15,
+        ];
+    }
+
+    public function getTierDiscountPercent(): float
+    {
+        return self::getTierDiscounts()[$this->tier] ?? 0;
+    }
+
+    public function calculateDiscount(float $amount): float
+    {
+        $discountPercent = $this->getTierDiscountPercent();
+
+        return $amount * ($discountPercent / 100);
+    }
+
+    public function getTierBadgeColor(): string
+    {
+        return match ($this->tier) {
+            'bronze' => 'amber',
+            'silver' => 'gray',
+            'gold' => 'yellow',
+            'platinum' => 'sky',
+            default => 'gray',
+        };
     }
 
     /*

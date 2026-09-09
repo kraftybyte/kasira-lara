@@ -8,11 +8,14 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Tenant;
 use BackedEnum;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Pagination\Paginator;
 use Illuminate\Http\Response;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use UnitEnum;
 
@@ -83,12 +86,12 @@ class SalesReport extends Page
         return Carbon::parse($this->endDate)->endOfDay();
     }
 
-    public function getSalesProperty(): \Illuminate\Contracts\Pagination\Paginator
+    public function getSalesProperty(): Paginator
     {
         $tenant = $this->tenant;
 
         if (! $tenant) {
-            return new \Illuminate\Pagination\LengthAwarePaginator([], 0, 25);
+            return new LengthAwarePaginator([], 0, 25);
         }
 
         $query = Sale::query()
@@ -96,11 +99,13 @@ class SalesReport extends Page
             ->whereBetween('created_at', [
                 $this->getStartDateTime(),
                 $this->getEndDateTime(),
-            ])
-            ->where('status', 'completed');
+            ]);
 
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
+        } else {
+            // Default: show completed sales only
+            $query->where('status', 'completed');
         }
 
         if ($this->paymentMethodFilter) {
@@ -157,13 +162,14 @@ class SalesReport extends Page
         if ($count === 0) {
             return 0;
         }
+
         return $this->totalRevenue / $count;
     }
 
     public function getTotalProfitProperty(): float
     {
         $tenant = $this->tenant;
-        if (!$tenant) {
+        if (! $tenant) {
             return 0;
         }
 
@@ -173,14 +179,15 @@ class SalesReport extends Page
         }
 
         // Calculate profit from sale items
-        $totalCost = \App\Models\SaleItem::query()
+        $totalCost = SaleItem::query()
             ->whereIn('sale_id', $saleIds)
             ->get()
             ->sum(function ($item) {
                 $product = $item->product;
-                if (!$product) {
+                if (! $product) {
                     return 0;
                 }
+
                 // Cost = product cost_price * quantity
                 return (float) $product->cost_price * (float) $item->quantity;
             });
@@ -193,17 +200,18 @@ class SalesReport extends Page
         if ($this->totalRevenue <= 0) {
             return 0;
         }
+
         return ($this->totalProfit / $this->totalRevenue) * 100;
     }
 
     public function exportToPdf(): Response
     {
         $tenant = $this->tenant;
-        if (!$tenant) {
+        if (! $tenant) {
             return response()->json(['error' => 'Tenant not found'], 400);
         }
 
-        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('reports.sales-pdf', [
+        $pdf = Pdf::loadView('reports.sales-pdf', [
             'tenant' => $tenant,
             'dateRange' => $this->dateRange,
             'startDate' => $this->startDate,

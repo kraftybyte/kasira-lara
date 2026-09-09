@@ -63,7 +63,7 @@ class OrderDetailsModal extends Component
 
         $this->orders = Sale::query()
             ->where('table_id', $this->selectedTableId)
-            ->whereIn('status', ['open', 'pending', 'completed'])
+            ->whereIn('status', ['open', 'pending', 'preparing', 'ready', 'completed'])
             ->with(['items.product'])
             ->orderByDesc('created_at')
             ->get()
@@ -72,10 +72,20 @@ class OrderDetailsModal extends Component
                     return $item->product && $item->product->rate_type === 'duration';
                 });
 
+                // Determine display status
+                $displayStatus = match ($sale->status) {
+                    'open', 'pending' => $sale->served_at ? 'served' : 'pending',
+                    'preparing' => 'preparing',
+                    'ready' => 'ready',
+                    'completed' => $sale->served_at ? 'served' : 'ready',
+                    default => 'pending',
+                };
+
                 return [
                     'id' => $sale->id,
                     'invoice_number' => $sale->invoice_number,
                     'status' => $sale->status,
+                    'display_status' => $displayStatus,
                     'payment_method' => $sale->payment_method,
                     'grand_total' => (float) $sale->grand_total,
                     'served_at' => $sale->served_at?->toIso8601String(),
