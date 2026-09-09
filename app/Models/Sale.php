@@ -32,6 +32,13 @@ class Sale extends Model
         'change_amount',
         'served_at',
         'notes',
+
+        // Paywuz fields
+        'paywuz_transaction_id',
+        'paywuz_qr_url',
+        'paywuz_status',
+        'payment_status',
+        'paid_at',
     ];
 
     protected function casts(): array
@@ -47,6 +54,7 @@ class Sale extends Model
             'cancelled_at' => 'datetime',
             'started_at' => 'datetime',
             'served_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 

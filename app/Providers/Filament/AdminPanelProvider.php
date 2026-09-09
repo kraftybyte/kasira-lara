@@ -2,11 +2,13 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Settings\TenantSettings;
 use App\Models\Tenant;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
 use Filament\Http\Middleware\DispatchServingFilamentEvent;
+use Filament\Http\Middleware\IdentifyTenant;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
@@ -16,12 +18,30 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use Spatie\Permission\Middleware\RoleMiddleware;
-use Spatie\Permission\Middleware\PermissionMiddleware;
+use ReflectionClass;
 
 class AdminPanelProvider extends PanelProvider
 {
+    public function boot(): void
+    {
+        // Super admin and owner bypasses all permission checks
+        Gate::before(function ($user, $ability) {
+            if ($user && ($user->hasRole('super_admin') || $user->hasRole('owner'))) {
+                return true;
+            }
+        });
+
+        // Set navigation icon for TenantSettings via static method
+        TenantSettings::navigationIcon('heroicon-o-cog-6-tooth');
+
+        // Set navigation sort using reflection
+        $reflection = new ReflectionClass(TenantSettings::class);
+        $prop = $reflection->getProperty('navigationSort');
+        $prop->setValue(null, 10);
+    }
+
     public function panel(Panel $panel): Panel
     {
         return $panel
@@ -41,7 +61,6 @@ class AdminPanelProvider extends PanelProvider
                 'primary' => Color::hex('#EF4444'),
             ])
 
-            // Spatie Permission middleware
             ->topNavigation(false)
 
             ->discoverResources(
@@ -53,6 +72,10 @@ class AdminPanelProvider extends PanelProvider
                 in: app_path('Filament/Pages'),
                 for: 'App\Filament\Pages'
             )
+
+            ->pages([
+                TenantSettings::class,
+            ])
 
             ->discoverWidgets(
                 in: app_path('Filament/Widgets'),
@@ -77,8 +100,8 @@ class AdminPanelProvider extends PanelProvider
 
             ->authMiddleware([
                 Authenticate::class,
+                IdentifyTenant::class,
             ]);
 
     }
 }
-

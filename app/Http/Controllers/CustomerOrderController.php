@@ -8,8 +8,10 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
 use App\Models\Tenant;
+use App\Services\PaywuzService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 
 class CustomerOrderController extends Controller
 {
@@ -94,31 +96,31 @@ class CustomerOrderController extends Controller
             ];
         }
 
-        // Generate unique invoice number using timestamp + random
+        // Generate unique invoice number
         $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(md5(uniqid()), 0, 6));
 
-        // For instant payment (QRIS/Transfer), mark as paid but pending kitchen preparation
-        // Kitchen will mark as preparing → ready → completed
-        // Cash orders also start as pending for kitchen
-        $isInstantPayment = in_array($validatedPayment['payment_method'], ['qris', 'transfer']);
-        $saleStatus = 'pending';
+        // For QRIS payment, create Paywuz transaction first
+        if ($validatedPayment['payment_method'] === 'qris') {
+            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $grandTotal, $saleItems);
+        }
 
-        // Create order/sale
+        // For other payment methods, create pending order
         $sale = Sale::create([
             'tenant_id' => $tenant->id,
             'table_id' => $table->id,
             'user_id' => Auth::id(),
             'invoice_number' => $invoiceNumber,
             'customer_name' => $request->input('customer_name', 'Customer'),
-            'status' => $saleStatus,
+            'status' => 'pending',
             'payment_method' => $validatedPayment['payment_method'],
             'notes' => $request->input('notes'),
             'subtotal' => $grandTotal,
             'tax' => 0,
             'discount' => 0,
             'grand_total' => $grandTotal,
-            'paid_amount' => $isInstantPayment ? $grandTotal : 0,
+            'paid_amount' => 0,
             'change_amount' => 0,
+            'payment_status' => 'pending',
         ]);
 
         // Create sale items
@@ -126,27 +128,117 @@ class CustomerOrderController extends Controller
             SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
         }
 
-        // Update table status if needed
+        // Update table status
         if ($table->status === 'available') {
             $table->update(['status' => 'active']);
         }
 
-        // For instant payment (QRIS/Transfer), go directly to success
-        // For Cash, redirect to payment page
-        if ($isInstantPayment) {
-            return redirect()->route('customer.order.success', [
-                'tenant' => $tenant->slug ?? $tenant->id,
-                'table' => $table->id,
-                'sale' => $sale->id,
-            ])->with('success', 'Pembayaran berhasil!');
-        }
-
-        // Redirect to payment page for Cash
         return redirect()->route('customer.order.payment', [
             'tenant' => $tenant->slug ?? $tenant->id,
             'table' => $table->id,
             'sale' => $sale->id,
         ]);
+    }
+
+    /**
+     * Process QRIS payment via Paywuz
+     */
+    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $grandTotal, array $saleItems)
+    {
+        $paywuz = new PaywuzService;
+
+        // Create Paywuz dynamic QR
+        $response = $paywuz->createDynamicQr(
+            $invoiceNumber,
+            $grandTotal,
+            config('services.paywuz.merchant_name', 'KasirAja')
+        );
+
+        Log::info('Paywuz QR Response', $response);
+
+        // Check if Paywuz is configured
+        if (! $paywuz->isConfigured()) {
+            // Paywuz not configured, create order without payment
+            $sale = Sale::create([
+                'tenant_id' => $tenant->id,
+                'table_id' => $table->id,
+                'user_id' => Auth::id(),
+                'invoice_number' => $invoiceNumber,
+                'customer_name' => $request->input('customer_name', 'Customer'),
+                'status' => 'pending',
+                'payment_method' => 'qris',
+                'notes' => $request->input('notes'),
+                'subtotal' => $grandTotal,
+                'tax' => 0,
+                'discount' => 0,
+                'grand_total' => $grandTotal,
+                'paid_amount' => 0,
+                'change_amount' => 0,
+                'payment_status' => 'pending',
+            ]);
+
+            foreach ($saleItems as $item) {
+                SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+            }
+
+            if ($table->status === 'available') {
+                $table->update(['status' => 'active']);
+            }
+
+            return redirect()->route('customer.order.payment', [
+                'tenant' => $tenant->slug ?? $tenant->id,
+                'table' => $table->id,
+                'sale' => $sale->id,
+            ])->with('warning', 'Paywuz belum dikonfigurasi. Silakan bayar di kasir.');
+        }
+
+        // Check if Paywuz returned success
+        if (isset($response['success']) && $response['success']) {
+            // Create sale with Paywuz transaction ID
+            $sale = Sale::create([
+                'tenant_id' => $tenant->id,
+                'table_id' => $table->id,
+                'user_id' => Auth::id(),
+                'invoice_number' => $invoiceNumber,
+                'customer_name' => $request->input('customer_name', 'Customer'),
+                'status' => 'pending',
+                'payment_method' => 'qris',
+                'notes' => $request->input('notes'),
+                'subtotal' => $grandTotal,
+                'tax' => 0,
+                'discount' => 0,
+                'grand_total' => $grandTotal,
+                'paid_amount' => 0,
+                'change_amount' => 0,
+                'paywuz_transaction_id' => $response['data']['transaction_id'] ?? null,
+                'paywuz_qr_url' => $response['data']['qr_url'] ?? $response['data']['qr_string'] ?? null,
+                'paywuz_status' => 'pending',
+                'payment_status' => 'pending',
+            ]);
+
+            // Create sale items
+            foreach ($saleItems as $item) {
+                SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+            }
+
+            // Update table status
+            if ($table->status === 'available') {
+                $table->update(['status' => 'active']);
+            }
+
+            // Redirect to payment page with QR
+            return redirect()->route('customer.order.payment', [
+                'tenant' => $tenant->slug ?? $tenant->id,
+                'table' => $table->id,
+                'sale' => $sale->id,
+            ]);
+        }
+
+        // Paywuz error
+        Log::error('Paywuz QR Creation Failed', $response);
+
+        return redirect()->back()
+            ->with('error', 'Gagal membuat QR payment: '.($response['message'] ?? 'Unknown error'));
     }
 
     public function payment(string $tenantSlug, Table $table, Sale $sale)
@@ -157,10 +249,33 @@ class CustomerOrderController extends Controller
             abort(404);
         }
 
+        // Check if already paid
+        if ($sale->status === 'completed' || $sale->payment_status === 'paid') {
+            return redirect()->route('customer.order.success', [
+                'tenant' => $tenant->slug ?? $tenant->id,
+                'table' => $table->id,
+                'sale' => $sale->id,
+            ]);
+        }
+
+        // Get QR data if Paywuz transaction exists
+        $qrData = null;
+        if ($sale->paywuz_transaction_id && $sale->payment_method === 'qris') {
+            $paywuz = new PaywuzService;
+
+            // If no qr_url stored, try to get it
+            if (! $sale->paywuz_qr_url) {
+                $qrData = $sale->paywuz_qr_url;
+            } else {
+                $qrData = $sale->paywuz_qr_url;
+            }
+        }
+
         return view('customer.payment', [
             'tenant' => $tenant,
             'table' => $table,
             'sale' => $sale,
+            'qrData' => $qrData,
         ]);
     }
 
@@ -169,17 +284,101 @@ class CustomerOrderController extends Controller
         $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
 
         if ($table->tenant_id !== $tenant->id || $sale->table_id !== $table->id) {
+            if ($request->expectsJson()) {
+                return response()->json(['success' => false, 'message' => 'Not found'], 404);
+            }
             abort(404);
         }
 
-        // Update sale status to completed
-        $sale->update(['status' => 'completed']);
+        // Check if already paid
+        if ($sale->payment_status === 'paid' || $sale->status === 'completed') {
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'redirect' => route('customer.order.success', [
+                        'tenant' => $tenant->slug ?? $tenant->id,
+                        'table' => $table->id,
+                        'sale' => $sale->id,
+                    ]),
+                ]);
+            }
 
-        return redirect()->route('customer.order.success', [
+            return redirect()->route('customer.order.success', [
+                'tenant' => $tenant->slug ?? $tenant->id,
+                'table' => $table->id,
+                'sale' => $sale->id,
+            ]);
+        }
+
+        // Check payment status via Paywuz if transaction exists
+        if ($sale->paywuz_transaction_id) {
+            $paywuz = new PaywuzService;
+            $status = $paywuz->inquiry($sale->paywuz_transaction_id);
+
+            if (isset($status['data']['status'])) {
+                $paywuzStatus = $status['data']['status'];
+
+                // Update local status
+                $sale->update([
+                    'paywuz_status' => $paywuzStatus,
+                ]);
+
+                if ($paywuzStatus === 'success') {
+                    $sale->update([
+                        'status' => 'completed',
+                        'payment_status' => 'paid',
+                        'paid_at' => now(),
+                    ]);
+
+                    if ($table->status === 'active') {
+                        $table->update(['status' => 'available']);
+                    }
+
+                    $redirectUrl = route('customer.order.success', [
+                        'tenant' => $tenant->slug ?? $tenant->id,
+                        'table' => $table->id,
+                        'sale' => $sale->id,
+                    ]);
+
+                    if ($request->expectsJson()) {
+                        return response()->json(['success' => true, 'redirect' => $redirectUrl]);
+                    }
+
+                    return redirect($redirectUrl)->with('success', 'Pembayaran berhasil!');
+                }
+
+                if ($paywuzStatus === 'expired' || $paywuzStatus === 'failed') {
+                    if ($request->expectsJson()) {
+                        return response()->json(['success' => false, 'message' => 'Payment expired atau failed'], 400);
+                    }
+
+                    return redirect()->back()->with('error', 'Payment expired atau failed. Silakan coba lagi.');
+                }
+            }
+        }
+
+        // If no Paywuz, mark as completed (cash/manual)
+        $sale->update([
+            'status' => 'completed',
+            'payment_status' => 'paid',
+            'paid_at' => now(),
+        ]);
+
+        if ($table->status === 'active') {
+            $table->update(['status' => 'available']);
+        }
+
+        $redirectUrl = route('customer.order.success', [
             'tenant' => $tenant->slug ?? $tenant->id,
             'table' => $table->id,
             'sale' => $sale->id,
-        ])->with('success', 'Pembayaran berhasil!');
+        ]);
+
+        if ($request->expectsJson()) {
+            return response()->json(['success' => true, 'redirect' => $redirectUrl]);
+        }
+
+        return redirect($redirectUrl)->with('success', 'Pembayaran berhasil!');
     }
 
     public function success(string $tenantSlug, Table $table, Sale $sale)

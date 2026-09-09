@@ -96,7 +96,7 @@
         @endif
 
         {{-- Products Page --}}
-        <div id="menu-page" class="flex-1 overflow-y-auto px-4 py-4">
+        <div id="menu-page" class="flex-1 overflow-y-auto px-4 py-4 pb-28">
             @forelse($products as $categoryId => $items)
                 @php $category = $items->first()->category @endphp
                 <div class="product-category mb-6" data-category="{{ $categoryId }}">
@@ -121,11 +121,18 @@
                                         @endif
                                         <div class="flex items-center justify-between mt-2">
                                             <span class="font-bold text-primary">Rp {{ number_format($product->selling_price, 0, ',', '.') }}</span>
-                                            <button onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->selling_price }})" class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90">
-                                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-                                                </svg>
-                                            </button>
+                                            <div class="flex items-center gap-2">
+                                                @if($product->modifiers->count() > 0)
+                                                    <button type="button" onclick="event.stopPropagation(); openModifierModal({{ $product->id }});" class="px-3 py-1.5 text-xs font-medium text-white bg-gradient-to-r from-orange-500 to-amber-500 rounded-lg hover:from-orange-600 hover:to-amber-600 transition-all shadow-sm">
+                                                        Custom
+                                                    </button>
+                                                @endif
+                                                <button type="button" onclick="addToCart({{ $product->id }}, '{{ addslashes($product->name) }}', {{ $product->selling_price }})" class="w-8 h-8 rounded-full bg-primary text-white flex items-center justify-center hover:bg-red-600 transition-all active:scale-90">
+                                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                                    </svg>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -146,7 +153,7 @@
         </div>
 
         {{-- Cart Page --}}
-        <div id="cart-page" class="hidden flex-1 overflow-y-auto">
+        <div id="cart-page" class="hidden flex-1 overflow-y-auto pb-32">
             <div class="p-4">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Keranjang Belanja</h2>
 
@@ -243,17 +250,213 @@
 
     </div>
 
+    {{-- Modifier Modal --}}
+    <div id="modifier-modal" class="fixed inset-0 hidden" style="z-index: 9999;">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" onclick="closeModifierModal()"></div>
+        <div class="absolute bottom-0 left-0 right-0 bg-white rounded-t-3xl max-h-[85vh] flex flex-col" style="max-height: 85vh;">
+            <div class="sticky top-0 bg-white px-4 py-3 border-b border-gray-100 flex items-center justify-between z-10">
+                <div>
+                    <h3 class="text-lg font-bold text-gray-900">Pilih Customisasi</h3>
+                    <p id="modifier-product-name" class="text-sm text-gray-500"></p>
+                </div>
+                <button onclick="closeModifierModal()" class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200">
+                    <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
+            <div id="modifier-content" class="flex-1 overflow-y-auto p-4" style="overflow-y: auto;">
+                {{-- Modifiers will be rendered here --}}
+            </div>
+            <div class="sticky bottom-0 bg-white px-4 py-3 border-t border-gray-100 z-10">
+                <button type="button" onclick="addToCartWithModifiers()" class="w-full py-3.5 bg-gradient-to-r from-red-500 to-orange-500 text-white font-semibold rounded-xl shadow-lg">
+                    Tambah ke Keranjang
+                </button>
+            </div>
+        </div>
+    </div>
+
     <script>
         // Cart state
         let cart = [];
         let currentPage = 'menu';
+        let currentModifierProduct = null;
+        let selectedModifiers = [];
+
+        // Product modifiers data
+        const productModifiers = {};
+        @foreach($products as $categoryId => $items)
+            @foreach($items as $product)
+                @if($product->modifiers->count() > 0)
+                    productModifiers[{{ $product->id }}] = {
+                        name: '{{ addslashes($product->name) }}',
+                        price: {{ $product->selling_price }},
+                        modifiers: [
+                            @foreach($product->modifiers as $mod)
+                                {id: {{ $mod->id }}, name: '{{ addslashes($mod->name) }}', type: '{{ $mod->type }}', price: {{ $mod->price_adjustment }}},
+                            @endforeach
+                        ]
+                    };
+                @endif
+            @endforeach
+        @endforeach
+
+        function openModifierModal(productId) {
+            // Get the modal element
+            var modal = document.getElementById('modifier-modal');
+            var contentDiv = document.getElementById('modifier-content');
+            var nameDiv = document.getElementById('modifier-product-name');
+
+            // Find product data
+            var productData = null;
+            for (var key in productModifiers) {
+                if (parseInt(key) === productId) {
+                    productData = productModifiers[key];
+                    break;
+                }
+            }
+
+            if (!productData) {
+                alert('Tidak ada customisasi untuk produk ini');
+                return;
+            }
+
+            nameDiv.textContent = productData.name;
+
+            // Build HTML
+            var html = '';
+
+            // Addon modifiers
+            var addons = productData.modifiers.filter(function(m) { return m.type === 'addon'; });
+            if (addons.length > 0) {
+                html += '<div class="mb-4"><h4 class="text-sm font-semibold text-gray-700 mb-2">Extra (Tambah Harga)</h4>';
+                addons.forEach(function(mod) {
+                    html += '<label class="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 mb-2">';
+                    html += '<div class="flex items-center gap-3">';
+                    html += '<input type="checkbox" id="mod-' + mod.id + '" value="' + mod.id + '" onclick="toggleModifier(' + mod.id + ', ' + mod.price + ')" class="w-5 h-5 rounded border-gray-300" style="accent-color: #EF4444;">';
+                    html += '<span class="text-gray-900">' + mod.name + '</span></div>';
+                    html += '<span class="text-sm font-medium text-red-500">+ Rp ' + mod.price.toLocaleString('id-ID') + '</span></label>';
+                });
+                html += '</div>';
+            }
+
+            // Option modifiers
+            var options = productData.modifiers.filter(function(m) { return m.type === 'option'; });
+            if (options.length > 0) {
+                html += '<div><h4 class="text-sm font-semibold text-gray-700 mb-2">Pilihan</h4>';
+                options.forEach(function(mod) {
+                    html += '<label class="flex items-center justify-between p-3 bg-gray-50 rounded-xl cursor-pointer hover:bg-gray-100 mb-2">';
+                    html += '<div class="flex items-center gap-3">';
+                    html += '<input type="radio" name="option_modifier" value="' + mod.id + '" onclick="selectOption(' + mod.id + ', ' + mod.price + ', \'' + mod.name.replace(/'/g, "\\'") + '\')" class="w-5 h-5 border-gray-300" style="accent-color: #EF4444;">';
+                    html += '<span class="text-gray-900">' + mod.name + '</span></div>';
+                    if (mod.price > 0) {
+                        html += '<span class="text-sm font-medium text-red-500">+ Rp ' + mod.price.toLocaleString('id-ID') + '</span>';
+                    }
+                    html += '</label>';
+                });
+                html += '</div>';
+            }
+
+            contentDiv.innerHTML = html;
+            currentModifierProduct = productId;
+            selectedModifiers = [];
+            selectedOption = null;
+
+            // Show modal
+            modal.classList.remove('hidden');
+        }
+
+        function closeModifierModal() {
+            var modal = document.getElementById('modifier-modal');
+            if (modal) {
+                modal.classList.add('hidden');
+            }
+            currentModifierProduct = null;
+            selectedModifiers = [];
+            selectedOption = null;
+        }
+
+        function toggleModifier(modId, price) {
+            var idx = -1;
+            for (var i = 0; i < selectedModifiers.length; i++) {
+                if (selectedModifiers[i].id === modId) {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx > -1) {
+                selectedModifiers.splice(idx, 1);
+            } else {
+                selectedModifiers.push({ id: modId, price: price });
+            }
+        }
+
+        var selectedOption = null;
+        function selectOption(modId, price, name) {
+            selectedOption = { id: modId, price: price, name: name };
+        }
+
+        function addToCartWithModifiers() {
+            if (!currentModifierProduct) {
+                alert('Pilih produk terlebih dahulu');
+                return;
+            }
+
+            var productData = null;
+            for (var key in productModifiers) {
+                if (parseInt(key) === currentModifierProduct) {
+                    productData = productModifiers[key];
+                    break;
+                }
+            }
+
+            if (!productData) return;
+
+            // Add selected option if exists
+            if (selectedOption) {
+                selectedModifiers.push({ id: selectedOption.id, price: selectedOption.price, name: selectedOption.name });
+            }
+
+            // Calculate total price with modifiers
+            var modifierTotal = 0;
+            for (var i = 0; i < selectedModifiers.length; i++) {
+                modifierTotal += selectedModifiers[i].price;
+            }
+            var finalPrice = productData.price + modifierTotal;
+
+            // Check if product already in cart
+            var existing = null;
+            for (var i = 0; i < cart.length; i++) {
+                if (cart[i].id === currentModifierProduct) {
+                    existing = cart[i];
+                    break;
+                }
+            }
+
+            if (existing) {
+                existing.quantity++;
+                existing.price = finalPrice;
+                existing.modifiers = selectedModifiers.slice();
+            } else {
+                cart.push({
+                    id: currentModifierProduct,
+                    name: productData.name,
+                    price: finalPrice,
+                    quantity: 1,
+                    modifiers: selectedModifiers.slice()
+                });
+            }
+
+            updateCartUI();
+            closeModifierModal();
+        }
 
         function addToCart(productId, name, price) {
             const existing = cart.find(item => item.id === productId);
             if (existing) {
                 existing.quantity++;
             } else {
-                cart.push({ id: productId, name: name, price: price, quantity: 1 });
+                cart.push({ id: productId, name: name, price: price, quantity: 1, modifiers: [] });
             }
             updateCartUI();
 
@@ -310,7 +513,8 @@
             badge.textContent = totalQty;
             itemsInput.value = JSON.stringify(cart.map(item => ({
                 product_id: item.id,
-                quantity: item.quantity
+                quantity: item.quantity,
+                modifiers: item.modifiers || []
             })));
 
             if (paymentSection) paymentSection.classList.remove('hidden');
@@ -355,10 +559,15 @@
             }
 
             emptyCart.classList.add('hidden');
-            container.innerHTML = cart.map(item => `
+            container.innerHTML = cart.map(item => {
+                const modText = item.modifiers && item.modifiers.length > 0
+                    ? '<p class="text-xs text-gray-500 mt-1">' + item.modifiers.map(m => m.name || 'Custom').join(', ') + '</p>'
+                    : '';
+                return `
                 <div class="flex items-center gap-3 bg-white border border-gray-100 rounded-xl p-3">
                     <div class="flex-1">
                         <p class="font-semibold text-gray-900">${item.name}</p>
+                        ${modText}
                         <p class="text-sm text-primary font-medium">Rp ${item.price.toLocaleString('id-ID')}</p>
                     </div>
                     <div class="flex items-center gap-2">
@@ -379,7 +588,7 @@
                         <button onclick="removeFromCart(${item.id})" class="text-xs text-red-500 hover:underline">Hapus</button>
                     </div>
                 </div>
-            `).join('');
+            `}).join('');
         }
 
         function submitOrder() {

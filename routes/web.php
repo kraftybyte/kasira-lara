@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\CustomerOrderController;
+use App\Http\Controllers\PaywuzWebhookController;
 use App\Http\Controllers\ReceiptController;
 use Illuminate\Support\Facades\Route;
 
@@ -50,3 +51,15 @@ Route::middleware(['auth'])
         [ReceiptController::class, 'show']
     )
     ->name('receipt.show');
+
+/*
+|--------------------------------------------------------------------------
+| Paywuz Webhook
+|--------------------------------------------------------------------------
+|
+| Endpoint untuk menerima notifikasi pembayaran dari paywuz.id
+|
+*/
+
+Route::post('/webhook/paywuz', [PaywuzWebhookController::class, 'handle'])
+    ->name('webhook.paywuz');
