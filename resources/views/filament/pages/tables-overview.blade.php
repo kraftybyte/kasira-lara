@@ -62,6 +62,68 @@
         </div>
     </div>
 
+    {{-- Today's Reservations --}}
+    @if($this->todayReservations->isNotEmpty())
+        <div class="mb-8">
+            <div class="mb-4 flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white">
+                    <x-heroicon-o-calendar class="h-5 w-5" />
+                </div>
+                <h2 class="text-xl font-bold text-gray-900 dark:text-white">Reservasi Hari Ini</h2>
+                <span class="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                    {{ $this->todayReservations->count() }}
+                </span>
+            </div>
+
+            <div class="space-y-3">
+                @foreach($this->todayReservations as $reservation)
+                    <div class="card-hover flex items-center justify-between p-4">
+                        <div class="flex items-center gap-4">
+                            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                                <x-heroicon-o-user-group class="h-6 w-6" />
+                            </div>
+                            <div>
+                                <p class="text-base font-bold text-gray-900 dark:text-white">{{ $reservation->customer_name }}</p>
+                                <p class="text-sm text-gray-500">
+                                    {{ $reservation->table?->name ?? 'Meja belum ditentukan' }} &bull;
+                                    {{ $reservation->guest_count }} orang &bull;
+                                    {{ \Carbon\Carbon::parse($reservation->reservation_time)->format('H:i') }} WIB
+                                </p>
+                                @if($reservation->customer_phone)
+                                    <p class="text-xs text-gray-400">{{ $reservation->customer_phone }}</p>
+                                @endif
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            @if($reservation->status === 'pending')
+                                <button wire:click="confirmReservation({{ $reservation->id }})"
+                                    class="btn btn-secondary btn-sm">
+                                    <x-heroicon-o-check class="h-4 w-4" />
+                                    Konfirmasi
+                                </button>
+                            @endif
+                            @if($reservation->table && $reservation->table->status === 'available')
+                                <button wire:click="seatReservation({{ $reservation->id }})"
+                                    class="btn btn-primary btn-sm">
+                                    <x-heroicon-o-arrow-right-end-on-rectangle class="h-4 w-4" />
+                                    Tempatkan
+                                </button>
+                            @elseif($reservation->table && $reservation->table->status !== 'available')
+                                <span class="rounded-full bg-red-100 px-3 py-1 text-xs font-medium text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                                    Meja terpakai
+                                </span>
+                            @endif
+                            <button wire:click="cancelReservation({{ $reservation->id }})"
+                                class="btn btn-ghost btn-sm text-red-500 hover:bg-red-50">
+                                <x-heroicon-o-x-mark class="h-4 w-4" />
+                            </button>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
+
     {{-- Tables Grid --}}
     <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
 

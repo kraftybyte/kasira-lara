@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Product;
+use App\Models\ProductModifier;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
@@ -22,7 +23,7 @@ class CustomerOrderController extends Controller
 
         $products = Product::where('tenant_id', $tenant->id)
             ->where('is_active', true)
-            ->with('category')
+            ->with(['category', 'modifiers'])
             ->orderBy('name')
             ->get()
             ->groupBy('category_id');
@@ -63,7 +64,21 @@ class CustomerOrderController extends Controller
         foreach ($items as $item) {
             $product = Product::findOrFail($item['product_id']);
 
-            $itemTotal = $product->selling_price * $item['quantity'];
+            // Calculate modifier total
+            $modifierTotal = 0;
+            $itemModifiers = [];
+            if (! empty($item['modifiers'])) {
+                foreach ($item['modifiers'] as $modId) {
+                    $modifier = ProductModifier::find($modId);
+                    if ($modifier) {
+                        $modifierTotal += (float) $modifier->price_adjustment;
+                        $itemModifiers[] = $modifier;
+                    }
+                }
+            }
+
+            $baseTotal = $product->selling_price * $item['quantity'];
+            $itemTotal = $baseTotal + ($modifierTotal * $item['quantity']);
             $grandTotal += $itemTotal;
 
             $saleItems[] = [
@@ -82,10 +97,11 @@ class CustomerOrderController extends Controller
         // Generate unique invoice number using timestamp + random
         $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(md5(uniqid()), 0, 6));
 
-        // For QRIS and Transfer, payment is already received - set to completed
-        // For Cash, keep as pending (needs collection at POS)
+        // For instant payment (QRIS/Transfer), mark as paid but pending kitchen preparation
+        // Kitchen will mark as preparing → ready → completed
+        // Cash orders also start as pending for kitchen
         $isInstantPayment = in_array($validatedPayment['payment_method'], ['qris', 'transfer']);
-        $saleStatus = $isInstantPayment ? 'completed' : 'pending';
+        $saleStatus = 'pending';
 
         // Create order/sale
         $sale = Sale::create([

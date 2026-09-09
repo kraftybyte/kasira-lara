@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages\Tables;
 
+use App\Models\Reservation;
 use App\Models\Sale;
 use App\Models\Table;
 use BackedEnum;
@@ -54,6 +55,44 @@ class TablesOverview extends Page
     public function reservedTables(): Collection
     {
         return $this->tables->where('status', 'reserved');
+    }
+
+    #[Computed]
+    public function todayReservations(): Collection
+    {
+        $tenant = filament()->getTenant();
+
+        if (! $tenant) {
+            return collect();
+        }
+
+        return Reservation::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('reservation_date', now()->toDateString())
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->with('table')
+            ->orderBy('reservation_time')
+            ->get();
+    }
+
+    #[Computed]
+    public function upcomingReservations(): Collection
+    {
+        $tenant = filament()->getTenant();
+
+        if (! $tenant) {
+            return collect();
+        }
+
+        return Reservation::query()
+            ->where('tenant_id', $tenant->id)
+            ->where('reservation_date', '>', now()->toDateString())
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->with('table')
+            ->orderBy('reservation_date')
+            ->orderBy('reservation_time')
+            ->limit(10)
+            ->get();
     }
 
     #[Computed]
@@ -126,6 +165,78 @@ class TablesOverview extends Page
             $sale->markAsUnserved();
             $this->reset('tableOrders');
         }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESERVATION ACTIONS
+    |--------------------------------------------------------------------------
+    */
+
+    public function seatReservation(int $reservationId): void
+    {
+        $reservation = Reservation::find($reservationId);
+
+        if (! $reservation) {
+            return;
+        }
+
+        // Update reservation status
+        $reservation->update(['status' => 'seated']);
+
+        // Update table status to active
+        if ($reservation->table_id) {
+            $table = Table::find($reservation->table_id);
+            if ($table && $table->status === 'available') {
+                $table->update(['status' => 'active']);
+            }
+        }
+
+        $this->reset('todayReservations');
+
+        Notification::make()
+            ->title('Tamu ditempatkan')
+            ->body("{$reservation->customer_name} sudah di tempatkan di meja {$reservation->table?->name}.")
+            ->success()
+            ->send();
+    }
+
+    public function confirmReservation(int $reservationId): void
+    {
+        $reservation = Reservation::find($reservationId);
+
+        if (! $reservation) {
+            return;
+        }
+
+        $reservation->update(['status' => 'confirmed']);
+
+        $this->reset('todayReservations');
+
+        Notification::make()
+            ->title('Reservasi dikonfirmasi')
+            ->body("Reservasi untuk {$reservation->customer_name} sudah dikonfirmasi.")
+            ->success()
+            ->send();
+    }
+
+    public function cancelReservation(int $reservationId): void
+    {
+        $reservation = Reservation::find($reservationId);
+
+        if (! $reservation) {
+            return;
+        }
+
+        $reservation->update(['status' => 'cancelled']);
+
+        $this->reset('todayReservations');
+
+        Notification::make()
+            ->title('Reservasi dibatalkan')
+            ->body("Reservasi untuk {$reservation->customer_name} sudah dibatalkan.")
+            ->warning()
+            ->send();
     }
 
     /*

@@ -14,8 +14,11 @@
                     </div>
                     <div>
                         @if($this->tableId === 'takeaway')
-                            <p class="text-lg font-bold text-gray-900 dark:text-white">🏠 Take Away</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">Take Away</p>
                             <p class="text-sm text-emerald-600 dark:text-emerald-400">Bawa Pulang</p>
+                        @elseif($this->reservation && $this->reservation->status !== 'seated')
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">Reservasi</p>
+                            <p class="text-sm text-emerald-600 dark:text-emerald-400">{{ $this->reservation->customer_name }} - {{ $this->reservation->guest_count }} orang</p>
                         @elseif($this->activeTableId)
                             <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $this->selectedTable?->name ?? 'Meja Aktif' }}</p>
                             <p class="text-sm text-emerald-600 dark:text-emerald-400">Bill sedang aktif</p>
@@ -26,6 +29,12 @@
                     </div>
                 </div>
                 <div class="flex items-center gap-2">
+                    @if($this->reservation && $this->reservation->status !== 'seated')
+                        <button type="button" wire:click="seatReservation" class="btn btn-primary btn-md">
+                            <x-heroicon-o-user-group class="h-4 w-4" />
+                            Tempatkan Tamu
+                        </button>
+                    @endif
                     @if($this->activeTableId)
                         <button type="button" wire:click="saveToTable" @disabled(empty($this->cart)) class="btn btn-outline-success btn-md">
                             <x-heroicon-o-check class="h-4 w-4" />
@@ -551,7 +560,9 @@
                                 @endif
                                 <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-lg border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white {{ $this->cartHasDurationProducts && !$tableId && $tableId !== 'takeaway' ? 'border-amber-400' : '' }}">
                                     <option value="">Pilih Meja</option>
+                                @if(!$this->cartHasDurationProducts)
                                     <option value="takeaway">Take Away / Bawa Pulang</option>
+                                @endif
                                     @foreach($this->tables as $table)
                                         <option value="{{ $table->id }}">{{ $table->name }}</option>
                                     @endforeach

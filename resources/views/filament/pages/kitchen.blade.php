@@ -52,9 +52,9 @@
         </div>
 
         @if($this->getPendingOrders()->isEmpty())
-            <div class="rounded-2xl border-2 border-dashed border-gray-200 bg-gray-50 p-16 text-center dark:border-gray-700 dark:bg-gray-800/50">
-                <x-heroicon-o-face-smile class="mx-auto h-16 w-16 text-gray-300" />
-                <p class="mt-4 text-lg font-medium text-gray-400">Tidak ada pesanan aktif</p>
+            <div class="rounded-2xl border border-gray-200 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800/50">
+                <x-heroicon-o-face-smile class="mx-auto h-12 w-12 text-gray-300" />
+                <p class="mt-4 text-sm font-medium text-gray-400">Tidak ada pesanan aktif</p>
             </div>
         @else
             <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
@@ -166,7 +166,7 @@
 
                         {{-- Action --}}
                         <div class="border-t border-gray-100 p-3">
-                            @if($order->status !== 'completed')
+                            @if($order->status !== 'completed' && $order->table_id)
                                 <a href="/admin/{{ $order->tenant_id ?? 1 }}/pos?table={{ $order->table_id }}"
                                     class="btn btn-primary btn-md mb-2 flex w-full items-center justify-center gap-2">
                                     <x-heroicon-o-credit-card class="h-4 w-4" />

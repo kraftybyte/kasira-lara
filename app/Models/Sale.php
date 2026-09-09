@@ -14,6 +14,7 @@ class Sale extends Model
         'table_id',
         'customer_id',
         'user_id',
+        'reservation_id',
         'invoice_number',
         'status',
         'started_at',
@@ -108,6 +109,17 @@ class Sale extends Model
     public function table(): BelongsTo
     {
         return $this->belongsTo(Table::class);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | RESERVATION
+    |--------------------------------------------------------------------------
+    */
+
+    public function reservation(): BelongsTo
+    {
+        return $this->belongsTo(Reservation::class);
     }
 
     /*

@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Customer;
 use App\Models\Payment;
 use App\Models\Product;
+use App\Models\ProductModifier;
+use App\Models\Reservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
@@ -89,15 +91,88 @@ class POS extends Page
 
     public ?string $tableId = null;
 
-    public ?int $activeTableId = null;
+    public ?string $activeTableId = null;
 
     public ?int $currentBillId = null;
 
     public ?int $selectedCategoryId = null;
 
+    public ?int $reservationId = null;
+
     public bool $showModifierModal = false;
 
     public ?int $modifierProductId = null;
+
+    public array $selectedModifiers = [];
+
+    public string $modifierNotes = '';
+
+    /*
+    |--------------------------------------------------------------------------
+    | MODIFIER MODAL
+    |--------------------------------------------------------------------------
+    */
+
+    public function openModifierModal(int $productId): void
+    {
+        $this->modifierProductId = $productId;
+        $this->showModifierModal = true;
+        $this->selectedModifiers = [];
+        $this->modifierNotes = '';
+    }
+
+    public function closeModifierModal(): void
+    {
+        $this->showModifierModal = false;
+        $this->modifierProductId = null;
+        $this->selectedModifiers = [];
+        $this->modifierNotes = '';
+    }
+
+    public function toggleModifier(array $modifier): void
+    {
+        $modifierId = $modifier['id'];
+
+        // Check if it's an option modifier (radio) - only one allowed
+        $modifierType = ProductModifier::find($modifierId)?->type ?? 'addon';
+
+        if ($modifierType === 'option') {
+            // Replace all option modifiers with this one
+            $this->selectedModifiers = [$modifier];
+        } else {
+            // Toggle addon modifier
+            $index = array_search($modifierId, array_column($this->selectedModifiers, 'id'));
+
+            if ($index !== false) {
+                unset($this->selectedModifiers[$index]);
+                $this->selectedModifiers = array_values($this->selectedModifiers);
+            } else {
+                $this->selectedModifiers[] = $modifier;
+            }
+        }
+    }
+
+    public function saveModifiers(): void
+    {
+        if (! $this->modifierProductId) {
+            $this->closeModifierModal();
+
+            return;
+        }
+
+        $product = Product::find($this->modifierProductId);
+
+        if (! $product) {
+            $this->closeModifierModal();
+
+            return;
+        }
+
+        // Add to cart with modifiers
+        $this->addToCart($product);
+
+        $this->closeModifierModal();
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -429,18 +504,6 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
-    public function openModifierModal(int $productId): void
-    {
-        $this->modifierProductId = $productId;
-        $this->showModifierModal = true;
-    }
-
-    public function closeModifierModal(): void
-    {
-        $this->showModifierModal = false;
-        $this->modifierProductId = null;
-    }
-
     public function openCheckout(): void
     {
         if (empty($this->cart)) {
@@ -465,6 +528,37 @@ class POS extends Page
 
             $this->paidAmount =
                 $this->total;
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | OPEN CHECKOUT FOR TAKE AWAY
+    |--------------------------------------------------------------------------
+    |
+    | Take Away orders go to Kitchen first before completion
+    |
+    */
+
+    public function openCheckoutForTakeAway(): void
+    {
+        if (empty($this->cart)) {
+
+            Notification::make()
+                ->title('Keranjang kosong')
+                ->warning()
+                ->send();
+
+            return;
+        }
+
+        $this->showCheckout = true;
+
+        // Set flag for Take Away
+        $this->activeTableId = 'takeaway';
+
+        if ($this->paymentMethod === 'cash') {
+            $this->paidAmount = $this->total;
         }
     }
 
@@ -810,14 +904,18 @@ class POS extends Page
 
                                 'tenant_id' => $tenantId,
 
+                                'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
+
                                 'customer_id' => $this->customerId
                                         ?: null,
+
+                                'reservation_id' => $this->reservationId,
 
                                 'user_id' => Auth::id(),
 
                                 'invoice_number' => $invoiceNumber,
 
-                                'status' => 'completed',
+                                'status' => $this->activeTableId === 'takeaway' ? 'open' : 'completed',
 
                                 'payment_method' => $this->paymentMethod,
 
@@ -1890,6 +1988,14 @@ class POS extends Page
             return;
         }
 
+        // Check for active reservation
+        $reservation = Reservation::where('table_id', $tableId)
+            ->whereIn('status', ['pending', 'confirmed'])
+            ->where('reservation_date', now()->toDateString())
+            ->first();
+
+        $this->reservationId = $reservation?->id;
+
         // Always check for unpaid orders (any status except completed)
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
@@ -1996,9 +2102,9 @@ class POS extends Page
             return;
         }
 
-        // Handle Take Away
+        // Handle Take Away - create order first (goes to Kitchen), then checkout
         if ($this->tableId === 'takeaway') {
-            $this->openCheckout();
+            $this->openCheckoutForTakeAway();
 
             return;
         }
@@ -2081,6 +2187,7 @@ class POS extends Page
                 'tenant_id' => $tenantId,
                 'table_id' => $this->tableId,
                 'customer_id' => $this->customerId,
+                'reservation_id' => $this->reservationId,
                 'user_id' => auth()->id(),
                 'invoice_number' => $invoiceNumber,
                 'status' => 'open',
@@ -2202,6 +2309,50 @@ class POS extends Page
 
     /*
     |--------------------------------------------------------------------------
+    | RESERVATION
+    |--------------------------------------------------------------------------
+    */
+
+    public function getReservationProperty(): ?Reservation
+    {
+        if (! $this->reservationId) {
+            return null;
+        }
+
+        return Reservation::find($this->reservationId);
+    }
+
+    public function seatReservation(): void
+    {
+        if (! $this->reservationId) {
+            return;
+        }
+
+        $reservation = Reservation::find($this->reservationId);
+
+        if (! $reservation) {
+            return;
+        }
+
+        // Update reservation status to seated
+        $reservation->update(['status' => 'seated']);
+
+        // Set customer info if available
+        if ($reservation->customer_id) {
+            $this->customerId = $reservation->customer_id;
+        }
+
+        $this->reservationId = null;
+
+        Notification::make()
+            ->title('Reservasi ditempatkan')
+            ->body("Tamu {$reservation->customer_name} sudah di tempatkan di meja ini.")
+            ->success()
+            ->send();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | CLEAR TABLE / RESET
     |--------------------------------------------------------------------------
     */
@@ -2211,6 +2362,7 @@ class POS extends Page
         $this->tableId = null;
         $this->activeTableId = null;
         $this->currentBillId = null;
+        $this->reservationId = null;
         $this->cart = [];
         $this->customerId = null;
         $this->paymentMethod = 'cash';
