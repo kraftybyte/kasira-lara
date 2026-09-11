@@ -166,13 +166,6 @@
 
                         {{-- Action --}}
                         <div class="border-t border-gray-100 p-3">
-                            @if($order->status !== 'completed' && $order->table_id)
-                                <a href="/admin/{{ $order->tenant_id ?? 1 }}/pos?table={{ $order->table_id }}"
-                                    class="btn btn-primary btn-md mb-2 flex w-full items-center justify-center gap-2">
-                                    <x-heroicon-o-credit-card class="h-4 w-4" />
-                                    Bayar Sekarang
-                                </a>
-                            @endif
                             <button wire:click="markAsCompleted({{ $order->id }})"
                                 class="btn btn-secondary btn-md w-full">
                                 <x-heroicon-o-hand-thumb-up class="h-4 w-4" />

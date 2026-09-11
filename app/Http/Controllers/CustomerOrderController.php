@@ -34,6 +34,8 @@ class CustomerOrderController extends Controller
             'tenant' => $tenant,
             'table' => $table,
             'products' => $products,
+            'completedSale' => null,
+            'pendingSale' => null,
         ]);
     }
 
@@ -330,7 +332,13 @@ class CustomerOrderController extends Controller
                         'paid_at' => now(),
                     ]);
 
-                    if ($table->status === 'active') {
+                    // Only set table to available if no more pending orders exist
+                    $hasPendingOrders = Sale::where('table_id', $table->id)
+                        ->where('id', '!=', $sale->id)
+                        ->where('status', '!=', 'completed')
+                        ->exists();
+
+                    if (! $hasPendingOrders && $table->status === 'active') {
                         $table->update(['status' => 'available']);
                     }
 
@@ -364,7 +372,13 @@ class CustomerOrderController extends Controller
             'paid_at' => now(),
         ]);
 
-        if ($table->status === 'active') {
+        // Only set table to available if no more pending orders exist
+        $hasPendingOrders = Sale::where('table_id', $table->id)
+            ->where('id', '!=', $sale->id)
+            ->where('status', '!=', 'completed')
+            ->exists();
+
+        if (! $hasPendingOrders && $table->status === 'active') {
             $table->update(['status' => 'available']);
         }
 

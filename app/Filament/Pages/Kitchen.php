@@ -35,7 +35,7 @@ class Kitchen extends Page
 
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->whereIn('status', ['open', 'pending', 'preparing'])
+            ->whereNotIn('status', ['completed', 'ready', 'cancelled'])
             ->with(['items', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -58,16 +58,25 @@ class Kitchen extends Page
 
     public function markAsPreparing(int $saleId): void
     {
-        Sale::where('id', $saleId)->update(['status' => 'preparing']);
+        $tenant = $this->getTenant();
+        Sale::where('id', $saleId)
+            ->where('tenant_id', $tenant?->id)
+            ->update(['status' => 'preparing']);
     }
 
     public function markAsReady(int $saleId): void
     {
-        Sale::where('id', $saleId)->update(['status' => 'ready']);
+        $tenant = $this->getTenant();
+        Sale::where('id', $saleId)
+            ->where('tenant_id', $tenant?->id)
+            ->update(['status' => 'ready']);
     }
 
     public function markAsCompleted(int $saleId): void
     {
-        Sale::where('id', $saleId)->update(['status' => 'completed']);
+        $tenant = $this->getTenant();
+        Sale::where('id', $saleId)
+            ->where('tenant_id', $tenant?->id)
+            ->update(['status' => 'completed']);
     }
 }

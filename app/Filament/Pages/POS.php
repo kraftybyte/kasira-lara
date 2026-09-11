@@ -11,6 +11,8 @@ use App\Models\Reservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
+use App\Models\TenantSetting;
+use App\Services\PaywuzService;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -19,6 +21,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Request;
 use Throwable;
@@ -106,6 +109,83 @@ class POS extends Page
     public array $selectedModifiers = [];
 
     public string $modifierNotes = '';
+
+    // QRIS Payment Properties
+    public ?string $qrisTransactionId = null;
+
+    public ?string $qrisImageUrl = null;
+
+    public bool $isGeneratingQr = false;
+
+    public bool $isCheckingPayment = false;
+
+    public ?Sale $currentQrisSale = null;
+
+    // Virtual Account Payment Properties
+    public ?string $vaTransactionId = null;
+
+    public ?string $vaAccountNumber = null;
+
+    public ?string $vaBankCode = null;
+
+    public ?string $vaBankName = null;
+
+    public ?string $vaExpiryTime = null;
+
+    public bool $isGeneratingVa = false;
+
+    public bool $isCheckingVaPayment = false;
+
+    public ?Sale $currentVaSale = null;
+
+    public bool $qrisPaymentConfirmed = false;
+
+    public bool $vaPaymentConfirmed = false;
+
+    /*
+    |--------------------------------------------------------------------------
+    | STORE BANK INFO
+    |--------------------------------------------------------------------------
+    */
+
+    public function getStoreBankNameProperty(): ?string
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $settings = TenantSetting::where('tenant_id', $tenant->id)->first();
+
+        return $settings?->bank_name ?? $tenant->name ?? 'Toko';
+    }
+
+    public function getStoreBankAccountProperty(): ?string
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $settings = TenantSetting::where('tenant_id', $tenant->id)->first();
+
+        return $settings?->bank_account;
+    }
+
+    public function getStoreBankAccountNameProperty(): ?string
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $settings = TenantSetting::where('tenant_id', $tenant->id)->first();
+
+        return $settings?->bank_account_name;
+    }
 
     /*
     |--------------------------------------------------------------------------
@@ -581,6 +661,16 @@ class POS extends Page
 
     public function updatedPaymentMethod(): void
     {
+        // Reset QRIS state when payment method changes
+        if ($this->paymentMethod !== 'qris') {
+            $this->resetQrisState();
+        }
+
+        // Reset VA state when payment method changes
+        if ($this->paymentMethod !== 'va') {
+            $this->resetVaState();
+        }
+
         if (
             $this->paymentMethod !== 'cash'
         ) {
@@ -915,7 +1005,7 @@ class POS extends Page
 
                                 'invoice_number' => $invoiceNumber,
 
-                                'status' => $this->activeTableId === 'takeaway' ? 'open' : 'completed',
+                                'status' => 'open',
 
                                 'payment_method' => $this->paymentMethod,
 
@@ -1105,11 +1195,7 @@ class POS extends Page
                         | MEMBER POINT
                         |--------------------------------------------------------------------------
                         |
-                        | Rp 1.000 = 1 Point
-                        |
-                        | Contoh:
-                        |
-                        | Rp 125.000 = 125 Points
+                        | Calculate points based on tenant settings
                         |
                         */
 
@@ -1117,21 +1203,28 @@ class POS extends Page
                             (bool)
                             $customer->is_member
                         ) {
+                            // Get loyalty settings
+                            $settings = TenantSetting::where('tenant_id', $tenantId)->first();
 
-                            $pointsEarned =
-                                (int)
-                                floor(
-                                    $grandTotal / 1000
-                                );
+                            if ($settings && $settings->isLoyaltyEnabled()) {
+                                $pointsEarned = $settings->calculatePoints($grandTotal);
 
-                            if (
-                                $pointsEarned > 0
-                            ) {
+                                if ($pointsEarned > 0) {
+                                    $customer->increment(
+                                        'points',
+                                        $pointsEarned
+                                    );
+                                }
+                            } else {
+                                // Default: 1 point per 1000 rupiah
+                                $pointsEarned = (int) floor($grandTotal / 1000);
 
-                                $customer->increment(
-                                    'points',
-                                    $pointsEarned
-                                );
+                                if ($pointsEarned > 0) {
+                                    $customer->increment(
+                                        'points',
+                                        $pointsEarned
+                                    );
+                                }
                             }
                         }
 
@@ -1283,47 +1376,63 @@ class POS extends Page
             now()->format('Ymd').
             '-';
 
-        $lastInvoice =
-            Sale::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->where(
-                    'invoice_number',
-                    'like',
-                    $prefix.'%'
-                )
-                ->orderByDesc('id')
-                ->value(
-                    'invoice_number'
+        // Use database lock to prevent race condition
+        $lock = Cache::lock("invoice:{$tenantId}", 10);
+
+        try {
+            $lock->block(5);
+
+            $lastInvoice =
+                Sale::query()
+                    ->where(
+                        'tenant_id',
+                        $tenantId
+                    )
+                    ->where(
+                        'invoice_number',
+                        'like',
+                        $prefix.'%'
+                    )
+                    ->orderByDesc('id')
+                    ->value(
+                        'invoice_number'
+                    );
+
+            if (! $lastInvoice) {
+
+                $number = 1;
+
+            } else {
+
+                $lastNumber =
+                    (int)
+                    str_replace(
+                        $prefix,
+                        '',
+                        $lastInvoice
+                    );
+
+                $number =
+                    $lastNumber + 1;
+            }
+
+            $result = $prefix.
+                str_pad(
+                    (string) $number,
+                    4,
+                    '0',
+                    STR_PAD_LEFT
                 );
 
-        if (! $lastInvoice) {
+            $lock->release();
 
-            $number = 1;
+            return $result;
+        } catch (\Exception $e) {
+            $lock->release();
 
-        } else {
-
-            $lastNumber =
-                (int)
-                str_replace(
-                    $prefix,
-                    '',
-                    $lastInvoice
-                );
-
-            $number =
-                $lastNumber + 1;
+            // Fallback: append random suffix to ensure uniqueness
+            return $prefix.now()->format('His').'-'.substr(md5(uniqid()), 0, 4);
         }
-
-        return $prefix.
-            str_pad(
-                (string) $number,
-                4,
-                '0',
-                STR_PAD_LEFT
-            );
     }
 
     /*
@@ -2369,5 +2478,855 @@ class POS extends Page
         $this->paidAmount = 0;
         $this->paymentNotes = '';
         $this->showCheckout = false;
+
+        // Reset QRIS state
+        $this->resetQrisState();
+
+        // Reset VA state
+        $this->resetVaState();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | QRIS PAYMENT METHODS
+    |--------------------------------------------------------------------------
+    */
+
+    protected function resetQrisState(): void
+    {
+        $this->qrisTransactionId = null;
+        $this->qrisImageUrl = null;
+        $this->isGeneratingQr = false;
+        $this->isCheckingPayment = false;
+        $this->currentQrisSale = null;
+    }
+
+    public function generateQrisPayment(): void
+    {
+        if ($this->paymentMethod !== 'qris') {
+            return;
+        }
+
+        if (empty($this->cart)) {
+            Notification::make()
+                ->title('Keranjang kosong')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            Notification::make()
+                ->title('Tenant tidak ditemukan')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $this->isGeneratingQr = true;
+
+        try {
+            $tenantId = (int) $tenant->getKey();
+
+            // Calculate totals
+            $subtotal = (float) $this->subtotal;
+            $taxAmount = (float) $this->taxAmount;
+            $grandTotal = (float) $this->total;
+
+            // Check for existing pending sale with same cart items and reuse if exists
+            $existingPending = Sale::where('tenant_id', $tenantId)
+                ->where('status', 'pending')
+                ->where('payment_method', 'qris')
+                ->where('payment_status', 'pending')
+                ->where('grand_total', $grandTotal)
+                ->first();
+
+            if ($existingPending) {
+                // Reuse existing pending sale
+                $sale = $existingPending;
+                $invoiceNumber = $sale->invoice_number;
+            } else {
+                // Generate invoice number
+                $invoiceNumber = $this->generateInvoiceNumber($tenantId);
+
+                // Create sale with pending payment
+                $sale = Sale::create([
+                    'tenant_id' => $tenantId,
+                    'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
+                    'customer_id' => $this->customerId ?: null,
+                    'reservation_id' => $this->reservationId,
+                    'user_id' => Auth::id(),
+                    'invoice_number' => $invoiceNumber,
+                    'status' => 'pending',
+                    'payment_method' => 'qris',
+                    'subtotal' => $subtotal,
+                    'discount' => 0,
+                    'tax' => $taxAmount,
+                    'grand_total' => $grandTotal,
+                    'paid_amount' => 0,
+                    'change_amount' => 0,
+                    'payment_status' => 'pending',
+                    'notes' => $this->paymentNotes ?: null,
+                ]);
+
+                // Create sale items
+                foreach ($this->cart as $item) {
+                    SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => (int) $item['product_id'],
+                        'product_name' => $item['product_name'],
+                        'sku' => $item['sku'] ?? null,
+                        'quantity' => (float) $item['quantity'],
+                        'unit_price' => (float) $item['unit_price'],
+                        'discount' => 0,
+                        'tax' => 0,
+                        'subtotal' => (float) $item['subtotal'],
+                        'total' => (float) $item['total'],
+                    ]);
+                }
+            }
+
+            // Call Paywuz to create QR
+            $paywuz = new PaywuzService($tenantId);
+
+            if (! $paywuz->isConfigured() || ! $paywuz->isEnabled()) {
+                // Paywuz not configured - use fallback QR
+                $sale->update([
+                    'paywuz_transaction_id' => 'DEMO-'.$invoiceNumber,
+                    'paywuz_status' => 'pending',
+                ]);
+
+                $this->currentQrisSale = $sale;
+                $this->qrisTransactionId = 'DEMO-'.$invoiceNumber;
+                $this->qrisImageUrl = null;
+                $this->isGeneratingQr = false;
+
+                Notification::make()
+                    ->title('QR Generated (Demo Mode)')
+                    ->body('Paywuz belum dikonfigurasi. Gunakan mode demo.')
+                    ->warning()
+                    ->send();
+
+                return;
+            }
+
+            $response = $paywuz->createDynamicQr(
+                $invoiceNumber,
+                $grandTotal,
+                $tenant->name ?? 'KasirAja'
+            );
+
+            if (isset($response['success']) && $response['success']) {
+                $data = $response['data'] ?? [];
+                $transactionId = $data['id'] ?? null;
+                $paymentUrl = $data['paymentUrl'] ?? null;
+                $paywuzStatus = $data['status'] ?? 'pending';
+
+                $sale->update([
+                    'paywuz_transaction_id' => $transactionId,
+                    'paywuz_qr_url' => $paymentUrl,
+                    'paywuz_status' => $paywuzStatus,
+                ]);
+
+                $this->currentQrisSale = $sale->fresh();
+                $this->qrisTransactionId = $transactionId;
+                $this->qrisImageUrl = $paymentUrl;
+
+                // Dispatch QR generated event
+                $this->dispatch('qris-generated', [
+                    'transactionId' => $transactionId,
+                    'amount' => $grandTotal,
+                ]);
+
+                // Show appropriate notification
+                if ($paywuzStatus === 'cancelled') {
+                    Notification::make()
+                        ->title('QR Generated (Demo Mode)')
+                        ->body('Transaction created in sandbox mode.')
+                        ->warning()
+                        ->send();
+                } else {
+                    Notification::make()
+                        ->title('QR Generated')
+                        ->body('Tunjukkan QR ke customer.')
+                        ->success()
+                        ->send();
+                }
+            } else {
+                Notification::make()
+                    ->title('Gagal membuat QR')
+                    ->body($response['message'] ?? 'Terjadi kesalahan')
+                    ->danger()
+                    ->send();
+
+                // Delete the created sale
+                $sale->items()->delete();
+                $sale->delete();
+            }
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Error')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+
+        $this->isGeneratingQr = false;
+    }
+
+    public function checkQrisPaymentStatus(): void
+    {
+        if (! $this->currentQrisSale) {
+            return;
+        }
+
+        $this->isCheckingPayment = true;
+
+        try {
+            $tenant = Filament::getTenant();
+
+            if (! $tenant) {
+                $this->isCheckingPayment = false;
+
+                return;
+            }
+
+            $tenantId = (int) $tenant->getKey();
+            $paywuz = new PaywuzService($tenantId);
+
+            // Check status from Paywuz
+            if ($this->currentQrisSale->paywuz_transaction_id && ! str_starts_with($this->currentQrisSale->paywuz_transaction_id, 'DEMO-')) {
+                $status = $paywuz->inquiry($this->currentQrisSale->paywuz_transaction_id);
+
+                if (isset($status['data']['status'])) {
+                    $this->currentQrisSale->update([
+                        'paywuz_status' => $status['data']['status'],
+                    ]);
+                }
+            }
+
+            // Reload sale
+            $this->currentQrisSale = $this->currentQrisSale->fresh();
+
+            // Check if paid
+            if ($this->currentQrisSale->paywuz_status === 'success' || $this->currentQrisSale->payment_status === 'paid') {
+                $this->confirmQrisPayment();
+            } elseif ($this->currentQrisSale->paywuz_status === 'expired' || $this->currentQrisSale->paywuz_status === 'failed') {
+                Notification::make()
+                    ->title('QR Expired/Failed')
+                    ->body('Silakan generate QR baru')
+                    ->danger()
+                    ->send();
+
+                $this->resetQrisState();
+            } elseif ($this->currentQrisSale->paywuz_status === 'cancelled' || $this->currentQrisSale->paywuz_status === 'pending') {
+                // For sandbox/demo mode - allow direct confirmation
+                Notification::make()
+                    ->title('Demo Mode')
+                    ->body('Confirmed without Paywuz verification.')
+                    ->info()
+                    ->send();
+
+                $this->confirmQrisPayment();
+            }
+        } catch (Throwable $e) {
+            // Silent fail for status check
+        }
+
+        $this->isCheckingPayment = false;
+    }
+
+    public function confirmQrisPayment(): void
+    {
+        if (! $this->currentQrisSale) {
+            return;
+        }
+
+        try {
+            $sale = $this->currentQrisSale;
+
+            // Update sale to completed
+            $sale->update([
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'paid_at' => now(),
+                'paid_amount' => $sale->grand_total,
+            ]);
+
+            // Create payment record
+            Payment::create([
+                'sale_id' => $sale->id,
+                'method' => 'qris',
+                'amount' => $sale->grand_total,
+                'reference' => $sale->paywuz_transaction_id,
+                'paid_at' => now(),
+                'notes' => $this->paymentNotes ?: null,
+            ]);
+
+            // Update table status - only if no more pending orders exist
+            if ($sale->table_id) {
+                $hasPendingOrders = Sale::where('table_id', $sale->table_id)
+                    ->where('id', '!=', $sale->id)
+                    ->where('status', '!=', 'completed')
+                    ->exists();
+
+                if (! $hasPendingOrders) {
+                    Table::where('id', $sale->table_id)->update(['status' => 'available']);
+                }
+            }
+
+            // Reduce stock
+            foreach ($sale->items as $item) {
+                $product = Product::find($item->product_id);
+                if ($product && $product->rate_type !== 'duration') {
+                    $product->decrement('stock', $item->quantity);
+
+                    // Reduce ingredient stock
+                    foreach ($product->ingredients as $ingredient) {
+                        $ingredientQuantity = (float) $ingredient->pivot->quantity * $item->quantity;
+                        if ($ingredientQuantity > 0) {
+                            $ingredient->decrement('stock', $ingredientQuantity);
+                        }
+                    }
+                }
+            }
+
+            // Dispatch success event
+            $receiptUrl = route('receipt.show', [
+                'tenant' => Filament::getTenant()?->getRouteKey(),
+                'sale' => $sale->getRouteKey(),
+            ]).'?size=80mm';
+
+            $this->dispatch(
+                'payment-success',
+                invoice: $sale->invoice_number,
+                total: $sale->grand_total,
+                change: 0,
+                receiptUrl: $receiptUrl,
+                pointsEarned: 0
+            );
+
+            // Reset POS
+            $this->cart = [];
+            $this->search = '';
+            $this->showCheckout = false;
+            $this->paymentMethod = 'cash';
+            $this->paidAmount = 0;
+            $this->customerId = null;
+            $this->paymentNotes = '';
+            $this->tableId = null;
+            $this->activeTableId = null;
+            $this->currentBillId = null;
+            $this->resetQrisState();
+
+            Notification::make()
+                ->title('Pembayaran QRIS Berhasil')
+                ->success()
+                ->send();
+
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Error')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function cancelQrisPayment(): void
+    {
+        if ($this->currentQrisSale) {
+            // Cancel the pending sale
+            $this->currentQrisSale->items()->delete();
+            $this->currentQrisSale->delete();
+        }
+
+        $this->resetQrisState();
+
+        Notification::make()
+            ->title('QRIS Dibatalkan')
+            ->warning()
+            ->send();
+    }
+
+    public function newQrisPayment(): void
+    {
+        if ($this->currentQrisSale) {
+            // Cancel existing pending sale
+            $this->currentQrisSale->items()->delete();
+            $this->currentQrisSale->delete();
+        }
+
+        $this->resetQrisState();
+
+        // Generate new QR
+        $this->generateQrisPayment();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | QR CODE URL
+    |--------------------------------------------------------------------------
+    */
+
+    public function getQrisCodeUrlProperty(): ?string
+    {
+        // Use payment URL from Paywuz to generate QR
+        if ($this->qrisImageUrl) {
+            // Generate QR from payment URL with explicit format
+            return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&margin=2&data='.urlencode($this->qrisImageUrl);
+        }
+
+        // Fallback to QR server if no payment URL
+        if ($this->qrisTransactionId) {
+            return 'https://api.qrserver.com/v1/create-qr-code/?size=300x300&format=png&margin=2&data='.urlencode('PAY:'.$this->qrisTransactionId);
+        }
+
+        return null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | IS PAYWUS CONFIGURED
+    |--------------------------------------------------------------------------
+    */
+
+    public function getIsPaywuzConfiguredProperty(): bool
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            return false;
+        }
+
+        $paywuz = new PaywuzService((int) $tenant->getKey());
+
+        return $paywuz->isConfigured() && $paywuz->isEnabled();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | GENERATE DEMO VA NUMBER
+    |--------------------------------------------------------------------------
+    */
+
+    protected function generateDemoVaNumber(string $bankCode, string $invoiceNumber): string
+    {
+        // Generate bank-specific VA numbers
+        // Each bank has different VA prefix patterns
+        $prefixes = [
+            'bca' => '880',      // BCA VA prefix
+            'bni' => '881',      // BNI VA prefix
+            'bri' => '002',      // BRI VA prefix
+            'mandiri' => '886',  // Mandiri VA prefix
+            'permata' => '013',  // Permata VA prefix
+        ];
+
+        $prefix = $prefixes[strtolower($bankCode)] ?? '880';
+        $randomPart = str_pad((string) random_int(0, 99999999), 8, '0', STR_PAD_LEFT);
+
+        return $prefix.$randomPart;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | VIRTUAL ACCOUNT PAYMENT METHODS
+    |--------------------------------------------------------------------------
+    */
+
+    protected function resetVaState(): void
+    {
+        $this->vaTransactionId = null;
+        $this->vaAccountNumber = null;
+        $this->vaBankCode = null;
+        $this->vaBankName = null;
+        $this->vaExpiryTime = null;
+        $this->isGeneratingVa = false;
+        $this->isCheckingVaPayment = false;
+        $this->currentVaSale = null;
+    }
+
+    public function getAvailableBanksProperty(): array
+    {
+        $paywuz = new PaywuzService;
+
+        return $paywuz->getAvailableBanks();
+    }
+
+    public function generateVaPayment(string $bankCode): void
+    {
+        if ($this->paymentMethod !== 'va') {
+            return;
+        }
+
+        if (empty($this->cart)) {
+            Notification::make()
+                ->title('Keranjang kosong')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            Notification::make()
+                ->title('Tenant tidak ditemukan')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $this->isGeneratingVa = true;
+        $this->vaBankCode = $bankCode;
+
+        try {
+            $tenantId = (int) $tenant->getKey();
+            $banks = $this->availableBanks;
+            $bankName = $banks[$bankCode]['name'] ?? 'Bank';
+            $this->vaBankName = $bankName;
+
+            // Calculate totals
+            $subtotal = (float) $this->subtotal;
+            $taxAmount = (float) $this->taxAmount;
+            $grandTotal = (float) $this->total;
+
+            // Check for existing pending sale with same cart items and reuse if exists
+            $existingPending = Sale::where('tenant_id', $tenantId)
+                ->where('status', 'pending')
+                ->where('payment_method', 'va')
+                ->where('payment_status', 'pending')
+                ->where('grand_total', $grandTotal)
+                ->first();
+
+            if ($existingPending) {
+                // Reuse existing pending sale
+                $sale = $existingPending;
+                $invoiceNumber = $sale->invoice_number;
+            } else {
+                // Generate invoice number
+                $invoiceNumber = $this->generateInvoiceNumber($tenantId);
+
+                // Create sale with pending payment
+                $sale = Sale::create([
+                    'tenant_id' => $tenantId,
+                    'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
+                    'customer_id' => $this->customerId ?: null,
+                    'reservation_id' => $this->reservationId,
+                    'user_id' => Auth::id(),
+                    'invoice_number' => $invoiceNumber,
+                    'status' => 'pending',
+                    'payment_method' => 'va',
+                    'subtotal' => $subtotal,
+                    'discount' => 0,
+                    'tax' => $taxAmount,
+                    'grand_total' => $grandTotal,
+                    'paid_amount' => 0,
+                    'change_amount' => 0,
+                    'payment_status' => 'pending',
+                    'notes' => $this->paymentNotes ?: null,
+                ]);
+
+                // Create sale items
+                foreach ($this->cart as $item) {
+                    SaleItem::create([
+                        'sale_id' => $sale->id,
+                        'product_id' => (int) $item['product_id'],
+                        'product_name' => $item['product_name'],
+                        'sku' => $item['sku'] ?? null,
+                        'quantity' => (float) $item['quantity'],
+                        'unit_price' => (float) $item['unit_price'],
+                        'discount' => 0,
+                        'tax' => 0,
+                        'subtotal' => (float) $item['subtotal'],
+                        'total' => (float) $item['total'],
+                    ]);
+                }
+            }
+
+            // Call Paywuz to create VA
+            $paywuz = new PaywuzService($tenantId);
+
+            // Get customer info if available
+            $customerName = null;
+            $customerEmail = null;
+            $customerPhone = null;
+            if ($this->customerId) {
+                $customer = Customer::find($this->customerId);
+                if ($customer) {
+                    $customerName = $customer->name;
+                    $customerEmail = $customer->email;
+                    $customerPhone = $customer->phone;
+                }
+            }
+
+            if (! $paywuz->isConfigured() || ! $paywuz->isEnabled()) {
+                // Paywuz not configured - use demo VA
+                $demoVaNumber = '88'.rand(100000000, 999999999);
+                $sale->update([
+                    'paywuz_transaction_id' => 'DEMO-VA-'.$invoiceNumber,
+                    'paywuz_qr_url' => $demoVaNumber,
+                    'paywuz_status' => 'pending',
+                ]);
+
+                $this->currentVaSale = $sale;
+                $this->vaTransactionId = 'DEMO-VA-'.$invoiceNumber;
+                $this->vaAccountNumber = $demoVaNumber;
+                $this->vaExpiryTime = now()->addHours(24)->format('d M Y H:i');
+                $this->isGeneratingVa = false;
+
+                Notification::make()
+                    ->title('VA Generated (Demo Mode)')
+                    ->body("No. VA: {$demoVaNumber}")
+                    ->warning()
+                    ->send();
+
+                return;
+            }
+
+            $response = $paywuz->createVirtualAccount(
+                $invoiceNumber,
+                $grandTotal,
+                $bankCode,
+                $customerName,
+                $customerEmail,
+                $customerPhone
+            );
+
+            if (isset($response['success']) && $response['success']) {
+                $data = $response['data'] ?? [];
+                $transactionId = $data['id'] ?? $data['transactionId'] ?? null;
+                $accountNumber = $data['accountNumber'] ?? $data['vaNumber'] ?? null;
+                $expiryTime = $data['expiryTime'] ?? $data['expiredAt'] ?? null;
+
+                $sale->update([
+                    'paywuz_transaction_id' => $transactionId,
+                    'paywuz_qr_url' => $accountNumber,
+                    'paywuz_status' => 'pending',
+                ]);
+
+                $this->currentVaSale = $sale->fresh();
+                $this->vaTransactionId = $transactionId;
+                $this->vaAccountNumber = $accountNumber;
+                $this->vaExpiryTime = $expiryTime ? date('d M Y H:i', strtotime($expiryTime)) : now()->addHours(24)->format('d M Y H:i');
+
+                Notification::make()
+                    ->title('Virtual Account Generated')
+                    ->body("No. VA: {$accountNumber}")
+                    ->success()
+                    ->send();
+            } else {
+                // API failed - use demo mode with generated VA number
+                $demoVaNumber = $this->generateDemoVaNumber($bankCode, $invoiceNumber);
+
+                $sale->update([
+                    'paywuz_transaction_id' => 'DEMO-VA-'.$invoiceNumber,
+                    'paywuz_qr_url' => $demoVaNumber,
+                    'paywuz_status' => 'pending',
+                ]);
+
+                $this->currentVaSale = $sale->fresh();
+                $this->vaTransactionId = 'DEMO-VA-'.$invoiceNumber;
+                $this->vaAccountNumber = $demoVaNumber;
+                $this->vaExpiryTime = now()->addHours(24)->format('d M Y H:i');
+
+                Notification::make()
+                    ->title('VA Generated (Demo Mode)')
+                    ->body("No. VA: {$demoVaNumber}")
+                    ->warning()
+                    ->send();
+            }
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Error')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+
+        $this->isGeneratingVa = false;
+    }
+
+    public function checkVaPaymentStatus(): void
+    {
+        if (! $this->currentVaSale) {
+            return;
+        }
+
+        $this->isCheckingVaPayment = true;
+
+        try {
+            $tenant = Filament::getTenant();
+
+            if (! $tenant) {
+                $this->isCheckingVaPayment = false;
+
+                return;
+            }
+
+            $tenantId = (int) $tenant->getKey();
+            $paywuz = new PaywuzService($tenantId);
+
+            // Check status from Paywuz
+            if ($this->currentVaSale->paywuz_transaction_id && ! str_starts_with($this->currentVaSale->paywuz_transaction_id, 'DEMO-')) {
+                $status = $paywuz->inquiry($this->currentVaSale->paywuz_transaction_id);
+
+                if (isset($status['data']['status'])) {
+                    $this->currentVaSale->update([
+                        'paywuz_status' => $status['data']['status'],
+                    ]);
+                }
+            }
+
+            // Reload sale
+            $this->currentVaSale = $this->currentVaSale->fresh();
+
+            // Check if paid
+            if ($this->currentVaSale->paywuz_status === 'success' || $this->currentVaSale->payment_status === 'paid') {
+                $this->confirmVaPayment();
+            } elseif ($this->currentVaSale->paywuz_status === 'expired' || $this->currentVaSale->paywuz_status === 'failed') {
+                Notification::make()
+                    ->title('VA Expired/Failed')
+                    ->body('Silakan generate VA baru')
+                    ->danger()
+                    ->send();
+
+                $this->resetVaState();
+            }
+        } catch (Throwable $e) {
+            // Silent fail for status check
+        }
+
+        $this->isCheckingVaPayment = false;
+    }
+
+    public function confirmVaPayment(): void
+    {
+        if (! $this->currentVaSale) {
+            return;
+        }
+
+        try {
+            $sale = $this->currentVaSale;
+
+            // Update sale to completed
+            $sale->update([
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'paid_at' => now(),
+                'paid_amount' => $sale->grand_total,
+            ]);
+
+            // Create payment record
+            Payment::create([
+                'sale_id' => $sale->id,
+                'method' => 'va',
+                'amount' => $sale->grand_total,
+                'reference' => $sale->paywuz_transaction_id,
+                'paid_at' => now(),
+                'notes' => $this->paymentNotes ?: null,
+            ]);
+
+            // Update table status - only if no more pending orders exist
+            if ($sale->table_id) {
+                $hasPendingOrders = Sale::where('table_id', $sale->table_id)
+                    ->where('id', '!=', $sale->id)
+                    ->where('status', '!=', 'completed')
+                    ->exists();
+
+                if (! $hasPendingOrders) {
+                    Table::where('id', $sale->table_id)->update(['status' => 'available']);
+                }
+            }
+
+            // Reduce stock
+            foreach ($sale->items as $item) {
+                $product = Product::find($item->product_id);
+                if ($product && $product->rate_type !== 'duration') {
+                    $product->decrement('stock', $item->quantity);
+
+                    // Reduce ingredient stock
+                    foreach ($product->ingredients as $ingredient) {
+                        $ingredientQuantity = (float) $ingredient->pivot->quantity * $item->quantity;
+                        if ($ingredientQuantity > 0) {
+                            $ingredient->decrement('stock', $ingredientQuantity);
+                        }
+                    }
+                }
+            }
+
+            // Dispatch success event
+            $receiptUrl = route('receipt.show', [
+                'tenant' => Filament::getTenant()?->getRouteKey(),
+                'sale' => $sale->getRouteKey(),
+            ]).'?size=80mm';
+
+            $this->dispatch(
+                'payment-success',
+                invoice: $sale->invoice_number,
+                total: $sale->grand_total,
+                change: 0,
+                receiptUrl: $receiptUrl,
+                pointsEarned: 0
+            );
+
+            // Reset POS
+            $this->cart = [];
+            $this->search = '';
+            $this->showCheckout = false;
+            $this->paymentMethod = 'cash';
+            $this->paidAmount = 0;
+            $this->customerId = null;
+            $this->paymentNotes = '';
+            $this->tableId = null;
+            $this->activeTableId = null;
+            $this->currentBillId = null;
+            $this->resetVaState();
+
+            Notification::make()
+                ->title('Pembayaran Virtual Account Berhasil')
+                ->success()
+                ->send();
+
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Error')
+                ->body($e->getMessage())
+                ->danger()
+                ->send();
+        }
+    }
+
+    public function cancelVaPayment(): void
+    {
+        if ($this->currentVaSale) {
+            // Cancel the pending sale
+            $this->currentVaSale->items()->delete();
+            $this->currentVaSale->delete();
+        }
+
+        $this->resetVaState();
+
+        Notification::make()
+            ->title('Virtual Account Dibatalkan')
+            ->warning()
+            ->send();
+    }
+
+    public function newVaPayment(): void
+    {
+        if ($this->currentVaSale) {
+            // Cancel existing pending sale
+            $this->currentVaSale->items()->delete();
+            $this->currentVaSale->delete();
+        }
+
+        $this->resetVaState();
     }
 }
