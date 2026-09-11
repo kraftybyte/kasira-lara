@@ -34,7 +34,10 @@ class UserResource extends Resource
 
     protected static bool $shouldAutoDiscoverRelations = false;
 
+    // Disable tenant scoping - users use many-to-many relationship
     protected static bool $isScopedToTenant = false;
+
+    protected static ?string $tenantOwnershipRelationship = null;
 
     public static function form(Schema $schema): Schema
     {
@@ -47,7 +50,7 @@ class UserResource extends Resource
                 TextInput::make('email')
                     ->email()
                     ->required()
-                    ->unique(User::class)
+                    ->unique(User::class, ignoreRecord: true)
                     ->maxLength(255),
 
                 TextInput::make('password')
@@ -63,14 +66,32 @@ class UserResource extends Resource
                 Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name')
-                    ->options(fn () => Role::pluck('name', 'id')->toArray()),
+                    ->options(function () {
+                        // Filter out super_admin role for non-super_admin users
+                        $user = auth()->user();
+                        if ($user && $user->hasRole('super_admin')) {
+                            return Role::pluck('name', 'id')->toArray();
+                        }
+
+                        return Role::where('name', '!=', 'super_admin')->pluck('name', 'id')->toArray();
+                    }),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->query(User::query()->with('roles'))
+            ->query(
+                User::query()
+                    ->with('roles')
+                    ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
+                    ->whereHas('tenants', function ($q) {
+                        $tenant = Filament::getTenant();
+                        if ($tenant) {
+                            $q->where('tenants.id', $tenant->id)->wherePivot('status', 'active');
+                        }
+                    })
+            )
             ->columns([
                 TextColumn::make('name')
                     ->label('Name')

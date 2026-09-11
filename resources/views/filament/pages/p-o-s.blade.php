@@ -149,7 +149,7 @@
                                     @if ($product->image)
                                         <img src="{{ Storage::disk('public')->url($product->image) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
                                     @else
-                                        <div class="flex h-full w-full items-center justify-center bg-linear-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
+                                        <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
                                             <span class="text-lg font-bold uppercase text-gray-300">{{ substr($product->name, 0, 2) }}</span>
                                         </div>
                                     @endif
@@ -642,17 +642,17 @@
             <div class="flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900 max-h-[92vh]">
 
                 {{-- HEADER --}}
-                <div class="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700">
+                <div class="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700 bg-gradient-to-r from-red-500 to-red-600">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 items-center justify-center rounded-xl text-white" class="gradient-bg">
+                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 text-white">
                             <x-heroicon-o-credit-card class="h-5 w-5" />
                         </div>
                         <div>
-                            <h2 class="text-lg font-bold text-gray-900 dark:text-white">Pembayaran</h2>
-                            <p class="text-xs text-gray-500">Selesaikan transaksi</p>
+                            <h2 class="text-lg font-bold text-white">Pembayaran</h2>
+                            <p class="text-xs text-white/80">Selesaikan transaksi</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeCheckout" class="btn-icon btn-ghost">
+                    <button type="button" wire:click="closeCheckout" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/20 hover:text-white">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
                 </div>
@@ -662,39 +662,46 @@
                     <div class="space-y-4 p-6">
 
                         {{-- TOTAL --}}
-                        <div class="overflow-hidden rounded-2xl p-5 text-gray-900" class="gradient-bg">
+                        <div class="overflow-hidden rounded-2xl bg-gray-900 p-5 text-white">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-xs font-medium text-gray-900">Total pembayaran</p>
+                                    <p class="text-xs font-medium text-gray-400">Total pembayaran</p>
                                     <p class="mt-1 text-3xl font-black">Rp {{ number_format($this->total, 0, ',', '.') }}</p>
                                 </div>
-                                <x-heroicon-o-credit-card class="h-10 w-10 text-white/80" />
+                                <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/10">
+                                    <x-heroicon-o-credit-card class="h-6 w-6 text-white" />
+                                </div>
                             </div>
                         </div>
 
                         {{-- PAYMENT METHOD --}}
                         <div>
                             <label class="mb-3 block text-sm font-semibold text-gray-900 dark:text-white">Metode Pembayaran</label>
-                            <div class="grid grid-cols-3 gap-2">
-                                @foreach (['cash' => ['label' => 'Tunai', 'icon' => 'banknotes'], 'qris' => ['label' => 'QRIS', 'icon' => 'qr'], 'transfer' => ['label' => 'Transfer', 'icon' => 'building']] as $method => $data)
-                                    <button type="button" wire:click="$set('paymentMethod', '{{ $method }}')" class="relative rounded-xl border p-3 text-center transition-all {{ $paymentMethod === $method ? 'border-red-500 bg-red-50 ring-2 ring-red-500/20 dark:border-red-500 dark:bg-red-500/10' : 'border-gray-200 bg-white hover:border-red-300 dark:border-gray-700 dark:bg-gray-800' }}">
-                                        <div class="mx-auto mb-2 flex h-9 w-9 items-center justify-center rounded-lg {{ $paymentMethod === $method ? 'bg-red-500 text-white' : 'bg-gray-100 text-gray-500 dark:bg-gray-700 dark:text-gray-300' }}">
-                                            @if ($data['icon'] === 'banknotes')
-                                                <x-heroicon-o-credit-card class="h-5 w-5" />
-                                            @elseif ($data['icon'] === 'qr')
-                                                <x-heroicon-o-qr-code class="h-5 w-5" />
-                                            @else
-                                                <x-heroicon-o-building-office class="h-5 w-5" />
-                                            @endif
-                                        </div>
-                                        <span class="text-xs font-semibold text-gray-900 dark:text-white">{{ $data['label'] }}</span>
-                                        @if ($paymentMethod === $method)
-                                            <div class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-red-500 text-white">
-                                                <x-heroicon-o-check class="h-3 w-3" />
-                                            </div>
-                                        @endif
-                                    </button>
-                                @endforeach
+                            <div class="grid grid-cols-4 gap-2">
+                                <button type="button" wire:click="$set('paymentMethod', 'cash')" class="flex flex-col items-center gap-2 rounded-2xl p-3 transition-all {{ $paymentMethod === 'cash' ? 'bg-green-500 shadow-lg' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800' }}">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl {{ $paymentMethod === 'cash' ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700' }}">
+                                        <x-heroicon-o-banknotes class="h-5 w-5 {{ $paymentMethod === 'cash' ? 'text-white' : 'text-gray-600 dark:text-gray-300' }}" />
+                                    </div>
+                                    <span class="text-xs font-bold {{ $paymentMethod === 'cash' ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">Tunai</span>
+                                </button>
+                                <button type="button" wire:click="$set('paymentMethod', 'qris')" class="flex flex-col items-center gap-2 rounded-2xl p-3 transition-all {{ $paymentMethod === 'qris' ? 'bg-green-500 shadow-lg' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800' }}">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl {{ $paymentMethod === 'qris' ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700' }}">
+                                        <x-heroicon-o-qr-code class="h-5 w-5 {{ $paymentMethod === 'qris' ? 'text-white' : 'text-gray-600 dark:text-gray-300' }}" />
+                                    </div>
+                                    <span class="text-xs font-bold {{ $paymentMethod === 'qris' ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">QRIS</span>
+                                </button>
+                                <button type="button" wire:click="$set('paymentMethod', 'va')" class="flex flex-col items-center gap-2 rounded-2xl p-3 transition-all {{ $paymentMethod === 'va' ? 'bg-green-500 shadow-lg' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800' }}">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl {{ $paymentMethod === 'va' ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700' }}">
+                                        <x-heroicon-o-building-office class="h-5 w-5 {{ $paymentMethod === 'va' ? 'text-white' : 'text-gray-600 dark:text-gray-300' }}" />
+                                    </div>
+                                    <span class="text-xs font-bold {{ $paymentMethod === 'va' ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">VA</span>
+                                </button>
+                                <button type="button" wire:click="$set('paymentMethod', 'transfer')" class="flex flex-col items-center gap-2 rounded-2xl p-3 transition-all {{ $paymentMethod === 'transfer' ? 'bg-green-500 shadow-lg' : 'bg-gray-100 hover:bg-gray-200 dark:bg-gray-800' }}">
+                                    <div class="flex h-11 w-11 items-center justify-center rounded-xl {{ $paymentMethod === 'transfer' ? 'bg-white/20' : 'bg-gray-200 dark:bg-gray-700' }}">
+                                        <x-heroicon-o-arrow-right-circle class="h-5 w-5 {{ $paymentMethod === 'transfer' ? 'text-white' : 'text-gray-600 dark:text-gray-300' }}" />
+                                    </div>
+                                    <span class="text-xs font-bold {{ $paymentMethod === 'transfer' ? 'text-white' : 'text-gray-700 dark:text-gray-300' }}">Transfer</span>
+                                </button>
                             </div>
                         </div>
 
@@ -713,14 +720,216 @@
                                     @endforeach
                                 </div>
                             </div>
+                        @elseif ($paymentMethod === 'qris')
+                            {{-- QRIS --}}
+                            @if (!$qrisTransactionId)
+                                <button type="button" wire:click="generateQrisPayment" wire:loading.attr="disabled" class="w-full rounded-2xl bg-green-500 p-8 text-center transition hover:bg-green-600">
+                                    <div wire:loading.remove wire:target="generateQrisPayment" class="min-h-30 flex flex-col items-center justify-center gap-3">
+                                        <div class="flex h-16 w-16 items-center justify-center rounded-2xl bg-white">
+                                            <x-heroicon-o-qr-code class="h-8 w-8 text-green-500" />
+                                        </div>
+                                        <p class="text-lg font-bold text-white">Generate QR Code</p>
+                                        <p class="text-sm text-white/80">Klik untuk buat QRIS</p>
+                                    </div>
+                                    <div wire:loading wire:target="generateQrisPayment" class="min-h-30 flex flex-col items-center justify-center gap-3">
+                                        <div class="h-12 w-12 rounded-full border-4 border-white/30 animate-spin" style="border-top-color: white;"></div>
+                                        <span class="text-sm font-medium text-white">Membuat...</span>
+                                    </div>
+                                </button>
+                            @else
+                                <div class="space-y-4">
+                                    {{-- QR Display Card --}}
+                                    <div class="rounded-2xl bg-white p-6 dark:bg-gray-800">
+                                        <div class="mb-4 text-center">
+                                            <p class="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500 dark:text-gray-400">Total Bayar</p>
+                                            <p class="text-2xl font-black text-green-600 dark:text-green-400">Rp {{ number_format($currentQrisSale?->grand_total ?? $this->total, 0, ',', '.') }}</p>
+                                        </div>
+                                        <div class="flex justify-center">
+                                            @if ($this->qrisCodeUrl)
+                                                <img src="{{ $this->qrisCodeUrl }}" alt="QRIS" class="h-48 w-48 rounded-lg object-contain bg-white">
+                                            @elseif ($currentQrisSale?->paywuz_qr_url)
+                                                <img src="{{ $currentQrisSale->paywuz_qr_url }}" alt="QRIS" class="h-48 w-48 rounded-lg object-contain bg-white">
+                                            @endif
+                                        </div>
+                                        <p class="mt-4 text-center text-xs text-gray-500 dark:text-gray-400">Tunjukkan QR ke customer</p>
+                                    </div>
+                                    @if ($currentQrisSale?->paywuz_transaction_id)
+                                        <div class="rounded-lg bg-blue-100 px-4 py-2 dark:bg-blue-900/50">
+                                            <p class="text-center text-xs text-blue-700 dark:text-blue-300">ID: {{ $currentQrisSale->paywuz_transaction_id }}</p>
+                                        </div>
+                                    @endif
+                                    <div class="flex gap-3">
+                                        <button type="button" wire:click="checkQrisPaymentStatus" wire:loading.attr="disabled" class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-500 py-3 text-sm font-semibold text-white transition hover:bg-green-600 disabled:opacity-50">
+                                            <span wire:loading.remove wire:target="checkQrisPaymentStatus" class="flex items-center justify-center gap-2">
+                                                <x-heroicon-o-check class="h-4 w-4" /> Cek Status
+                                            </span>
+                                            <span wire:loading wire:target="checkQrisPaymentStatus" class="flex items-center justify-center gap-2">
+                                                <div class="h-4 w-4 rounded-full border-2 border-white/70 animate-spin" style="border-top-color: white;"></div>
+                                                <span>Mengecek...</span>
+                                            </span>
+                                        </button>
+                                        <button type="button" wire:click="cancelQrisPayment" class="flex items-center justify-center rounded-xl bg-gray-200 px-4 py-3 text-gray-600 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
+                                            <x-heroicon-o-x-mark class="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        @elseif ($paymentMethod === 'va')
+                            {{-- VA --}}
+                            @if (!$vaTransactionId)
+                                <div class="mb-4 text-center">
+                                    <p class="text-sm font-semibold text-gray-900 dark:text-white">Pilih Bank</p>
+                                    <p class="text-xs text-gray-500">Virtual Account</p>
+                                </div>
+                                <div class="grid grid-cols-5 gap-3">
+                                    @foreach ($this->availableBanks as $bank)
+                                        @php
+                                            $code = strtolower($bank['code'] ?? '');
+                                            $name = strtolower($bank['name'] ?? '');
+                                            // Determine color - check code first, then name
+                                            if (empty($code) && empty($name)) {
+                                                $bgColor = 'bg-gray-500';
+                                            } elseif ($code === 'bca' || str_contains($name, 'bca')) {
+                                                $bgColor = 'bg-blue-500';
+                                            } elseif ($code === 'bni' || str_contains($name, 'bni')) {
+                                                $bgColor = 'bg-orange-500';
+                                            } elseif ($code === 'bri' || str_contains($name, 'bri')) {
+                                                $bgColor = 'bg-blue-700';
+                                            } elseif ($code === 'mandiri' || str_contains($name, 'mandiri')) {
+                                                $bgColor = 'bg-yellow-600';
+                                            } elseif ($code === 'permata' || str_contains($name, 'permata')) {
+                                                $bgColor = 'bg-purple-500';
+                                            } else {
+                                                $bgColor = 'bg-gray-500';
+                                            }
+                                        @endphp
+                                        <button type="button" wire:click="generateVaPayment('{{ $bank['code'] ?? $code }}')" wire:loading.attr="disabled" class="flex flex-col items-center justify-center gap-2 rounded-xl bg-white p-3 transition hover:shadow-lg dark:bg-gray-800 disabled:opacity-50">
+                                            <div class="flex h-12 w-12 items-center justify-center rounded-xl {{ $bgColor }} font-bold text-white">
+                                                {{ strtoupper(substr($bank['name'], 0, 4)) }}
+                                            </div>
+                                            <span class="text-xs font-semibold text-gray-700 dark:text-gray-300">{{ $bank['name'] }}</span>
+                                            <div wire:loading wire:target="generateVaPayment('{{ $bank['code'] ?? $code }}')" class="flex items-center justify-center">
+                                                <div class="h-4 w-4 rounded-full border-2 border-gray-400 animate-spin" style="border-top-color: transparent;"></div>
+                                            </div>
+                                        </button>
+                                    @endforeach
+                                </div>
+                            @else
+                                @php
+                                    $bankCode = strtolower($vaBankCode ?? '');
+                                    // Determine color based on vaBankCode
+                                    if (str_contains($bankCode, 'bca')) {
+                                        $bgColor = 'bg-blue-500';
+                                    } elseif (str_contains($bankCode, 'bni')) {
+                                        $bgColor = 'bg-orange-500';
+                                    } elseif (str_contains($bankCode, 'bri')) {
+                                        $bgColor = 'bg-blue-700';
+                                    } elseif (str_contains($bankCode, 'mandiri')) {
+                                        $bgColor = 'bg-yellow-500';
+                                    } elseif (str_contains($bankCode, 'permata')) {
+                                        $bgColor = 'bg-purple-500';
+                                    } else {
+                                        $bgColor = 'bg-blue-500';
+                                    }
+                                @endphp
+                                <div class="space-y-4">
+                                    <div class="rounded-xl bg-white p-4 text-center dark:bg-gray-800">
+                                        <p class="mb-1 text-xs font-medium uppercase tracking-wider text-gray-500">Total Bayar</p>
+                                        <p class="text-2xl font-black text-gray-900 dark:text-white">Rp {{ number_format($currentVaSale?->grand_total ?? $this->total, 0, ',', '.') }}</p>
+                                    </div>
+                                    <div class="overflow-hidden rounded-xl bg-white dark:bg-gray-800">
+                                        <div class="{{ $bgColor }} px-4 py-3 text-center font-bold text-white">
+                                            {{ $vaBankName ?? 'Virtual Account' }}
+                                        </div>
+                                        <div class="p-5 text-center">
+                                            <p class="mb-2 text-xs font-medium uppercase tracking-wider text-gray-500">Nomor VA</p>
+                                            <div class="flex items-center justify-center gap-3">
+                                                <span class="font-mono text-2xl font-bold text-gray-900 dark:text-white">{{ $vaAccountNumber ?? '-' }}</span>
+                                                <button type="button" x-on:click="navigator.clipboard.writeText('{{ $vaAccountNumber ?? '' }}')" class="flex h-9 w-9 items-center justify-center rounded-lg bg-gray-100 text-gray-500 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
+                                                    <x-heroicon-o-document-duplicate class="h-4 w-4" />
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    @if ($vaExpiryTime)
+                                        <div class="flex items-center justify-center gap-2 rounded-lg bg-amber-100 px-4 py-2 dark:bg-amber-900/50">
+                                            <x-heroicon-o-clock class="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                                            <span class="text-xs font-medium text-amber-700 dark:text-amber-400">Expired: {{ $vaExpiryTime }}</span>
+                                        </div>
+                                    @endif
+                                    <div class="flex gap-3">
+                                        <button type="button" wire:click="checkVaPaymentStatus" wire:loading.attr="disabled" class="flex-1 flex items-center justify-center gap-2 rounded-xl {{ $bgColor }} py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:opacity-50">
+                                            <span wire:loading.remove wire:target="checkVaPaymentStatus" class="flex items-center justify-center gap-2">
+                                                <x-heroicon-o-check class="h-4 w-4" /> Cek Status
+                                            </span>
+                                            <span wire:loading wire:target="checkVaPaymentStatus" class="flex items-center justify-center gap-2">
+                                                <div class="h-4 w-4 rounded-full border-2 border-white/70 animate-spin" style="border-top-color: white;"></div>
+                                                <span>Mengecek...</span>
+                                            </span>
+                                        </button>
+                                        <button type="button" wire:click="cancelVaPayment" class="flex items-center justify-center rounded-xl bg-gray-100 px-4 py-3 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
+                                            <x-heroicon-o-x-mark class="h-5 w-5" />
+                                        </button>
+                                    </div>
+                                </div>
+                            @endif
+                        @elseif ($paymentMethod === 'transfer')
+                            {{-- TRANSFER MANUAL --}}
+                            <div class="space-y-4">
+                                <div class="rounded-2xl bg-white p-5 dark:bg-gray-800">
+                                    <div class="mb-4 flex items-center gap-3">
+                                        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-blue-500 text-white">
+                                            <x-heroicon-o-building-library class="h-5 w-5" />
+                                        </div>
+                                        <div>
+                                            <p class="text-sm font-bold text-gray-900 dark:text-white">Transfer Manual</p>
+                                            <p class="text-xs text-gray-500">Transfer ke rekening toko</p>
+                                        </div>
+                                    </div>
+                                    <div class="space-y-3">
+                                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                                            <span class="text-xs text-gray-500">Bank</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $this->storeBankName ?? 'Bank Toko' }}</span>
+                                        </div>
+                                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                                            <span class="text-xs text-gray-500">No. Rekening</span>
+                                            <div class="flex items-center gap-2">
+                                                <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $this->storeBankAccount ?? '-' }}</span>
+                                                @if ($this->storeBankAccount)
+                                                    <button type="button" x-on:click="navigator.clipboard.writeText('{{ $this->storeBankAccount }}')" class="flex h-7 w-7 items-center justify-center rounded-lg bg-gray-200 text-gray-500 transition hover:bg-gray-300 dark:bg-gray-600 dark:text-gray-400">
+                                                        <x-heroicon-o-document-duplicate class="h-3.5 w-3.5" />
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        </div>
+                                        <div class="flex items-center justify-between rounded-lg bg-gray-50 p-3 dark:bg-gray-700">
+                                            <span class="text-xs text-gray-500">Atas Nama</span>
+                                            <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $this->storeBankAccountName ?? '-' }}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="rounded-2xl bg-blue-50 p-5 text-center dark:bg-blue-900/30">
+                                    <p class="mb-1 text-xs font-medium uppercase tracking-wider text-blue-600 dark:text-blue-400">Total Bayar</p>
+                                    <p class="text-2xl font-black text-blue-600 dark:text-blue-400">Rp {{ number_format($this->total, 0, ',', '.') }}</p>
+                                </div>
+                                <div class="flex items-center gap-3 rounded-xl bg-amber-50 p-4 dark:bg-amber-500/20">
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
+                                        <x-heroicon-o-information-circle class="h-5 w-5" />
+                                    </div>
+                                    <div>
+                                        <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Instruksi</p>
+                                        <p class="text-xs text-amber-700 dark:text-amber-400">Transfer sesuai nominal, lalu klik "Konfirmasi Bayar" di bawah</p>
+                                    </div>
+                                </div>
+                            </div>
                         @else
-                            <div class="flex items-center gap-3 rounded-xl border-2 border-amber-300 bg-amber-50 p-4 dark:border-amber-500 dark:bg-amber-500/20">
+                            <div class="flex items-center gap-3 rounded-xl bg-amber-50 p-4 dark:bg-amber-500/20">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-amber-500 text-white">
                                     <x-heroicon-o-information-circle class="h-5 w-5" />
                                 </div>
                                 <div>
                                     <p class="text-sm font-semibold text-amber-800 dark:text-amber-300">Pembayaran {{ strtoupper($paymentMethod) }}</p>
-                                    <p class="text-xs text-amber-700 dark:text-amber-400">Pastikan sudah diterima sebelum menyimpan</p>
+                                    <p class="text-xs text-amber-700 dark:text-amber-400">Pastikan sudah diterima</p>
                                 </div>
                             </div>
                         @endif
@@ -806,15 +1015,38 @@
 
                 {{-- FOOTER --}}
                 <div class="shrink-0 border-t border-gray-100 bg-white p-5 dark:border-gray-700 dark:bg-gray-900">
+                    @php
+                        $isQrVa = in_array($paymentMethod, ['qris', 'va']);
+                        $isTransfer = $paymentMethod === 'transfer';
+                        // For QRIS/VA - button is locked (sale auto-completes after Cek Status confirms)
+                        // For Transfer - enabled directly (user confirms after manual transfer)
+                        // Only enable Bayar for CASH when sufficient amount is received
+                        $canPay = ($this->total > 0) && (
+                            ($paymentMethod === 'cash' && (float) $paidAmount >= (float) $this->total) ||
+                            $isTransfer
+                        );
+                    @endphp
                     <div class="flex gap-3">
                         <button type="button" wire:click="closeCheckout" class="btn btn-secondary btn-lg flex-1">
                             Batal
                         </button>
-                        <button type="button" wire:click="processPayment" wire:loading.attr="disabled" @disabled($this->total <= 0 || ($paymentMethod === 'cash' && (float) $paidAmount < (float) $this->total)) class="btn btn-primary btn-lg flex-1">
-                            <span wire:loading.remove wire:target="processPayment">
-                                <x-heroicon-o-check class="h-4 w-4" />
+                        <button type="button" wire:click="processPayment" wire:loading.attr="disabled" @disabled(!$canPay) class="btn btn-lg flex-1 {{ $canPay ? 'btn-primary' : 'bg-gray-300 border border-gray-300 text-gray-500 cursor-not-allowed' }}">
+                            <span wire:loading.remove wire:target="processPayment" class="flex items-center justify-center gap-2">
+                                @if ($isQrVa)
+                                    <x-heroicon-o-lock-closed class="h-4 w-4" />
+                                    <span>Cek Status Dulu</span>
+                                @elseif ($isTransfer)
+                                    <x-heroicon-o-check-circle class="h-4 w-4" />
+                                    <span>Konfirmasi Bayar</span>
+                                @else
+                                    <x-heroicon-o-check class="h-4 w-4" />
+                                    <span>Bayar Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                                @endif
                             </span>
-                            Bayar Rp {{ number_format($this->total, 0, ',', '.') }}
+                            <span wire:loading wire:target="processPayment" class="flex items-center justify-center gap-2">
+                                <div class="h-4 w-4 rounded-full border-2 border-white/50 border-t-white animate-spin" style="border-top-color: white;"></div>
+                                Memproses...
+                            </span>
                         </button>
                     </div>
                 </div>

@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\Sales;
 
 use App\Filament\Resources\Sales\Pages\CreateSale;
+use App\Filament\Resources\Sales\Pages\DailySummary;
 use App\Filament\Resources\Sales\Pages\EditSale;
 use App\Filament\Resources\Sales\Pages\ListSales;
 use App\Filament\Resources\Sales\Pages\ViewSale;
@@ -44,6 +45,7 @@ class SaleResource extends Resource
             'create' => CreateSale::route('/create'),
             'view' => ViewSale::route('/{record}'),
             'edit' => EditSale::route('/{record}/edit'),
+            'cash-report' => DailySummary::route('/cash-report'),
         ];
     }
 }

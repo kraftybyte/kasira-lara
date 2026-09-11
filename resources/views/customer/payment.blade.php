@@ -205,6 +205,75 @@
                     </div>
                 </div>
             @endif
+
+            {{-- Virtual Account Payment --}}
+            @if($sale->payment_method === 'va')
+                <div class="text-center">
+                    <div class="bg-white border-2 border-gray-100 rounded-2xl p-6 mb-6">
+                        <div class="flex items-center justify-center gap-2 mb-4">
+                            <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                                <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                </svg>
+                            </div>
+                            <p class="text-sm font-semibold text-gray-700">Virtual Account</p>
+                        </div>
+
+                        <p class="text-xs text-gray-500 mb-4">Lakukan pembayaran melalui Virtual Account</p>
+
+                        {{-- VA Number --}}
+                        @if($sale->paywuz_qr_url)
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 mb-4">
+                                <p class="text-xs text-blue-600 mb-2 font-medium uppercase tracking-wider">Nomor Virtual Account</p>
+                                <p class="font-mono text-2xl font-bold text-blue-700 tracking-wider">{{ $sale->paywuz_qr_url }}</p>
+                            </div>
+                        @else
+                            <div class="bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-200 rounded-xl p-5 mb-4">
+                                <p class="text-xs text-blue-600 mb-2 font-medium uppercase tracking-wider">Nomor Virtual Account</p>
+                                <p class="font-mono text-2xl font-bold text-blue-700 tracking-wider">88{{ substr($sale->invoice_number, -9) }}</p>
+                            </div>
+                        @endif
+
+                        {{-- Amount --}}
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+                            <p class="text-xs text-blue-600 mb-1">Jumlah Bayar</p>
+                            <p class="font-bold text-3xl text-blue-600">Rp {{ number_format($sale->grand_total, 0, ',', '.') }}</p>
+                        </div>
+
+                        {{-- Transaction ID --}}
+                        @if($sale->paywuz_transaction_id)
+                            <div class="bg-gray-50 rounded-xl p-3 mb-4">
+                                <p class="text-xs text-gray-500">Transaction ID</p>
+                                <p class="font-mono text-sm text-gray-700">{{ $sale->paywuz_transaction_id }}</p>
+                            </div>
+                        @endif
+
+                        {{-- Instructions --}}
+                        <div class="bg-gray-50 rounded-xl p-4 text-left">
+                            <p class="text-xs font-semibold text-gray-900 mb-2">Cara Pembayaran:</p>
+                            <ol class="text-xs text-gray-600 space-y-1 list-decimal list-inside">
+                                <li>Buka aplikasi mobile banking atau ATM</li>
+                                <li>Pilih menu "Transfer" / "Pembayaran"</li>
+                                <li>Pilih bank yang sesuai</li>
+                                <li>Masukkan nomor Virtual Account di atas</li>
+                                <li>Ikuti instruksi untuk menyelesaikan pembayaran</li>
+                            </ol>
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-6">
+                        <div class="flex items-start gap-3">
+                            <svg class="w-5 h-5 text-amber-500 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            <div>
+                                <p class="font-medium text-amber-800">Penting!</p>
+                                <p class="text-sm text-amber-700">Setelah melakukan pembayaran, klik tombol "Sudah Bayar" untuk konfirmasi pesanan Anda.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- Confirm Button (Fixed Bottom) --}}
@@ -278,6 +347,26 @@
                 statusText.textContent = 'Menunggu pembayaran... (' + seconds + 's)';
             }
         }, 1000);
+
+        // Reload on visibility change (when customer comes back to tab)
+        document.addEventListener('visibilitychange', function() {
+            if (document.visibilityState === 'visible') {
+                fetch('{{ route('customer.order.payment.confirm', [$tenant->slug ?? $tenant->id, $table->id, $sale->id]) }}', {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
+                        'Accept': 'application/json',
+                    },
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success || data.redirect) {
+                        window.location.reload();
+                    }
+                })
+                .catch(error => {});
+            }
+        });
     </script>
     @endif
 </body>

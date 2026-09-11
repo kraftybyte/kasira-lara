@@ -72,6 +72,10 @@ class TenantSettings extends Page implements HasForms
             'paywuz_enabled' => $this->settings->paywuz_enabled ?? false,
             'paywuz_merchant_name' => $this->settings->paywuz_merchant_name ?? 'KasirAja',
             'paywuz_api_key' => $this->settings->paywuz_api_key,
+
+            'bank_name' => $this->settings->bank_name,
+            'bank_account' => $this->settings->bank_account,
+            'bank_account_name' => $this->settings->bank_account_name,
         ];
     }
 
@@ -198,6 +202,27 @@ class TenantSettings extends Page implements HasForms
                                     ]),
                             ]),
 
+                        Tab::make('bank')
+                            ->label('Rekening Bank')
+                            ->icon('heroicon-o-building-library')
+                            ->schema([
+                                Section::make('Informasi Rekening untuk Transfer Manual')
+                                    ->description('Digunakan untuk opsi pembayaran Transfer Manual di POS')
+                                    ->schema([
+                                        TextInput::make('bank_name')
+                                            ->label('Nama Bank')
+                                            ->placeholder('Contoh: BCA, Mandiri, BNI'),
+
+                                        TextInput::make('bank_account')
+                                            ->label('Nomor Rekening')
+                                            ->placeholder('Contoh: 1234567890'),
+
+                                        TextInput::make('bank_account_name')
+                                            ->label('Nama Pemilik Rekening')
+                                            ->placeholder('Contoh: Toko Sejahtera'),
+                                    ]),
+                            ]),
+
                         Tab::make('about')
                             ->label('Tentang')
                             ->icon('heroicon-o-information-circle')
@@ -259,6 +284,12 @@ class TenantSettings extends Page implements HasForms
             $this->settings->paywuz_enabled = $data['paywuz_enabled'] ?? false;
             $this->settings->paywuz_merchant_name = $data['paywuz_merchant_name'] ?? null;
             $this->settings->paywuz_api_key = $data['paywuz_api_key'] ?? null;
+
+            // Bank account fields
+            $this->settings->bank_name = $data['bank_name'] ?? null;
+            $this->settings->bank_account = $data['bank_account'] ?? null;
+            $this->settings->bank_account_name = $data['bank_account_name'] ?? null;
+
             $this->settings->save();
 
             // Also update Tenant name if store_name changed

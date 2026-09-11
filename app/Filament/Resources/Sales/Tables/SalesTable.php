@@ -34,6 +34,54 @@ class SalesTable
 
                 /*
                 |--------------------------------------------------------------------------
+                | TABLE
+                |--------------------------------------------------------------------------
+                */
+
+                TextColumn::make('table.name')
+                    ->label('Meja')
+                    ->placeholder('Takeaway')
+                    ->formatStateUsing(function ($state, $record) {
+                        if ($record->table_id) {
+                            return 'Meja '.$state;
+                        }
+
+                        return 'Takeaway';
+                    })
+                    ->badge()
+                    ->color('info'),
+
+                /*
+                |--------------------------------------------------------------------------
+                | ITEMS (Products)
+                |--------------------------------------------------------------------------
+                */
+
+                TextColumn::make('items_summary')
+                    ->label('Produk')
+                    ->getStateUsing(function ($record) {
+                        $items = $record->items->take(3);
+                        $names = $items->pluck('product_name')->toArray();
+                        $more = $record->items->count() - 3;
+
+                        $text = implode(', ', $names);
+                        if ($more > 0) {
+                            $text .= " +{$more} more";
+                        }
+
+                        return $text ?: '-';
+                    })
+                    ->tooltip(function ($record) {
+                        $items = $record->items->map(function ($item) {
+                            return "{$item->quantity}x {$item->product_name}";
+                        })->toArray();
+
+                        return implode("\n", $items);
+                    })
+                    ->lineClamp(1),
+
+                /*
+                |--------------------------------------------------------------------------
                 | CUSTOMER
                 |--------------------------------------------------------------------------
                 */
@@ -91,6 +139,8 @@ class SalesTable
                             'credit' => 'Credit Card',
 
                             'credit_card' => 'Credit Card',
+
+                            'va' => 'VA',
 
                             default => $state
                                 ? ucfirst(
@@ -157,6 +207,14 @@ class SalesTable
 
             /*
             |--------------------------------------------------------------------------
+            | DEFAULT SORT
+            |--------------------------------------------------------------------------
+            */
+
+            ->defaultSort('created_at', 'desc')
+
+            /*
+            |--------------------------------------------------------------------------
             | FILTER
             |--------------------------------------------------------------------------
             */
@@ -173,6 +231,14 @@ class SalesTable
 
                         'cancelled' => 'Dibatalkan',
 
+                    ]),
+
+                SelectFilter::make('payment_method')
+                    ->label('Pembayaran')
+                    ->options([
+                        'cash' => 'Tunai',
+                        'qris' => 'QRIS',
+                        'va' => 'Virtual Account',
                     ]),
 
             ])

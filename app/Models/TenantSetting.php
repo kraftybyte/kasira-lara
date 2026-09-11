@@ -35,6 +35,17 @@ class TenantSetting extends Model
         'paywuz_enabled',
         'paywuz_merchant_name',
         'paywuz_api_key',
+
+        // Loyalty/Points Settings
+        'loyalty_enabled',
+        'loyalty_points_per_rupiah',
+        'loyalty_points_value',
+        'loyalty_minimum_redeem',
+
+        // Bank Account for Manual Transfer
+        'bank_name',
+        'bank_account',
+        'bank_account_name',
     ];
 
     /**
@@ -53,6 +64,11 @@ class TenantSetting extends Model
         'tax_rate' => 'decimal:2',
 
         'paywuz_enabled' => 'boolean',
+
+        'loyalty_enabled' => 'boolean',
+        'loyalty_points_per_rupiah' => 'decimal:2',
+        'loyalty_points_value' => 'decimal:2',
+        'loyalty_minimum_redeem' => 'integer',
     ];
 
     public function tenant(): BelongsTo
@@ -87,5 +103,51 @@ class TenantSetting extends Model
     {
         return $this->paywuz_enabled
             && ! empty($this->paywuz_api_key);
+    }
+
+    /**
+     * Check if loyalty is enabled and configured
+     */
+    public function isLoyaltyEnabled(): bool
+    {
+        return $this->loyalty_enabled
+            && $this->loyalty_points_per_rupiah > 0;
+    }
+
+    /**
+     * Calculate points earned from amount
+     */
+    public function calculatePoints(float $amount): int
+    {
+        if (! $this->isLoyaltyEnabled()) {
+            return 0;
+        }
+
+        return (int) floor($amount / $this->loyalty_points_per_rupiah);
+    }
+
+    /**
+     * Calculate redemption value
+     */
+    public function calculateRedemptionValue(int $points): float
+    {
+        if (! $this->isLoyaltyEnabled() || $points <= 0) {
+            return 0;
+        }
+
+        return $points * $this->loyalty_points_value;
+    }
+
+    /**
+     * Get default settings for new tenants
+     */
+    public static function getDefaults(): array
+    {
+        return [
+            'loyalty_enabled' => false,
+            'loyalty_points_per_rupiah' => 1000, // 1 point per 1000 rupiah
+            'loyalty_points_value' => 1,         // 1 point = Rp 1
+            'loyalty_minimum_redeem' => 100,     // Min 100 points to redeem
+        ];
     }
 }

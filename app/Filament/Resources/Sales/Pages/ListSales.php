@@ -6,6 +6,7 @@ use App\Filament\Pages\Reports\SalesReport;
 use App\Filament\Resources\Sales\SaleResource;
 use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
+use Illuminate\Database\Eloquent\Builder;
 
 class ListSales extends ListRecords
 {
@@ -20,5 +21,10 @@ class ListSales extends ListRecords
                 ->color('gray')
                 ->url(SalesReport::getUrl()),
         ];
+    }
+
+    protected function getTableQuery(): Builder
+    {
+        return parent::getTableQuery()->with(['items', 'table', 'customer', 'user']);
     }
 }

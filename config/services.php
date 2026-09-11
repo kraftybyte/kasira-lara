@@ -46,7 +46,7 @@ return [
     */
 
     'paywuz' => [
-        'base_url' => env('PAYWUZ_BASE_URL', 'https://paywuz.id/api/v1'),
+        'base_url' => env('PAYWUZ_BASE_URL', 'https://api.paywuz.id/v1'),
         'api_key' => env('PAYWUZ_API_KEY', ''),
         'callback_url' => env('PAYWUZ_CALLBACK_URL', '/webhook/paywuz'),
         'merchant_name' => env('PAYWUZ_MERCHANT_NAME', 'KasirAja'),

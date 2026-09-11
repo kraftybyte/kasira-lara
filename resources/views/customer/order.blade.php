@@ -25,6 +25,17 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .hide-scrollbar::-webkit-scrollbar { display: none; }
         .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Touch scroll for category tabs */
+        .touch-scroll {
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scroll-snap-type: x mandatory;
+            scroll-behavior: smooth;
+        }
+        .touch-scroll > * {
+            scroll-snap-align: start;
+        }
     </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
@@ -60,14 +71,14 @@
             </div>
 
             {{-- Categories (only show on menu page) --}}
-            <div id="category-tabs" class="px-4 pb-3 overflow-x-auto hide-scrollbar">
-                <div class="flex gap-2">
-                    <button onclick="filterCategory('all')" class="category-tab active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md shadow-red-500/20">
+            <div id="category-tabs" class="px-4 pb-3">
+                <div id="category-scroll" class="flex gap-2 overflow-x-auto hide-scrollbar pb-1" style="overflow-x: auto; -webkit-overflow-scrolling: touch;">
+                    <button onclick="filterCategory('all')" class="category-tab active px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gradient-to-r from-red-500 to-orange-500 text-white shadow-md shrink-0">
                         Semua
                     </button>
                     @foreach($products as $categoryId => $items)
                         @php $category = $items->first()->category @endphp
-                        <button onclick="filterCategory('{{ $categoryId }}')" class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors">
+                        <button onclick="filterCategory('{{ $categoryId }}')" class="category-tab px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors shrink-0">
                             {{ $category->name ?? 'Lainnya' }}
                         </button>
                     @endforeach
@@ -76,22 +87,50 @@
         </div>
 
         {{-- Success Message --}}
-        @if(session('success'))
-            <div class="mx-4 mt-4 p-4 bg-green-50 border border-green-200 rounded-xl">
-                <div class="flex items-center gap-3">
-                    <div class="w-8 h-8 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg class="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        @if($completedSale)
+            <div class="mx-4 mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center">
+                <div class="flex flex-col items-center gap-3">
+                    <div class="w-12 h-12 rounded-full bg-green-500 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                         </svg>
                     </div>
                     <div>
-                        <p class="font-semibold text-green-800">{{ session('success') }}</p>
-                        <p class="text-xs text-green-600">Pesanan Anda sedang diproses</p>
+                        <p class="font-bold text-green-800">Pembayaran Berhasil!</p>
+                        <p class="text-xs text-green-600 mt-1">Invoice: {{ $completedSale->invoice_number }}</p>
+                    </div>
+                    <div class="pt-2 border-t border-green-200">
+                        <p class="text-sm text-green-700">Pesanan Anda sedang diproses. Silakan tunggu.</p>
                     </div>
                 </div>
-                <a href="{{ url('/order/' . $tenant->slug . '/' . $table->id) }}" class="mt-3 block w-full py-2 bg-green-500 text-white text-center rounded-lg font-medium hover:bg-green-600">
-                    Pesan Lagi
-                </a>
+            </div>
+        @endif
+
+        {{-- Pending Payment Banner --}}
+        @if(isset($pendingSale) && $pendingSale)
+            <div class="mx-4 mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl">
+                <div class="flex flex-col items-center gap-3 text-center">
+                    <div class="w-12 h-12 rounded-full bg-amber-500 flex items-center justify-center">
+                        <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div>
+                        <p class="font-bold text-amber-800">Menunggu Pembayaran</p>
+                        <p class="text-xs text-amber-600 mt-1">Invoice: {{ $pendingSale->invoice_number }}</p>
+                    </div>
+                    <div class="flex gap-2 w-full">
+                        <a href="{{ route('customer.order.payment', ['tenant' => $tenant->slug ?? $tenant->id, 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="flex-1 py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
+                            Bayar Sekarang
+                        </a>
+                        <form action="{{ route('customer.order.check-status', ['tenant' => $tenant->slug ?? $tenant->id, 'table' => $table->id, 'sale' => $pendingSale->id]) }}" method="POST" class="flex-1">
+                            @csrf
+                            <button type="submit" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
+                                Cek Status
+                            </button>
+                        </form>
+                    </div>
+                </div>
             </div>
         @endif
 
@@ -609,11 +648,11 @@
 
         function filterCategory(categoryId) {
             document.querySelectorAll('.category-tab').forEach(tab => {
-                tab.classList.remove('bg-primary', 'text-white');
+                tab.classList.remove('bg-gradient-to-r', 'from-red-500', 'to-orange-500', 'text-white', 'shadow-md');
                 tab.classList.add('bg-gray-100', 'text-gray-600');
             });
             event.target.classList.remove('bg-gray-100', 'text-gray-600');
-            event.target.classList.add('bg-primary', 'text-white');
+            event.target.classList.add('bg-gradient-to-r', 'from-red-500', 'to-orange-500', 'text-white', 'shadow-md');
 
             document.querySelectorAll('.product-category').forEach(category => {
                 if (categoryId === 'all' || category.dataset.category === categoryId) {
@@ -626,6 +665,53 @@
 
         // Initialize
         document.addEventListener('DOMContentLoaded', () => {
+            // Touch swipe for category tabs
+            const scrollContainer = document.getElementById('category-scroll');
+            if (scrollContainer) {
+                let isDown = false;
+                let startX;
+                let scrollLeft;
+
+                scrollContainer.addEventListener('mousedown', (e) => {
+                    isDown = true;
+                    scrollContainer.style.cursor = 'grabbing';
+                    startX = e.pageX - scrollContainer.offsetLeft;
+                    scrollLeft = scrollContainer.scrollLeft;
+                });
+
+                scrollContainer.addEventListener('mouseleave', () => {
+                    isDown = false;
+                    scrollContainer.style.cursor = 'grab';
+                });
+
+                scrollContainer.addEventListener('mouseup', () => {
+                    isDown = false;
+                    scrollContainer.style.cursor = 'grab';
+                });
+
+                scrollContainer.addEventListener('mousemove', (e) => {
+                    if (!isDown) return;
+                    e.preventDefault();
+                    const x = e.pageX - scrollContainer.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    scrollContainer.scrollLeft = scrollLeft - walk;
+                });
+
+                // Touch events for mobile
+                scrollContainer.addEventListener('touchstart', (e) => {
+                    startX = e.touches[0].pageX - scrollContainer.offsetLeft;
+                    scrollLeft = scrollContainer.scrollLeft;
+                });
+
+                scrollContainer.addEventListener('touchmove', (e) => {
+                    const x = e.touches[0].pageX - scrollContainer.offsetLeft;
+                    const walk = (x - startX) * 2;
+                    scrollContainer.scrollLeft = scrollLeft - walk;
+                });
+
+                scrollContainer.style.cursor = 'grab';
+            }
+
             // Style payment options
             document.querySelectorAll('.payment-option input').forEach(input => {
                 input.addEventListener('change', () => {
