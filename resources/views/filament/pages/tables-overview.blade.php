@@ -294,46 +294,48 @@
         </div>
     @endif
 
-    {{-- Close Table Toast Confirmation --}}
+    {{-- Close Table Confirmation Modal --}}
     <div x-show="showCloseToast"
          x-transition:enter="transition ease-out duration-300"
-         x-transition:enter-start="translate-y-4 opacity-0"
-         x-transition:enter-end="translate-y-0 opacity-100"
+         x-transition:enter-start="opacity-0"
+         x-transition:enter-end="opacity-100"
          x-transition:leave="transition ease-in duration-200"
-         x-transition:leave-start="translate-y-0 opacity-100"
-         x-transition:leave-end="translate-y-4 opacity-0"
-         class="fixed inset-x-0 top-4 z-50 mx-auto w-96 rounded-2xl border border-gray-200 bg-white p-4 shadow-2xl dark:border-gray-700 dark:bg-gray-800"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
          style="display: none;">
-        <div class="flex items-start gap-3">
-            <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                <x-heroicon-o-question-mark-circle class="h-5 w-5" />
-            </div>
-            <div class="flex-1">
-                <h4 class="text-sm font-semibold text-gray-900 dark:text-white">Tutup Meja?</h4>
-                <p class="mt-1 text-xs text-gray-500">
+        <div x-show="showCloseToast"
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="w-full max-w-sm rounded-2xl border border-gray-200 bg-white p-6 shadow-2xl dark:border-gray-700 dark:bg-gray-800">
+            <div class="text-center">
+                <div class="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                    <x-heroicon-o-question-mark-circle class="h-7 w-7" />
+                </div>
+                <h3 class="text-lg font-bold text-gray-900 dark:text-white">Tutup Meja?</h3>
+                <p class="mt-2 text-sm text-gray-500">
                     <span x-text="closeTableName"></span> akan ditutup. Semua pesanan akan dihapus.
                 </p>
-                <div class="mt-3 flex gap-2">
+                <div class="mt-6 flex gap-3">
                     <button type="button"
                             wire:click="cancelCloseTable"
                             @click="showCloseToast = false"
-                            class="flex-1 rounded-lg border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
+                            class="flex-1 rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:bg-gray-600">
                         Batal
                     </button>
                     <button type="button"
                             wire:click="confirmCloseTable"
                             @click="showCloseToast = false"
-                            class="flex-1 rounded-lg bg-red-500 px-3 py-1.5 text-xs font-medium text-white transition hover:bg-red-600">
+                            class="flex-1 rounded-xl bg-red-500 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-red-600">
                         Ya, Tutup
                     </button>
                 </div>
             </div>
         </div>
-        <button type="button"
-                @click="showCloseToast = false"
-                class="absolute right-2 top-2 rounded-lg p-1 text-gray-400 transition hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
-            <x-heroicon-o-x-mark class="h-4 w-4" />
-        </button>
     </div>
 
     {{-- QR Code Modal --}}
