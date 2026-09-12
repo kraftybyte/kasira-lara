@@ -493,11 +493,14 @@
                     <div class="scrollbar-thin p-3 max-h-48 overflow-y-auto">
                         @forelse ($cart as $productId => $item)
                             @php
-                                $cartProduct = \App\Models\Product::find($productId);
+                                // Handle variant keys (e.g., "1_1699999999")
+                                $baseProductId = is_numeric($productId) ? $productId : explode('_', $productId)[0];
+                                $cartProduct = \App\Models\Product::find($baseProductId);
                                 $isDuration = $item['is_duration'] ?? false;
                                 $modifiers = $item['modifiers'] ?? [];
-                                $hasModifiers = count($modifiers) > 0;
+                                $hasModifiers = !empty($modifiers);
                                 $hasNotes = !empty($item['notes']);
+                                $isVariant = $item['is_variant'] ?? false;
                             @endphp
                             <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }}">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg {{ $isDuration ? 'bg-amber-100 dark:bg-amber-500/20' : 'bg-gray-200 dark:bg-gray-700' }}">
@@ -510,7 +513,12 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="flex-1 min-w-0">
-                                            <p class="truncate text-xs font-medium text-gray-900 dark:text-white">{{ $item['product_name'] }}</p>
+                                            <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+                                                {{ $item['product_name'] }}
+                                                @if($isVariant)
+                                                    <span class="ml-1 text-[10px] text-blue-500">(custom)</span>
+                                                @endif
+                                            </p>
                                             <p class="text-[11px] text-gray-500">
                                                 @if($isDuration)
                                                     <span class="text-amber-600 dark:text-amber-400">⏱ {{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
@@ -527,24 +535,24 @@
                                                         </span>
                                                     @endforeach
                                                     @if($hasNotes)
-                                                        <span class="inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-[10px] font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-400">
-                                                            📝 Catatan
+                                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                                            📝 {{ Str::limit($item['notes'], 20) }}
                                                         </span>
                                                     @endif
                                                 </div>
                                             @endif
                                         </div>
-                                        <button type="button" wire:click="openModifierModal({{ $productId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                                        <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
                                             <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
                                         </button>
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" wire:click="decrementQuantity({{ $productId }})" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
+                                    <button type="button" wire:click="decrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
                                         <x-heroicon-o-minus class="h-3 w-3" />
                                     </button>
                                     <span class="w-6 text-center text-xs font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
-                                    <button type="button" wire:click="incrementQuantity({{ $productId }})" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
+                                    <button type="button" wire:click="incrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
                                         <x-heroicon-o-plus class="h-3 w-3" />
                                     </button>
                                 </div>

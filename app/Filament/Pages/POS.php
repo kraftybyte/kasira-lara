@@ -340,6 +340,46 @@ class POS extends Page
         $isDuration = $product->rate_type === 'duration';
         $itemPrice = $sellingPrice + $modifierTotal;
 
+        // Check if product already in cart with different notes/modifiers
+        if (isset($this->cart[$productId])) {
+            $existing = $this->cart[$productId];
+            $hasExistingNotes = ! empty($existing['notes']);
+            $hasExistingMods = ! empty($existing['modifiers']);
+            $hasNewNotes = ! empty($notes);
+            $hasNewMods = ! empty($modifierData);
+
+            // If existing has notes/mods and new also has them, create variant entry
+            if (($hasExistingNotes && $hasNewNotes) || ($hasExistingMods && $hasNewMods)) {
+                $newKey = $productId.'_'.time();
+                $this->cart[$newKey] = [
+                    'product_id' => $productId,
+                    'product_name' => $product->name,
+                    'sku' => $product->sku,
+                    'unit_price' => $itemPrice,
+                    'quantity' => 1,
+                    'subtotal' => $itemPrice,
+                    'total' => $itemPrice,
+                    'is_duration' => $isDuration,
+                    'rate_type' => $product->rate_type,
+                    'rate' => (float) $product->rate,
+                    'notes' => $notes,
+                    'modifiers' => $modifierData,
+                    'is_variant' => true,
+                ];
+                Notification::make()->title('Ditambahkan')->body("+1 {$product->name}")->success()->send();
+
+                return;
+            }
+
+            // Just increment quantity if existing has no notes/mods
+            $this->cart[$productId]['quantity'] += 1;
+            $this->recalculateCartItem($productId);
+            Notification::make()->title('Ditambahkan')->body("+1 {$product->name}")->success()->send();
+
+            return;
+        }
+
+        // New product entry
         $this->cart[$productId] = [
             'product_id' => $productId,
             'product_name' => $product->name,
@@ -353,9 +393,9 @@ class POS extends Page
             'rate' => (float) $product->rate,
             'notes' => $notes,
             'modifiers' => $modifierData,
+            'is_variant' => false,
         ];
-
-        $this->recalculateCartItem($productId);
+        Notification::make()->title('Ditambahkan')->body("+1 {$product->name}")->success()->send();
     }
 
     /*
@@ -609,13 +649,9 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
-    public function removeFromCart(
-        int $productId
-    ): void {
-
-        unset(
-            $this->cart[$productId]
-        );
+    public function removeFromCart(int|string $productId): void
+    {
+        unset($this->cart[$productId]);
     }
 
     /*
@@ -624,7 +660,7 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
-    public function incrementQuantity(int $productId): void
+    public function incrementQuantity(int|string $productId): void
     {
         if (isset($this->cart[$productId])) {
             $this->cart[$productId]['quantity']++;
@@ -638,7 +674,7 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
-    public function decrementQuantity(int $productId): void
+    public function decrementQuantity(int|string $productId): void
     {
         if (isset($this->cart[$productId])) {
             if ($this->cart[$productId]['quantity'] > 1) {
@@ -1536,36 +1572,18 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
-    protected function recalculateCartItem(
-        int $productId
-    ): void {
-
-        if (
-            ! isset(
-                $this->cart[$productId]
-            )
-        ) {
-
+    protected function recalculateCartItem(int|string $productId): void
+    {
+        if (! isset($this->cart[$productId])) {
             return;
         }
 
-        $quantity =
-            (float)
-            $this->cart[$productId]['quantity'];
+        $quantity = (float) $this->cart[$productId]['quantity'];
+        $unitPrice = (float) $this->cart[$productId]['unit_price'];
+        $subtotal = $quantity * $unitPrice;
 
-        $unitPrice =
-            (float)
-            $this->cart[$productId]['unit_price'];
-
-        $subtotal =
-            $quantity *
-            $unitPrice;
-
-        $this->cart[$productId]['subtotal'] =
-            $subtotal;
-
-        $this->cart[$productId]['total'] =
-            $subtotal;
+        $this->cart[$productId]['subtotal'] = $subtotal;
+        $this->cart[$productId]['total'] = $subtotal;
     }
 
     /*
