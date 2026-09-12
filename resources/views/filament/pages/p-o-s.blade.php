@@ -91,10 +91,10 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 gap-3 xl:grid-cols-12">
+    <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
 
         {{-- PRODUCTS --}}
-        <div class="xl:col-span-8">
+        <div class="lg:col-span-8">
 
             {{-- Search & Category Filter --}}
             <div class="mb-3 space-y-2">
@@ -136,6 +136,16 @@
 
             <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
                 <div class="p-2">
+                    {{-- Loading State --}}
+                    <div wire:loading class="mb-3 flex items-center justify-center rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                        <div class="flex items-center gap-2 text-sm text-gray-500">
+                            <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            <span>Memuat produk...</span>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-4 max-h-[calc(100vh-280px)] overflow-y-auto">
                         @forelse ($this->products as $product)
                             <button
@@ -199,7 +209,7 @@
             </div>
         </div>
         {{-- CUSTOMER & CART --}}
-        <div class="xl:col-span-4">
+        <div class="lg:col-span-4">
             <div class="flex flex-col gap-4">
 
                 {{-- ====================================================
@@ -477,7 +487,7 @@
                             @endif
                         </div>
                         @if (count($cart) > 0)
-                            <button type="button" wire:click="clearCart" class="text-xs font-medium text-red-500 transition-colors hover:text-red-600">Hapus semua</button>
+                            <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-red-500 transition-colors hover:text-red-600">Hapus semua</button>
                         @endif
                     </div>
                     <div class="scrollbar-thin p-3 max-h-48 overflow-y-auto">
@@ -530,11 +540,11 @@
                                     </div>
                                 </div>
                                 <div class="flex items-center gap-1">
-                                    <button type="button" wire:click="decrementQuantity({{ $productId }})" class="btn-qty">
+                                    <button type="button" wire:click="decrementQuantity({{ $productId }})" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
                                         <x-heroicon-o-minus class="h-3 w-3" />
                                     </button>
                                     <span class="w-6 text-center text-xs font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
-                                    <button type="button" wire:click="incrementQuantity({{ $productId }})" class="btn-qty">
+                                    <button type="button" wire:click="incrementQuantity({{ $productId }})" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
                                         <x-heroicon-o-plus class="h-3 w-3" />
                                     </button>
                                 </div>
@@ -652,7 +662,7 @@
                             <p class="text-xs text-white/80">Selesaikan transaksi</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeCheckout" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/20 hover:text-white">
+                    <button type="button" wire:click="closeCheckout" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Tutup checkout">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
                 </div>
@@ -768,7 +778,7 @@
                                                 <span>Mengecek...</span>
                                             </span>
                                         </button>
-                                        <button type="button" wire:click="cancelQrisPayment" class="flex items-center justify-center rounded-xl bg-gray-200 px-4 py-3 text-gray-600 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400">
+                                        <button type="button" wire:click="cancelQrisPayment" class="flex items-center justify-center rounded-xl bg-gray-200 px-4 py-3 text-gray-600 transition hover:bg-gray-300 dark:bg-gray-700 dark:text-gray-400" aria-label="Batalkan QRIS">
                                             <x-heroicon-o-x-mark class="h-5 w-5" />
                                         </button>
                                     </div>
@@ -867,7 +877,7 @@
                                                 <span>Mengecek...</span>
                                             </span>
                                         </button>
-                                        <button type="button" wire:click="cancelVaPayment" class="flex items-center justify-center rounded-xl bg-gray-100 px-4 py-3 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400">
+                                        <button type="button" wire:click="cancelVaPayment" class="flex items-center justify-center rounded-xl bg-gray-100 px-4 py-3 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400" aria-label="Batalkan Virtual Account">
                                             <x-heroicon-o-x-mark class="h-5 w-5" />
                                         </button>
                                     </div>
@@ -1144,7 +1154,7 @@
                             <p class="text-xs text-gray-500">Customer baru</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeAddCustomer" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="closeAddCustomer" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="Tutup tambah customer">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
                 </div>
@@ -1194,7 +1204,7 @@
                             <p class="text-xs text-gray-500">{{ $product?->name ?? 'Produk' }}</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeModifierModal" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800">
+                    <button type="button" wire:click="closeModifierModal" class="flex h-9 w-9 items-center justify-center rounded-lg text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-700 dark:hover:bg-gray-800" aria-label="Tutup pilihan modifier">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
                 </div>

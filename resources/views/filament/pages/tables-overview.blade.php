@@ -191,31 +191,28 @@
                     <div class="flex gap-2">
                         <button
                             wire:click="$dispatch('showOrderDetails', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                            class="btn btn-secondary btn-md flex-1">
+                            class="btn btn-secondary btn-md flex-1"
+                            aria-label="Lihat pesanan meja {{ $table->name }}">
                             <x-heroicon-o-eye class="h-4 w-4" />
                             Lihat
                         </button>
                         <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos?table=' . $table->id) }}"
-                            class="btn btn-primary btn-md">
+                            class="btn btn-primary btn-md"
+                            aria-label="Tambah pesanan meja {{ $table->name }}">
                             <x-heroicon-o-plus class="h-4 w-4" />
                         </a>
                         <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                            class="btn btn-secondary btn-md">
+                            class="btn btn-secondary btn-md"
+                            aria-label="Tampilkan QR code meja {{ $table->name }}">
                             <x-heroicon-o-qr-code class="h-4 w-4" />
                         </button>
-                        @if($this->hasUnpaidOrders($table->id))
-                            <button
-                                wire:click="closeTable({{ $table->id }})"
-                                class="btn btn-danger btn-md">
-                                <x-heroicon-o-x-circle class="h-4 w-4" />
-                            </button>
-                        @else
-                            <button
-                                wire:click="closeTable({{ $table->id }})"
-                                class="btn btn-danger btn-md">
-                                <x-heroicon-o-x-circle class="h-4 w-4" />
-                            </button>
-                        @endif
+                        <button
+                            wire:click="closeTable({{ $table->id }})"
+                            wire:confirm="Yakin ingin menutup meja {{ $table->name }}?"
+                            class="btn btn-danger btn-md"
+                            aria-label="Tutup meja {{ $table->name }}">
+                            <x-heroicon-o-x-circle class="h-4 w-4" />
+                        </button>
                     </div>
                 </div>
             </div>

@@ -1,4 +1,15 @@
 <x-filament-panels::page>
+        {{-- Loading State --}}
+        <div wire:loading class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
+            <div class="flex items-center gap-2 rounded-xl bg-white px-6 py-4 shadow-lg dark:bg-gray-800">
+                <svg class="h-6 w-6 animate-spin text-red-500" viewBox="0 0 24 24" fill="none">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Memuat...</span>
+            </div>
+        </div>
+
     {{-- Header --}}
     <div class="mb-6 flex items-center justify-between">
         <div>
@@ -7,7 +18,7 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::now('Asia/Jakarta')->format('H:i') }} WIB</span>
-            <button wire:click="$refresh" class="btn btn-secondary btn-md">
+            <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
                 <x-heroicon-o-arrow-path class="h-4 w-4" />
                 Refresh
             </button>
@@ -94,13 +105,15 @@
                         <div class="border-t border-gray-100 p-3">
                             @if($order->status === 'pending')
                                 <button wire:click="markAsPreparing({{ $order->id }})"
-                                    class="btn btn-warning btn-md w-full">
+                                    class="btn btn-warning btn-md w-full"
+                                    aria-label="Mulai masak pesanan {{ $order->invoice_number }}">
                                     <x-heroicon-o-play class="h-4 w-4" />
                                     Mulai Masak
                                 </button>
                             @else
                                 <button wire:click="markAsReady({{ $order->id }})"
-                                    class="btn btn-success btn-md w-full">
+                                    class="btn btn-success btn-md w-full"
+                                    aria-label="Tandai selesai masak pesanan {{ $order->invoice_number }}">
                                     <x-heroicon-o-check class="h-4 w-4" />
                                     Selesai Masak
                                 </button>
@@ -167,7 +180,8 @@
                         {{-- Action --}}
                         <div class="border-t border-gray-100 p-3">
                             <button wire:click="markAsCompleted({{ $order->id }})"
-                                class="btn btn-secondary btn-md w-full">
+                                class="btn btn-secondary btn-md w-full"
+                                aria-label="Tandai pesanan {{ $order->invoice_number }} sudah selesai">
                                 <x-heroicon-o-hand-thumb-up class="h-4 w-4" />
                                 Selesai
                             </button>
