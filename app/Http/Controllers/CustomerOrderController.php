@@ -66,14 +66,30 @@ class CustomerOrderController extends Controller
         $saleItems = [];
 
         foreach ($items as $item) {
-            $product = Product::findOrFail($item['product_id']);
+            // ============================================================
+            // SECURITY FIX CWE-639: Validate product belongs to tenant
+            // ============================================================
+            $product = Product::where('id', $item['product_id'])
+                ->where('tenant_id', $tenant->id)
+                ->where('is_active', true)
+                ->first();
+
+            if (! $product) {
+                return redirect()->back()->with('error', 'Produk tidak valid atau tidak tersedia.');
+            }
 
             // Calculate modifier total
             $modifierTotal = 0;
             $itemModifiers = [];
             if (! empty($item['modifiers'])) {
                 foreach ($item['modifiers'] as $modId) {
-                    $modifier = ProductModifier::find($modId);
+                    // ============================================================
+                    // SECURITY FIX CWE-639: Validate modifier belongs to this product
+                    // ============================================================
+                    $modifier = ProductModifier::where('id', $modId)
+                        ->where('product_id', $product->id)
+                        ->first();
+
                     if ($modifier) {
                         $modifierTotal += (float) $modifier->price_adjustment;
                         $itemModifiers[] = $modifier;
@@ -365,7 +381,58 @@ class CustomerOrderController extends Controller
             }
         }
 
-        // If no Paywuz, mark as completed (cash/manual)
+        // ============================================================
+        // SECURITY FIX CWE-841: Payment bypass prevention
+        // For transfer payment, require staff confirmation - cannot auto-verify
+        // ============================================================
+        if ($sale->payment_method === 'transfer') {
+            // Transfer payments require manual staff verification
+            // DO NOT auto-mark as paid - this prevents fake payment claims
+            Log::warning('CustomerOrderController: Transfer payment confirmation attempted - requires staff verification', [
+                'sale_id' => $sale->id,
+                'invoice' => $sale->invoice_number,
+                'table_id' => $table->id,
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran transfer memerlukan verifikasi dari staff. Silakan tunjukkan bukti transfer ke kasir.',
+                ], 403);
+            }
+
+            return redirect()->back()->with('error', 'Pembayaran transfer memerlukan verifikasi dari staff. Silakan tunjukkan bukti transfer ke kasir.');
+        }
+
+        // For QRIS without Paywuz transaction (demo/fallback mode only)
+        // Only allow if explicitly in demo mode (paywuz_transaction_id starts with DEMO-)
+        if ($sale->payment_method === 'qris' && empty($sale->paywuz_transaction_id)) {
+            Log::warning('CustomerOrderController: QRIS payment without transaction ID - blocked', [
+                'sale_id' => $sale->id,
+                'invoice' => $sale->invoice_number,
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran QRIS tidak valid. Silakan coba lagi.',
+                ], 400);
+            }
+
+            return redirect()->back()->with('error', 'Pembayaran QRIS tidak valid. Silakan coba lagi.');
+        }
+
+        // If we reach here with no Paywuz transaction (DEMO mode QRIS only)
+        if (empty($sale->paywuz_transaction_id) || str_starts_with($sale->paywuz_transaction_id, 'DEMO-')) {
+            // Demo mode - allow but log heavily
+            Log::info('CustomerOrderController: Processing DEMO mode payment', [
+                'sale_id' => $sale->id,
+                'invoice' => $sale->invoice_number,
+                'payment_method' => $sale->payment_method,
+            ]);
+        }
+
+        // Mark as completed only if verified
         $sale->update([
             'status' => 'completed',
             'payment_status' => 'paid',
