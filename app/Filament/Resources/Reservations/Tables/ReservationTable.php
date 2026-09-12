@@ -1,12 +1,10 @@
 <?php
 
-namespace App\Filament\Resources\Reservations;
+namespace App\Filament\Resources\Reservations\Tables;
 
-use Filament\Actions\BulkActionGroup;
-use Filament\Actions\DeleteBulkAction;
-use Filament\Actions\EditAction;
-use Filament\Tables\Columns\TextColumn;
-use Filament\Tables\Filters\SelectFilter;
+use App\Models\Reservation;
+use Filament\Forms\Components\DatePicker;
+use Filament\Tables;
 use Filament\Tables\Table;
 
 class ReservationTable
@@ -14,92 +12,85 @@ class ReservationTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->query(
+                Reservation::query()->with(['table', 'customer'])
+            )
             ->columns([
-                TextColumn::make('customer_name')
-                    ->label('Nama Tamu')
+                Tables\Columns\TextColumn::make('customer_name')
+                    ->label('Nama')
                     ->searchable()
                     ->sortable(),
 
-                TextColumn::make('customer_phone')
+                Tables\Columns\TextColumn::make('customer_phone')
                     ->label('No. HP')
                     ->searchable()
-                    ->placeholder('-'),
+                    ->toggleable(isToggledHiddenByDefault: true),
 
-                TextColumn::make('reservation_date')
+                Tables\Columns\TextColumn::make('table.name')
+                    ->label('Meja')
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('guest_count')
+                    ->label('Jumlah Tamu')
+                    ->numeric()
+                    ->sortable(),
+
+                Tables\Columns\TextColumn::make('reservation_date')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable(),
 
-                TextColumn::make('reservation_time')
+                Tables\Columns\TextColumn::make('reservation_time')
                     ->label('Waktu')
                     ->time('H:i')
                     ->sortable(),
 
-                TextColumn::make('guest_count')
-                    ->label('Tamu')
-                    ->numeric()
-                    ->sortable(),
-
-                TextColumn::make('table.name')
-                    ->label('Meja')
-                    ->badge()
-                    ->placeholder('-'),
-
-                TextColumn::make('status')
+                Tables\Columns\BadgeColumn::make('status')
                     ->label('Status')
-                    ->badge()
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'pending' => 'Pending',
-                        'confirmed' => 'Dikonfirmasi',
-                        'seated' => 'Ditempatkan',
-                        'completed' => 'Selesai',
-                        'cancelled' => 'Dibatalkan',
-                        default => $state,
-                    })
-                    ->colors(fn (string $state): array => match ($state) {
-                        'pending' => ['warning'],
-                        'confirmed' => ['info'],
-                        'seated' => ['success'],
-                        'completed' => ['gray'],
-                        'cancelled' => ['danger'],
-                        default => ['gray'],
-                    }),
+                    ->colors([
+                        'warning' => 'pending',
+                        'info' => 'confirmed',
+                        'success' => 'seated',
+                        'danger' => 'cancelled',
+                    ]),
 
-                TextColumn::make('notes')
+                Tables\Columns\TextColumn::make('notes')
                     ->label('Catatan')
-                    ->limit(30)
-                    ->placeholder('-')
+                    ->limit(50)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                SelectFilter::make('status')
-                    ->label('Status')
+                Tables\Filters\SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
-                        'confirmed' => 'Dikonfirmasi',
-                        'seated' => 'Ditempatkan',
-                        'completed' => 'Selesai',
-                        'cancelled' => 'Dibatalkan',
+                        'confirmed' => 'Confirmed',
+                        'seated' => 'Seated',
+                        'cancelled' => 'Cancelled',
                     ]),
-
-                SelectFilter::make('reservation_date')
-                    ->label('Tanggal')
-                    ->options(function () {
-                        $dates = collect();
-                        for ($i = 0; $i < 7; $i++) {
-                            $date = now()->addDays($i);
-                            $dates[$date->format('Y-m-d')] = $date->format('d M Y');
-                        }
-
-                        return $dates->toArray();
+                Tables\Filters\Filter::make('reservation_date')
+                    ->form([
+                        DatePicker::make('from'),
+                        DatePicker::make('until'),
+                    ])
+                    ->query(function ($query, array $data) {
+                        return $query
+                            ->when(
+                                $data['from'],
+                                fn ($query) => $query->where('reservation_date', '>=', $data['from'])
+                            )
+                            ->when(
+                                $data['until'],
+                                fn ($query) => $query->where('reservation_date', '<=', $data['until'])
+                            );
                     }),
             ])
-            ->recordActions([
-                EditAction::make(),
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
             ])
-            ->toolbarActions([
-                BulkActionGroup::make([
-                    DeleteBulkAction::make(),
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('reservation_date', 'desc');
