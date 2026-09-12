@@ -248,8 +248,8 @@ class POS extends Page
             return;
         }
 
-        // Add to cart with modifiers
-        $this->addToCart($product);
+        // Add to cart with modifiers and notes
+        $this->addToCartWithNotes($product, $this->modifierNotes, $this->selectedModifiers);
 
         $this->closeModifierModal();
     }
@@ -263,6 +263,99 @@ class POS extends Page
     public function searchProduct(): void
     {
         // Produk menggunakan computed property $this->products
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | ADD TO CART WITH NOTES (For modifier modal)
+    |--------------------------------------------------------------------------
+    */
+
+    public function addToCartWithNotes(Product $product, ?string $notes = null, array $modifiers = []): void
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            Notification::make()
+                ->title('Tenant tidak ditemukan')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $tenantId = (int) $tenant->getKey();
+
+        if ((int) $product->tenant_id !== $tenantId) {
+            Notification::make()
+                ->title('Produk tidak valid')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        if ((int) $product->is_active !== 1) {
+            Notification::make()
+                ->title('Produk tidak aktif')
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        if (
+            $product->rate_type !== 'duration'
+            && (float) $product->stock <= 0
+        ) {
+            Notification::make()
+                ->title('Stok habis')
+                ->body("Stok {$product->name} sudah habis.")
+                ->danger()
+                ->send();
+
+            return;
+        }
+
+        $productId = (int) $product->id;
+
+        // Calculate modifier total
+        $modifierTotal = 0;
+        $modifierData = [];
+        if (! empty($modifiers)) {
+            foreach ($modifiers as $mod) {
+                $modifier = ProductModifier::find($mod['id']);
+                if ($modifier) {
+                    $modifierTotal += (float) ($modifier->price_adjustment ?? 0);
+                    $modifierData[] = [
+                        'id' => $modifier->id,
+                        'name' => $modifier->name,
+                        'price' => $modifier->price_adjustment,
+                    ];
+                }
+            }
+        }
+
+        $sellingPrice = (float) $product->selling_price;
+        $isDuration = $product->rate_type === 'duration';
+        $itemPrice = $sellingPrice + $modifierTotal;
+
+        $this->cart[$productId] = [
+            'product_id' => $productId,
+            'product_name' => $product->name,
+            'sku' => $product->sku,
+            'unit_price' => $itemPrice,
+            'quantity' => 1,
+            'subtotal' => $itemPrice,
+            'total' => $itemPrice,
+            'is_duration' => $isDuration,
+            'rate_type' => $product->rate_type,
+            'rate' => (float) $product->rate,
+            'notes' => $notes,
+            'modifiers' => $modifierData,
+        ];
+
+        $this->recalculateCartItem($productId);
     }
 
     /*
@@ -1104,6 +1197,8 @@ class POS extends Page
                             'subtotal' => $subtotal,
 
                             'total' => $subtotal,
+
+                            'notes' => $item['notes'] ?? null,
 
                         ]);
 
@@ -2320,6 +2415,7 @@ class POS extends Page
                     'unit_price' => $item['unit_price'],
                     'subtotal' => $item['subtotal'],
                     'total' => $item['total'],
+                    'notes' => $item['notes'] ?? null,
                 ]);
             }
 
@@ -2384,6 +2480,7 @@ class POS extends Page
                         'unit_price' => (float) $item['unit_price'],
                         'subtotal' => $cartQuantity * (float) $item['unit_price'],
                         'total' => $cartQuantity * (float) $item['unit_price'],
+                        'notes' => $item['notes'] ?? null,
                     ]);
                     $newSubtotal += $cartQuantity * (float) $item['unit_price'];
                 }
@@ -2586,6 +2683,7 @@ class POS extends Page
                         'tax' => 0,
                         'subtotal' => (float) $item['subtotal'],
                         'total' => (float) $item['total'],
+                        'notes' => $item['notes'] ?? null,
                     ]);
                 }
             }
@@ -3046,6 +3144,7 @@ class POS extends Page
                         'tax' => 0,
                         'subtotal' => (float) $item['subtotal'],
                         'total' => (float) $item['total'],
+                        'notes' => $item['notes'] ?? null,
                     ]);
                 }
             }
