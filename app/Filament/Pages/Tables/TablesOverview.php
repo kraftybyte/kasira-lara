@@ -241,6 +241,54 @@ class TablesOverview extends Page
 
     /*
     |--------------------------------------------------------------------------
+    | CLOSE TABLE CONFIRMATION
+    |--------------------------------------------------------------------------
+    */
+
+    public bool $showCloseTableConfirm = false;
+
+    public ?int $pendingCloseTableId = null;
+
+    public ?string $pendingCloseTableName = null;
+
+    public function requestCloseTable(int $tableId, string $tableName): void
+    {
+        $this->showCloseTableConfirm = true;
+        $this->pendingCloseTableId = $tableId;
+        $this->pendingCloseTableName = $tableName;
+
+        // Dispatch event to show toast
+        $this->dispatch('show-close-table-toast', [
+            'tableId' => $tableId,
+            'tableName' => $tableName,
+        ]);
+    }
+
+    public function confirmCloseTable(): void
+    {
+        if (! $this->pendingCloseTableId) {
+            $this->showCloseTableConfirm = false;
+
+            return;
+        }
+
+        $this->closeTable($this->pendingCloseTableId);
+
+        // Reset state
+        $this->showCloseTableConfirm = false;
+        $this->pendingCloseTableId = null;
+        $this->pendingCloseTableName = null;
+    }
+
+    public function cancelCloseTable(): void
+    {
+        $this->showCloseTableConfirm = false;
+        $this->pendingCloseTableId = null;
+        $this->pendingCloseTableName = null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | CLOSE TABLE
     |--------------------------------------------------------------------------
     */
