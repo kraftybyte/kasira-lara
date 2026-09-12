@@ -3,8 +3,15 @@
 namespace App\Filament\Resources\Reservations\Tables;
 
 use App\Models\Reservation;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\DatePicker;
-use Filament\Tables;
+use Filament\Tables\Actions\BulkActionGroup;
+use Filament\Tables\Actions\DeleteBulkAction;
+use Filament\Tables\Columns\BadgeColumn;
+use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 
 class ReservationTable
@@ -16,36 +23,36 @@ class ReservationTable
                 Reservation::query()->with(['table', 'customer'])
             )
             ->columns([
-                Tables\Columns\TextColumn::make('customer_name')
+                TextColumn::make('customer_name')
                     ->label('Nama')
                     ->searchable()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('customer_phone')
+                TextColumn::make('customer_phone')
                     ->label('No. HP')
                     ->searchable()
                     ->toggleable(isToggledHiddenByDefault: true),
 
-                Tables\Columns\TextColumn::make('table.name')
+                TextColumn::make('table.name')
                     ->label('Meja')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('guest_count')
+                TextColumn::make('guest_count')
                     ->label('Jumlah Tamu')
                     ->numeric()
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('reservation_date')
+                TextColumn::make('reservation_date')
                     ->label('Tanggal')
                     ->date('d M Y')
                     ->sortable(),
 
-                Tables\Columns\TextColumn::make('reservation_time')
+                TextColumn::make('reservation_time')
                     ->label('Waktu')
                     ->time('H:i')
                     ->sortable(),
 
-                Tables\Columns\BadgeColumn::make('status')
+                BadgeColumn::make('status')
                     ->label('Status')
                     ->colors([
                         'warning' => 'pending',
@@ -54,20 +61,20 @@ class ReservationTable
                         'danger' => 'cancelled',
                     ]),
 
-                Tables\Columns\TextColumn::make('notes')
+                TextColumn::make('notes')
                     ->label('Catatan')
                     ->limit(50)
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                Tables\Filters\SelectFilter::make('status')
+                SelectFilter::make('status')
                     ->options([
                         'pending' => 'Pending',
                         'confirmed' => 'Confirmed',
                         'seated' => 'Seated',
                         'cancelled' => 'Cancelled',
                     ]),
-                Tables\Filters\Filter::make('reservation_date')
+                Filter::make('reservation_date')
                     ->form([
                         DatePicker::make('from'),
                         DatePicker::make('until'),
@@ -85,12 +92,12 @@ class ReservationTable
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ])
             ->defaultSort('reservation_date', 'desc');
