@@ -348,8 +348,8 @@ class POS extends Page
             $hasNewNotes = ! empty($notes);
             $hasNewMods = ! empty($modifierData);
 
-            // If existing has notes/mods and new also has them, create variant entry
-            if (($hasExistingNotes && $hasNewNotes) || ($hasExistingMods && $hasNewMods)) {
+            // Create variant if NEW item has notes or modifiers (regardless of existing)
+            if ($hasNewNotes || $hasNewMods) {
                 $newKey = $productId.'_'.time();
                 $this->cart[$newKey] = [
                     'product_id' => $productId,
