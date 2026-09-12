@@ -99,10 +99,10 @@
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
                                         @if($item->notes)
-                                            <p class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                <x-heroicon-o-information-circle class="inline h-3 w-3 mr-1" />
+                                            <span class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                                                <x-heroicon-o-information-circle class="h-3 w-3 shrink-0" />
                                                 {{ $item->notes }}
-                                            </p>
+                                            </span>
                                         @endif
                                     </div>
                                 </div>
@@ -195,10 +195,10 @@
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
                                         @if($item->notes)
-                                            <p class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
-                                                <x-heroicon-o-information-circle class="inline h-3 w-3 mr-1" />
+                                            <span class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
+                                                <x-heroicon-o-information-circle class="h-3 w-3 shrink-0" />
                                                 {{ $item->notes }}
-                                            </p>
+                                            </span>
                                         @endif
                                     </div>
                                 </div>
