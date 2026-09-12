@@ -163,13 +163,22 @@ class CustomerOrderController extends Controller
      */
     protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $grandTotal, array $saleItems)
     {
-        $paywuz = new PaywuzService;
+        // Pass tenant ID to PaywuzService so it can load tenant-specific API key
+        $paywuz = new PaywuzService($tenant->id);
+
+        // Log for debugging
+        Log::info('PaywuzService initialized', [
+            'tenant_id' => $tenant->id,
+            'tenant_slug' => $tenant->slug,
+            'is_configured' => $paywuz->isConfigured(),
+            'is_enabled' => $paywuz->isEnabled(),
+        ]);
 
         // Create Paywuz dynamic QR
         $response = $paywuz->createDynamicQr(
             $invoiceNumber,
             $grandTotal,
-            config('services.paywuz.merchant_name', 'KasirAja')
+            $tenant->name ?? 'KasirAja'
         );
 
         Log::info('Paywuz QR Response', $response);

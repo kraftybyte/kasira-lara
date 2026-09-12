@@ -14,7 +14,7 @@ class PaywuzService
 
     protected string $apiKey;
 
-    protected string $callbackUrl;
+    protected ?string $callbackUrl;
 
     protected string $merchantName;
 
@@ -23,7 +23,6 @@ class PaywuzService
     public function __construct(?int $tenantId = null)
     {
         $this->baseUrl = config('services.paywuz.base_url', 'https://api.paywuz.id/v1');
-        $this->callbackUrl = config('services.paywuz.callback_url', url('/webhook/paywuz'));
         $this->tenantId = $tenantId;
 
         // Load from tenant settings if available
@@ -43,13 +42,17 @@ class PaywuzService
             if ($settings) {
                 $this->apiKey = $settings->paywuz_api_key ?? '';
                 $this->merchantName = $settings->paywuz_merchant_name ?? 'KasirAja';
+                // Callback URL tenant-specific
+                $this->callbackUrl = url('/webhook/paywuz?tenant_id='.$tenantId);
             } else {
                 $this->apiKey = '';
                 $this->merchantName = 'KasirAja';
+                $this->callbackUrl = config('services.paywuz.callback_url', url('/webhook/paywuz'));
             }
         } else {
             $this->apiKey = config('services.paywuz.api_key', '');
             $this->merchantName = config('services.paywuz.merchant_name', 'KasirAja');
+            $this->callbackUrl = config('services.paywuz.callback_url', url('/webhook/paywuz'));
         }
     }
 
