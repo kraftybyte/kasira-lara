@@ -92,13 +92,33 @@
                         {{-- Items --}}
                         <div class="max-h-56 overflow-y-auto p-3">
                             @foreach($order->items as $item)
-                                <div class="mb-2 flex items-center gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-800">
+                                <div class="mb-2 flex items-start gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-800">
                                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600 dark:bg-red-500/20 dark:text-red-400">
                                         {{ (int) $item->quantity }}
                                     </span>
-                                    <span class="flex-1 text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
+                                        @if($item->notes)
+                                            <p class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                                <x-heroicon-o-information-circle class="inline h-3 w-3 mr-1" />
+                                                {{ $item->notes }}
+                                            </p>
+                                        @endif
+                                    </div>
                                 </div>
                             @endforeach
+                            {{-- Order Notes --}}
+                            @if($order->notes)
+                                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-700/50 dark:bg-amber-500/10">
+                                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                        <x-heroicon-o-pencil-square class="inline h-3 w-3 mr-1" />
+                                        Catatan Pesanan:
+                                    </p>
+                                    <p class="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                                        {{ $order->notes }}
+                                    </p>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Action --}}
@@ -168,13 +188,33 @@
                         {{-- Items --}}
                         <div class="max-h-56 overflow-y-auto p-3">
                             @foreach($order->items as $item)
-                                <div class="mb-2 flex items-center gap-2 rounded-lg bg-emerald-50 p-2 dark:bg-emerald-500/10">
+                                <div class="mb-2 flex items-start gap-2 rounded-lg bg-emerald-50 p-2 dark:bg-emerald-500/10">
                                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-xs font-bold text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-300">
                                         {{ (int) $item->quantity }}
                                     </span>
-                                    <span class="flex-1 text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</span>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
+                                        @if($item->notes)
+                                            <p class="mt-0.5 text-xs text-amber-600 dark:text-amber-400">
+                                                <x-heroicon-o-information-circle class="inline h-3 w-3 mr-1" />
+                                                {{ $item->notes }}
+                                            </p>
+                                        @endif
+                                    </div>
                                 </div>
                             @endforeach
+                            {{-- Order Notes --}}
+                            @if($order->notes)
+                                <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-700/50 dark:bg-amber-500/10">
+                                    <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                        <x-heroicon-o-pencil-square class="inline h-3 w-3 mr-1" />
+                                        Catatan Pesanan:
+                                    </p>
+                                    <p class="mt-1 text-sm text-amber-800 dark:text-amber-300">
+                                        {{ $order->notes }}
+                                    </p>
+                                </div>
+                            @endif
                         </div>
 
                         {{-- Action --}}
