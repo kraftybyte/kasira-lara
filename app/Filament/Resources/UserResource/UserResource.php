@@ -89,7 +89,7 @@ class UserResource extends Resource
                     ->whereHas('tenants', function ($q) {
                         $tenant = Filament::getTenant();
                         if ($tenant) {
-                            $q->where('tenants.id', $tenant->id)->wherePivot('status', 'active');
+                            $q->where('tenants.id', $tenant->id)->where('tenant_user.status', 'active');
                         }
                     })
             )
