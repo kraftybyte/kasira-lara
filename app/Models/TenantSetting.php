@@ -35,6 +35,7 @@ class TenantSetting extends Model
         'paywuz_enabled',
         'paywuz_merchant_name',
         'paywuz_api_key',
+        'paywuz_fee_by_merchant', // false = customer bears fee, true = merchant bears fee
 
         // Loyalty/Points Settings
         'loyalty_enabled',
@@ -64,6 +65,7 @@ class TenantSetting extends Model
         'tax_rate' => 'decimal:2',
 
         'paywuz_enabled' => 'boolean',
+        'paywuz_fee_by_merchant' => 'boolean',
 
         'loyalty_enabled' => 'boolean',
         'loyalty_points_per_rupiah' => 'decimal:2',

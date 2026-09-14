@@ -19,6 +19,7 @@ class Sale extends Model
         'status',
         'started_at',
         'payment_method',
+        'source',
 
         'cancelled_by',
         'cancelled_at',
@@ -37,6 +38,8 @@ class Sale extends Model
         'paywuz_transaction_id',
         'paywuz_qr_url',
         'paywuz_status',
+        'paywuz_fee',
+        'paywuz_fee_by_merchant',
         'payment_status',
         'paid_at',
     ];
@@ -77,6 +80,16 @@ class Sale extends Model
     public function isPending(): bool
     {
         return $this->status === 'pending';
+    }
+
+    public function isOpenBill(): bool
+    {
+        return $this->source === 'pos' && $this->status === 'open';
+    }
+
+    public function isFromCustomer(): bool
+    {
+        return $this->source === 'customer';
     }
 
     public function markAsServed(): void

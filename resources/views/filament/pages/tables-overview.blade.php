@@ -300,7 +300,7 @@
                     </div>
                     <h3 class="text-lg font-bold text-gray-900 dark:text-white">Tutup Meja?</h3>
                     <p class="mt-2 text-sm text-gray-500">
-                        {{ $pendingCloseTableName }} akan ditutup. Semua pesanan akan dihapus.
+                        {{ $pendingCloseTableName }} akan di selesaikan, pastikan semua pesanan tidak ada lagi yang diproses.
                     </p>
                     <div class="mt-6 flex gap-3">
                         <button type="button"

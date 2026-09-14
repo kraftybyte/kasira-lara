@@ -5,9 +5,11 @@ namespace App\Filament\Pages;
 use App\Models\Sale;
 use BackedEnum;
 use Filament\Facades\Filament;
+use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
+use Throwable;
 
 class Kitchen extends Page
 {
@@ -19,7 +21,9 @@ class Kitchen extends Page
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedFire;
+    protected static ?int $navigationSort = 20;
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedFire;
 
     public function getTenant()
     {
@@ -33,10 +37,23 @@ class Kitchen extends Page
             return collect();
         }
 
+        // Orders that are not yet served
+        // POS orders: show all (already paid when created)
+        // QR scan orders: only show if payment is confirmed (paid or completed)
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->whereNotIn('status', ['completed', 'ready', 'cancelled'])
-            ->with(['items', 'table', 'customer'])
+            ->whereNull('served_at')
+            ->where(function ($query) {
+                $query->where('source', 'pos')
+                    ->orWhere(function ($q) {
+                        $q->where('source', 'customer')
+                            ->where(function ($inner) {
+                                $inner->where('payment_status', 'paid')
+                                    ->orWhere('status', 'completed');
+                            });
+                    });
+            })
+            ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
     }
@@ -48,35 +65,104 @@ class Kitchen extends Page
             return collect();
         }
 
+        // Orders that are ready to serve (not yet completed)
+        // Only show POS orders or paid customer orders
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->where('status', 'ready')
-            ->with(['items', 'table', 'customer'])
+            ->whereNotNull('served_at')
+            ->where('status', '!=', 'completed')
+            ->where(function ($query) {
+                $query->where('source', 'pos')
+                    ->orWhere(function ($q) {
+                        $q->where('source', 'customer')
+                            ->where(function ($inner) {
+                                $inner->where('payment_status', 'paid')
+                                    ->orWhere('status', 'completed');
+                            });
+                    });
+            })
+            ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
     }
 
-    public function markAsPreparing(int $saleId): void
+    public function markAsServed(int $saleId): void
     {
-        $tenant = $this->getTenant();
-        Sale::where('id', $saleId)
-            ->where('tenant_id', $tenant?->id)
-            ->update(['status' => 'preparing']);
+        try {
+            $tenant = $this->getTenant();
+            Sale::where('id', $saleId)
+                ->where('tenant_id', $tenant?->id)
+                ->update(['served_at' => now()]);
+
+            Notification::make()
+                ->title('Berhasil')
+                ->body('Pesanan ditandai siap disajikan.')
+                ->success()
+                ->send();
+
+            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Gagal')
+                ->body('Error: '.$e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
-    public function markAsReady(int $saleId): void
+    public function markAsUnserved(int $saleId): void
     {
-        $tenant = $this->getTenant();
-        Sale::where('id', $saleId)
-            ->where('tenant_id', $tenant?->id)
-            ->update(['status' => 'ready']);
+        try {
+            $tenant = $this->getTenant();
+            Sale::where('id', $saleId)
+                ->where('tenant_id', $tenant?->id)
+                ->update(['served_at' => null]);
+
+            Notification::make()
+                ->title('Berhasil')
+                ->body('Pesanan dikembalikan ke daftar masak.')
+                ->success()
+                ->send();
+
+            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Gagal')
+                ->body('Error: '.$e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 
     public function markAsCompleted(int $saleId): void
     {
-        $tenant = $this->getTenant();
-        Sale::where('id', $saleId)
-            ->where('tenant_id', $tenant?->id)
-            ->update(['status' => 'completed']);
+        try {
+            $tenant = $this->getTenant();
+            $updated = Sale::where('id', $saleId)
+                ->where('tenant_id', $tenant?->id)
+                ->update(['status' => 'completed']);
+
+            if ($updated) {
+                Notification::make()
+                    ->title('Berhasil')
+                    ->body('Pesanan ditutup.')
+                    ->success()
+                    ->send();
+
+                redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+            } else {
+                Notification::make()
+                    ->title('Gagal')
+                    ->body('Pesanan tidak ditemukan.')
+                    ->warning()
+                    ->send();
+            }
+        } catch (Throwable $e) {
+            Notification::make()
+                ->title('Gagal')
+                ->body('Error: '.$e->getMessage())
+                ->danger()
+                ->send();
+        }
     }
 }

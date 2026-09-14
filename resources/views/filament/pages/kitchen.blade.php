@@ -1,14 +1,16 @@
 <x-filament-panels::page>
-        {{-- Loading State --}}
-        <div wire:loading class="fixed inset-0 z-50 flex items-center justify-center bg-black/20">
-            <div class="flex items-center gap-2 rounded-xl bg-white px-6 py-4 shadow-lg dark:bg-gray-800">
-                <svg class="h-6 w-6 animate-spin text-red-500" viewBox="0 0 24 24" fill="none">
-                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <span class="text-sm font-medium text-gray-700 dark:text-gray-300">Memuat...</span>
-            </div>
-        </div>
+    {{-- Auto-refresh using JavaScript every 5 seconds --}}
+    @once
+    @push('scripts')
+    <script>
+        document.addEventListener('livewire:init', function() {
+            setInterval(function() {
+                @this.$refresh();
+            }, 5000);
+        });
+    </script>
+    @endpush
+    @endonce
 
     {{-- Header --}}
     <div class="mb-6 flex items-center justify-between">
@@ -17,7 +19,7 @@
             <p class="mt-1 text-sm text-gray-500">{{ $this->getTenant()?->name }}</p>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ \Carbon\Carbon::now('Asia/Jakarta')->format('H:i') }} WIB</span>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ now('Asia/Jakarta')->format('H:i') }} WIB</span>
             <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
                 <x-heroicon-o-arrow-path class="h-4 w-4" />
                 Refresh
@@ -26,7 +28,7 @@
     </div>
 
     {{-- Quick Stats --}}
-    <div class="mb-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+    <div class="mb-8 grid grid-cols-2 gap-4">
         <div class="card-hover flex items-center gap-4 p-5">
             <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-red-500 text-white">
                 <x-heroicon-o-fire class="h-7 w-7" />
@@ -98,16 +100,26 @@
                                     </span>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
+                                        {{-- Modifiers --}}
+                                        @if($item->modifiers && $item->modifiers->count() > 0)
+                                            <div class="mt-1 flex flex-wrap items-center gap-1">
+                                                @foreach($item->modifiers as $modifier)
+                                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                                        + {{ $modifier->modifier_name ?? $modifier->name }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        {{-- Notes --}}
                                         @if($item->notes)
                                             <span class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                                                <x-heroicon-o-information-circle class="h-3 w-3 shrink-0" />
+                                                <x-heroicon-o-pencil-square class="h-3 w-3 shrink-0" />
                                                 {{ $item->notes }}
                                             </span>
                                         @endif
                                     </div>
                                 </div>
                             @endforeach
-                            {{-- Order Notes --}}
                             @if($order->notes)
                                 <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-700/50 dark:bg-amber-500/10">
                                     <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -123,21 +135,12 @@
 
                         {{-- Action --}}
                         <div class="border-t border-gray-100 p-3">
-                            @if($order->status === 'pending')
-                                <button wire:click="markAsPreparing({{ $order->id }})"
-                                    class="btn btn-warning btn-md w-full"
-                                    aria-label="Mulai masak pesanan {{ $order->invoice_number }}">
-                                    <x-heroicon-o-play class="h-4 w-4" />
-                                    Mulai Masak
-                                </button>
-                            @else
-                                <button wire:click="markAsReady({{ $order->id }})"
-                                    class="btn btn-success btn-md w-full"
-                                    aria-label="Tandai selesai masak pesanan {{ $order->invoice_number }}">
-                                    <x-heroicon-o-check class="h-4 w-4" />
-                                    Selesai Masak
-                                </button>
-                            @endif
+                            <button wire:click="markAsServed({{ $order->id }})"
+                                class="btn btn-success btn-md w-full"
+                                aria-label="Tandai pesanan {{ $order->invoice_number }} siap disajikan">
+                                <x-heroicon-o-check class="h-4 w-4" />
+                                Siap Disajikan
+                            </button>
                         </div>
                     </div>
                 @endforeach
@@ -194,16 +197,26 @@
                                     </span>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $item->product_name }}</p>
+                                        {{-- Modifiers --}}
+                                        @if($item->modifiers && $item->modifiers->count() > 0)
+                                            <div class="mt-1 flex flex-wrap items-center gap-1">
+                                                @foreach($item->modifiers as $modifier)
+                                                    <span class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                                        + {{ $modifier->modifier_name ?? $modifier->name }}
+                                                    </span>
+                                                @endforeach
+                                            </div>
+                                        @endif
+                                        {{-- Notes --}}
                                         @if($item->notes)
                                             <span class="mt-0.5 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
-                                                <x-heroicon-o-information-circle class="h-3 w-3 shrink-0" />
+                                                <x-heroicon-o-pencil-square class="h-3 w-3 shrink-0" />
                                                 {{ $item->notes }}
                                             </span>
                                         @endif
                                     </div>
                                 </div>
                             @endforeach
-                            {{-- Order Notes --}}
                             @if($order->notes)
                                 <div class="mt-3 rounded-lg border border-amber-200 bg-amber-50 p-2 dark:border-amber-700/50 dark:bg-amber-500/10">
                                     <p class="text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -219,12 +232,20 @@
 
                         {{-- Action --}}
                         <div class="border-t border-gray-100 p-3">
-                            <button wire:click="markAsCompleted({{ $order->id }})"
-                                class="btn btn-secondary btn-md w-full"
-                                aria-label="Tandai pesanan {{ $order->invoice_number }} sudah selesai">
-                                <x-heroicon-o-hand-thumb-up class="h-4 w-4" />
-                                Selesai
-                            </button>
+                            <div class="flex gap-2">
+                                <button wire:click="markAsUnserved({{ $order->id }})"
+                                    class="flex-1 btn btn-secondary btn-md"
+                                    aria-label="Batalkan pesanan {{ $order->invoice_number }}">
+                                    <x-heroicon-o-arrow-uturn-left class="h-4 w-4" />
+                                    Batal
+                                </button>
+                                <button wire:click="markAsCompleted({{ $order->id }})"
+                                    class="flex-1 btn btn-success btn-md"
+                                    aria-label="Selesaikan pesanan {{ $order->invoice_number }}">
+                                    <x-heroicon-o-check class="h-4 w-4" />
+                                    Selesai
+                                </button>
+                            </div>
                         </div>
                     </div>
                 @endforeach

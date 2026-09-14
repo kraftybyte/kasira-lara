@@ -3,11 +3,11 @@
 namespace App\Filament\Resources\UserResource;
 
 use App\Filament\Resources\UserResource\Pages\ManageUsers;
+use App\Models\Tenant;
 use App\Models\User;
 use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
-use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -76,23 +76,40 @@ class UserResource extends Resource
 
                         return Role::where('name', '!=', 'super_admin')->pluck('name', 'id')->toArray();
                     }),
+
+                Select::make('tenants')
+                    ->multiple()
+                    ->label('Assign to Tenants')
+                    ->relationship('tenants', 'name')
+                    ->options(function () {
+                        return Tenant::where('is_active', true)->pluck('name', 'id')->toArray();
+                    })
+                    ->helperText('Assign this user to one or more tenants'),
             ]);
     }
 
     public static function table(Table $table): Table
     {
         return $table
-            ->query(
-                User::query()
-                    ->with('roles')
+            ->query(function () {
+                $query = User::query()->with('roles');
+
+                $user = auth()->user();
+
+                // Super admin can see all users
+                if ($user && $user->hasRole('super_admin')) {
+                    return $query;
+                }
+
+                // Other users only see users assigned to their tenants
+                return $query
                     ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
-                    ->whereHas('tenants', function ($q) {
-                        $tenant = Filament::getTenant();
-                        if ($tenant) {
-                            $q->where('tenants.id', $tenant->id)->where('tenant_user.status', 'active');
+                    ->whereHas('tenants', function ($q) use ($user) {
+                        if ($user) {
+                            $q->whereIn('tenants.id', $user->tenants()->pluck('tenants.id'));
                         }
-                    })
-            )
+                    });
+            })
             ->columns([
                 TextColumn::make('name')
                     ->label('Name')
@@ -106,6 +123,10 @@ class UserResource extends Resource
 
                 TagsColumn::make('roles.name')
                     ->label('Roles'),
+
+                TextColumn::make('tenants.name')
+                    ->label('Tenants')
+                    ->badge(),
             ])
             ->actions([
                 EditAction::make(),

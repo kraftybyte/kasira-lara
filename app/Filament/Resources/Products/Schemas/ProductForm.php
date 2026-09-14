@@ -131,6 +131,45 @@ class ProductForm
 
                 /*
                 |--------------------------------------------------------------------------
+                | ADDITIONAL OPTIONS (Tambahan/Extra)
+                |--------------------------------------------------------------------------
+                */
+                Repeater::make('modifiers')
+                    ->label('Tambahan / Extra')
+                    ->relationship()
+                    ->schema([
+                        TextInput::make('name')
+                            ->label('Nama')
+                            ->required()
+                            ->placeholder('Contoh: Telur, Nasi, Extra Keju'),
+
+                        TextInput::make('price_adjustment')
+                            ->label('Harga Tambahan')
+                            ->numeric()
+                            ->prefix('Rp')
+                            ->default(0)
+                            ->minValue(0),
+
+                        Select::make('type')
+                            ->label('Tipe')
+                            ->options([
+                                'addon' => 'Extra (Tambah Harga)',
+                                'option' => 'Pilihan (Tidak Tambah)',
+                            ])
+                            ->default('addon')
+                            ->required(),
+
+                        Toggle::make('is_active')
+                            ->label('Aktif')
+                            ->default(true),
+                    ])
+                    ->columns(2)
+                    ->columnSpanFull()
+                    ->default([])
+                    ->addActionLabel('Tambah Tambahan'),
+
+                /*
+                |--------------------------------------------------------------------------
                 | INGREDIENTS (Komposisi Bahan)
                 |--------------------------------------------------------------------------
                 */

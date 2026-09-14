@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources\TenantResource\Pages;
 
-use App\Filament\Resources\TenantResource;
+use App\Filament\Resources\TenantResource\TenantResource;
 use Filament\Actions;
 use Filament\Resources\Pages\ListRecords;
 

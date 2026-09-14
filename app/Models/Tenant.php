@@ -17,7 +17,15 @@ class Tenant extends Model
         'status',
         'timezone',
         'currency',
+        'is_active',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'is_active' => 'boolean',
+        ];
+    }
 
     public function users(): BelongsToMany
     {

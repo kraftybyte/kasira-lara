@@ -384,6 +384,69 @@ class PaywuzService
     }
 
     /**
+     * Check if merchant bears the fee (vs customer)
+     */
+    public function isFeeByMerchant(): bool
+    {
+        $tenantId = $this->tenantId ?? Filament::getTenant()?->id;
+
+        if ($tenantId) {
+            $settings = TenantSetting::where('tenant_id', $tenantId)->first();
+
+            return $settings?->paywuz_fee_by_merchant ?? false;
+        }
+
+        return false;
+    }
+
+    /**
+     * Calculate QRIS fee based on Paywuz tiered pricing
+     *
+     * Tiered pricing:
+     * - Below Rp 150,000: 0.7% × amount + Rp 290
+     * - Rp 150,000 and above: 0.95% × amount (no flat fee)
+     */
+    public function calculateQrisFee(float $amount): array
+    {
+        $threshold = 150000;
+
+        if ($amount < $threshold) {
+            // Below 150k: 0.7% × amount + 290
+            $feePercent = 0.007;
+            $flatFee = 290;
+        } else {
+            // 150k and above: 0.95% × amount (no flat fee)
+            $feePercent = 0.0095;
+            $flatFee = 0;
+        }
+
+        $fee = $flatFee + ceil($amount * $feePercent);
+
+        $feeByMerchant = $this->isFeeByMerchant();
+
+        if ($feeByMerchant) {
+            // Merchant bears the fee
+            $merchantReceives = $amount - $fee;
+            $customerPays = $amount;
+        } else {
+            // Customer bears the fee (default)
+            $merchantReceives = $amount;
+            $customerPays = $amount + $fee;
+        }
+
+        return [
+            'amount' => $amount,
+            'fee' => $fee,
+            'fee_percent' => $feePercent * 100,
+            'flat_fee' => $flatFee,
+            'customer_pays' => $customerPays,
+            'merchant_receives' => $merchantReceives,
+            'fee_by_merchant' => $feeByMerchant,
+            'tier' => $amount < $threshold ? 'under_150k' : 'above_150k',
+        ];
+    }
+
+    /**
      * Create Virtual Account payment
      * Uses POST /v1/va/create
      */

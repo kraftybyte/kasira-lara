@@ -24,7 +24,9 @@ class Dashboard extends Page
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedHome;
+    protected static ?int $navigationSort = 1;
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedHome;
 
     public int $days = 30;
 

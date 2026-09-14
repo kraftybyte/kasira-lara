@@ -2,7 +2,10 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Auth\Pages\Login as BaseLogin;
+use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
+use App\Models\AppSetting;
 use App\Models\Tenant;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
@@ -20,7 +23,6 @@ use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
-use ReflectionClass;
 
 class AdminPanelProvider extends PanelProvider
 {
@@ -33,17 +35,36 @@ class AdminPanelProvider extends PanelProvider
             }
         });
 
-        // Set navigation icon for TenantSettings via static method
-        TenantSettings::navigationIcon('heroicon-o-cog-6-tooth');
+        // Super admin can access all tenants
+        Gate::define('viewTenant', function ($user, $tenant) {
+            if ($user->hasRole('super_admin')) {
+                return true;
+            }
 
-        // Set navigation sort using reflection
-        $reflection = new ReflectionClass(TenantSettings::class);
-        $prop = $reflection->getProperty('navigationSort');
-        $prop->setValue(null, 10);
+            return $user->tenants()->where('tenants.id', $tenant->id)->exists();
+        });
     }
 
     public function panel(Panel $panel): Panel
     {
+        // Get app settings for branding
+        $appSetting = AppSetting::first();
+        $brandLogo = null;
+        if ($appSetting?->app_logo) {
+            $logo = $appSetting->app_logo;
+            // Handle FileUpload JSON format
+            if (is_string($logo)) {
+                $decoded = json_decode($logo, true);
+                if (is_array($decoded) && ! empty($decoded)) {
+                    $logo = array_keys($decoded)[0];
+                }
+            }
+            if ($logo) {
+                // Path already includes directory, just add storage prefix
+                $brandLogo = url('storage/'.$logo);
+            }
+        }
+
         return $panel
             ->sidebarWidth('280px')
             ->sidebarCollapsibleOnDesktop(false)
@@ -52,10 +73,22 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->viteTheme('resources/css/filament/admin/theme.css')
 
-            ->login()
+            ->login(BaseLogin::class)
+
+            // Branding - use app logo if available
+            ->brandName($appSetting?->app_name ?? 'KasirAja')
+            ->brandLogo($brandLogo)
+            ->brandLogoHeight('2.5rem')
 
             // TENANCY - Tenant menu moved to header via custom views
             ->tenant(Tenant::class)
+
+            // Disable global search in sidebar
+            ->globalSearch(false)
+
+            // Enable dark mode and theme switcher
+            ->darkMode(true)
+            ->themeSwitcher(true)
 
             ->colors([
                 'primary' => Color::hex('#EF4444'),
@@ -74,6 +107,7 @@ class AdminPanelProvider extends PanelProvider
             )
 
             ->pages([
+                GlobalSettings::class,
                 TenantSettings::class,
             ])
 

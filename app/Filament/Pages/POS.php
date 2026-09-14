@@ -36,7 +36,9 @@ class POS extends Page
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedShoppingCart;
+    protected static ?int $navigationSort = 2;
+
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
     public function getHeader(): ?View
     {
@@ -1136,6 +1138,8 @@ class POS extends Page
 
                                 'status' => 'open',
 
+                                'source' => 'pos',
+
                                 'payment_method' => $this->paymentMethod,
 
                                 'subtotal' => $subtotal,
@@ -1734,14 +1738,57 @@ class POS extends Page
 
     /*
     |--------------------------------------------------------------------------
+    | PAYWUZ FEE
+    |--------------------------------------------------------------------------
+    */
+
+    public function getPaywuzFeeProperty(): float
+    {
+        if ($this->paymentMethod !== 'qris') {
+            return 0;
+        }
+
+        $tenantId = Filament::getTenant()?->id;
+        if (! $tenantId) {
+            return 0;
+        }
+
+        $paywuz = new PaywuzService($tenantId);
+        if (! $paywuz->isConfigured()) {
+            return 0;
+        }
+
+        $feeCalc = $paywuz->calculateQrisFee($this->subtotal);
+
+        return $feeCalc['fee'];
+    }
+
+    public function getPaywuzFeeByMerchantProperty(): bool
+    {
+        $tenantId = Filament::getTenant()?->id;
+        if (! $tenantId) {
+            return false;
+        }
+
+        $paywuz = new PaywuzService($tenantId);
+
+        return $paywuz->isFeeByMerchant();
+    }
+
+    /*
+    |--------------------------------------------------------------------------
     | TOTAL (Include Tax - Harga Sudah Termasuk)
     |--------------------------------------------------------------------------
     */
 
     public function getTotalProperty(): float
     {
-        // Total = Subtotal (harga jual yang dibayar customer)
-        return $this->subtotal;
+        // Total = Subtotal + Paywuz fee (if customer bears the fee)
+        if ($this->paywuzFeeByMerchant) {
+            return $this->subtotal; // Merchant bears the fee
+        }
+
+        return $this->subtotal + $this->paywuzFee;
     }
 
     /*
@@ -2413,6 +2460,7 @@ class POS extends Page
                 'user_id' => auth()->id(),
                 'invoice_number' => $invoiceNumber,
                 'status' => 'open',
+                'source' => 'pos',
                 'started_at' => now(),
                 'subtotal' => $subtotal,
                 'discount' => 0,
@@ -2677,6 +2725,7 @@ class POS extends Page
                     'user_id' => Auth::id(),
                     'invoice_number' => $invoiceNumber,
                     'status' => 'pending',
+                    'source' => 'pos',
                     'payment_method' => 'qris',
                     'subtotal' => $subtotal,
                     'discount' => 0,
@@ -3138,6 +3187,7 @@ class POS extends Page
                     'user_id' => Auth::id(),
                     'invoice_number' => $invoiceNumber,
                     'status' => 'pending',
+                    'source' => 'pos',
                     'payment_method' => 'va',
                     'subtotal' => $subtotal,
                     'discount' => 0,

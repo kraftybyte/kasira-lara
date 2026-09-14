@@ -29,7 +29,7 @@ class SalesReport extends Page
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedChartBar;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedChartBar;
 
     protected static string|UnitEnum|null $navigationGroup = 'Laporan';
 

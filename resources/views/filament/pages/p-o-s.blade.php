@@ -599,6 +599,21 @@
                                     <span class="text-sm font-medium text-green-600 dark:text-green-400">+ Rp {{ number_format($this->taxAmount, 0, ',', '.') }}</span>
                                 </div>
                             @endif
+                            @if($this->paywuzFee > 0)
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-500">
+                                        Biaya Layanan
+                                        @if($this->paywuzFeeByMerchant)
+                                            <span class="text-green-600">(ditanggung toko)</span>
+                                        @else
+                                            <span class="text-orange-500">(ditanggung Anda)</span>
+                                        @endif
+                                    </span>
+                                    <span class="text-sm font-medium {{ $this->paywuzFeeByMerchant ? 'text-green-600 dark:text-green-400' : 'text-orange-500' }}">
+                                        {{ $this->paywuzFeeByMerchant ? '-' : '+' }} Rp {{ number_format($this->paywuzFee, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            @endif
                             <div class="flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-700">
                                 <span class="text-sm font-semibold text-gray-900 dark:text-white">Total</span>
                                 <span class="text-lg font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->total, 0, ',', '.') }}</span>

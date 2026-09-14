@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Settings;
 
 use App\Models\TenantSetting;
+use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
 use Filament\Forms\Components\Placeholder;
@@ -32,13 +33,17 @@ class TenantSettings extends Page implements HasForms
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?int $navigationSort = 9999;
+    protected static ?int $navigationSort = 9995;
+
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 
     protected static string|array $accessOwnership = ['owner', 'super_admin'];
 
     public ?array $data = [];
 
     public TenantSetting $settings;
+
+    public bool $canEditPaywuz = false;
 
     public function mount(): void
     {
@@ -47,6 +52,10 @@ class TenantSettings extends Page implements HasForms
         if (! $tenant) {
             abort(403);
         }
+
+        // Check if user is super_admin (can edit Paywuz settings)
+        $user = auth()->user();
+        $this->canEditPaywuz = $user && $user->hasRole('super_admin');
 
         $this->settings = TenantSetting::getOrCreateForTenant($tenant->id);
 
@@ -72,6 +81,7 @@ class TenantSettings extends Page implements HasForms
             'paywuz_enabled' => $this->settings->paywuz_enabled ?? false,
             'paywuz_merchant_name' => $this->settings->paywuz_merchant_name ?? 'KasirAja',
             'paywuz_api_key' => $this->settings->paywuz_api_key,
+            'paywuz_fee_by_merchant' => $this->settings->paywuz_fee_by_merchant ?? false,
 
             'bank_name' => $this->settings->bank_name,
             'bank_account' => $this->settings->bank_account,
@@ -178,14 +188,22 @@ class TenantSettings extends Page implements HasForms
                                     ->schema([
                                         Toggle::make('paywuz_enabled')
                                             ->label('Aktifkan Paywuz')
+                                            ->disabled(fn () => ! $this->canEditPaywuz)
                                             ->live(),
 
                                         TextInput::make('paywuz_merchant_name')
                                             ->label('Nama Merchant')
+                                            ->disabled(fn () => ! $this->canEditPaywuz)
                                             ->visible(fn (callable $get) => $get('paywuz_enabled') === true),
 
                                         TextInput::make('paywuz_api_key')
                                             ->label('API Key')
+                                            ->disabled(fn () => ! $this->canEditPaywuz)
+                                            ->visible(fn (callable $get) => $get('paywuz_enabled') === true),
+
+                                        Toggle::make('paywuz_fee_by_merchant')
+                                            ->label('Tanggung Biaya Admin')
+                                            ->helperText('PILIH = Tenant menyerap biaya admin. OFF = Biaya admin ditambahkan ke tagihan customer.')
                                             ->visible(fn (callable $get) => $get('paywuz_enabled') === true),
 
                                         Placeholder::make('paywuz_help')
@@ -253,7 +271,10 @@ class TenantSettings extends Page implements HasForms
 
         $user = auth()->user();
         $roles = $user ? $user->getRoleNames()->toArray() : [];
-        if (! in_array('owner', $roles) && ! in_array('super_admin', $roles)) {
+        $isOwner = in_array('owner', $roles);
+        $isSuperAdmin = in_array('super_admin', $roles);
+
+        if (! $isOwner && ! $isSuperAdmin) {
             Notification::make()
                 ->title('Akses Ditolak')
                 ->body('Hanya owner atau super_admin yang dapat mengubah pengaturan.')
@@ -264,7 +285,7 @@ class TenantSettings extends Page implements HasForms
         }
 
         try {
-            // Force save all fields
+            // Common fields (owner & super_admin can edit)
             $this->settings->store_name = $data['store_name'] ?? null;
             $this->settings->logo = $data['logo'] ?? null;
             $this->settings->address = $data['address'] ?? null;
@@ -281,11 +302,20 @@ class TenantSettings extends Page implements HasForms
             $this->settings->footer_text = $data['footer_text'] ?? null;
             $this->settings->tax_rate = $data['tax_rate'] ?? 0;
             $this->settings->show_tax = $data['show_tax'] ?? false;
-            $this->settings->paywuz_enabled = $data['paywuz_enabled'] ?? false;
-            $this->settings->paywuz_merchant_name = $data['paywuz_merchant_name'] ?? null;
-            $this->settings->paywuz_api_key = $data['paywuz_api_key'] ?? null;
 
-            // Bank account fields
+            // Paywuz toggle (owner & super_admin can edit)
+            $this->settings->paywuz_enabled = $data['paywuz_enabled'] ?? false;
+
+            // Paywuz settings - ONLY super_admin can edit API Key
+            if ($isSuperAdmin) {
+                $this->settings->paywuz_merchant_name = $data['paywuz_merchant_name'] ?? null;
+                $this->settings->paywuz_api_key = $data['paywuz_api_key'] ?? null;
+            }
+
+            // Fee by merchant - owner & super_admin can edit
+            $this->settings->paywuz_fee_by_merchant = $data['paywuz_fee_by_merchant'] ?? false;
+
+            // Bank account fields (owner & super_admin can edit)
             $this->settings->bank_name = $data['bank_name'] ?? null;
             $this->settings->bank_account = $data['bank_account'] ?? null;
             $this->settings->bank_account_name = $data['bank_account_name'] ?? null;

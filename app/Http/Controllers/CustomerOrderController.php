@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductModifier;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SaleItemModifier;
 use App\Models\Table;
 use App\Models\Tenant;
 use App\Services\PaywuzService;
@@ -62,7 +63,26 @@ class CustomerOrderController extends Controller
             'payment_method' => 'required|in:qris,transfer',
         ]);
 
-        $grandTotal = 0;
+        // Get tenant settings for tax and Paywuz fee calculation
+        $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
+        $showTax = $tenantSetting?->show_tax ?? false;
+        $taxRate = (float) ($tenantSetting?->tax_rate ?? 0);
+
+        // Initialize Paywuz service for fee calculation
+        $paywuzFee = 0;
+        $paywuzFeeByMerchant = false;
+        $paywuzService = null;
+
+        if ($validatedPayment['payment_method'] === 'qris') {
+            $paywuzService = new PaywuzService($tenant->id);
+            $paywuzFeeByMerchant = $paywuzService->isFeeByMerchant();
+            if ($paywuzService->isConfigured()) {
+                $feeCalculation = $paywuzService->calculateQrisFee(0); // Just to get the structure
+                // We'll calculate after we know the subtotal
+            }
+        }
+
+        $subtotal = 0;
         $saleItems = [];
 
         foreach ($items as $item) {
@@ -99,7 +119,7 @@ class CustomerOrderController extends Controller
 
             $baseTotal = $product->selling_price * $item['quantity'];
             $itemTotal = $baseTotal + ($modifierTotal * $item['quantity']);
-            $grandTotal += $itemTotal;
+            $subtotal += $itemTotal;
 
             $saleItems[] = [
                 'product_id' => $product->id,
@@ -111,18 +131,38 @@ class CustomerOrderController extends Controller
                 'tax' => 0,
                 'subtotal' => $itemTotal,
                 'total' => $itemTotal,
+                'modifiers' => $itemModifiers, // Store modifiers for later saving
             ];
         }
+
+        // Calculate tax (PPN) if enabled
+        $taxAmount = $showTax ? round($subtotal * ($taxRate / 100), 2) : 0;
+        $beforeTax = $subtotal;
+
+        // Calculate Paywuz fee for QRIS
+        $paywuzFeeAmount = 0;
+        $paywuzFeePercent = 0;
+        if ($validatedPayment['payment_method'] === 'qris' && $paywuzService && $paywuzService->isConfigured()) {
+            $feeCalc = $paywuzService->calculateQrisFee($subtotal);
+            $paywuzFeeAmount = $feeCalc['fee'];
+            $paywuzFeePercent = $feeCalc['fee_percent'];
+        }
+
+        // Calculate grand total
+        // If fee_by_merchant = true, merchant bears the fee (customer pays subtotal + tax only)
+        // If fee_by_merchant = false, customer bears the fee (customer pays subtotal + tax + fee)
+        $grandTotal = $beforeTax + $taxAmount;
+        $customerPays = $paywuzFeeByMerchant ? $grandTotal : $grandTotal + $paywuzFeeAmount;
 
         // Generate unique invoice number
         $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(md5(uniqid()), 0, 6));
 
         // For QRIS payment, create Paywuz transaction first
         if ($validatedPayment['payment_method'] === 'qris') {
-            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $grandTotal, $saleItems);
+            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $customerPays, $subtotal, $taxAmount, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems);
         }
 
-        // For other payment methods, create pending order
+        // For other payment methods (transfer), customer bears the fee
         $sale = Sale::create([
             'tenant_id' => $tenant->id,
             'table_id' => $table->id,
@@ -130,12 +170,15 @@ class CustomerOrderController extends Controller
             'invoice_number' => $invoiceNumber,
             'customer_name' => $request->input('customer_name', 'Customer'),
             'status' => 'pending',
+            'source' => 'customer',
             'payment_method' => $validatedPayment['payment_method'],
             'notes' => $request->input('notes'),
-            'subtotal' => $grandTotal,
-            'tax' => 0,
+            'subtotal' => $beforeTax,
+            'tax' => $taxAmount,
             'discount' => 0,
-            'grand_total' => $grandTotal,
+            'grand_total' => $customerPays,
+            'paywuz_fee' => $paywuzFeeAmount,
+            'paywuz_fee_by_merchant' => $paywuzFeeByMerchant,
             'paid_amount' => 0,
             'change_amount' => 0,
             'payment_status' => 'pending',
@@ -143,7 +186,20 @@ class CustomerOrderController extends Controller
 
         // Create sale items
         foreach ($saleItems as $item) {
-            SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+            $modifiers = $item['modifiers'] ?? [];
+            unset($item['modifiers']); // Remove modifiers from item data
+
+            $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+
+            // Save modifiers for this sale item
+            foreach ($modifiers as $modifier) {
+                SaleItemModifier::create([
+                    'sale_item_id' => $saleItem->id,
+                    'product_modifier_id' => $modifier->id,
+                    'modifier_name' => $modifier->name,
+                    'price' => $modifier->price_adjustment,
+                ]);
+            }
         }
 
         // Update table status
@@ -161,7 +217,7 @@ class CustomerOrderController extends Controller
     /**
      * Process QRIS payment via Paywuz
      */
-    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $grandTotal, array $saleItems)
+    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $customerPays, float $subtotal, float $taxAmount, float $paywuzFee, bool $feeByMerchant, array $saleItems)
     {
         // Pass tenant ID to PaywuzService so it can load tenant-specific API key
         $paywuz = new PaywuzService($tenant->id);
@@ -174,10 +230,10 @@ class CustomerOrderController extends Controller
             'is_enabled' => $paywuz->isEnabled(),
         ]);
 
-        // Create Paywuz dynamic QR
+        // Create Paywuz dynamic QR with customer pays amount (includes fee if not borne by merchant)
         $response = $paywuz->createDynamicQr(
             $invoiceNumber,
-            $grandTotal,
+            $customerPays,
             $tenant->name ?? 'KasirAja'
         );
 
@@ -193,19 +249,35 @@ class CustomerOrderController extends Controller
                 'invoice_number' => $invoiceNumber,
                 'customer_name' => $request->input('customer_name', 'Customer'),
                 'status' => 'pending',
+                'source' => 'customer',
                 'payment_method' => 'qris',
                 'notes' => $request->input('notes'),
-                'subtotal' => $grandTotal,
-                'tax' => 0,
+                'subtotal' => $subtotal,
+                'tax' => $taxAmount,
                 'discount' => 0,
-                'grand_total' => $grandTotal,
+                'grand_total' => $customerPays,
+                'paywuz_fee' => $paywuzFee,
+                'paywuz_fee_by_merchant' => $feeByMerchant,
                 'paid_amount' => 0,
                 'change_amount' => 0,
                 'payment_status' => 'pending',
             ]);
 
             foreach ($saleItems as $item) {
-                SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+                $modifiers = $item['modifiers'] ?? [];
+                unset($item['modifiers']);
+
+                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+
+                // Save modifiers for this sale item
+                foreach ($modifiers as $modifier) {
+                    SaleItemModifier::create([
+                        'sale_item_id' => $saleItem->id,
+                        'product_modifier_id' => $modifier->id,
+                        'modifier_name' => $modifier->name,
+                        'price' => $modifier->price_adjustment,
+                    ]);
+                }
             }
 
             if ($table->status === 'available') {
@@ -229,12 +301,15 @@ class CustomerOrderController extends Controller
                 'invoice_number' => $invoiceNumber,
                 'customer_name' => $request->input('customer_name', 'Customer'),
                 'status' => 'pending',
+                'source' => 'customer',
                 'payment_method' => 'qris',
                 'notes' => $request->input('notes'),
-                'subtotal' => $grandTotal,
-                'tax' => 0,
+                'subtotal' => $subtotal,
+                'tax' => $taxAmount,
                 'discount' => 0,
-                'grand_total' => $grandTotal,
+                'grand_total' => $customerPays,
+                'paywuz_fee' => $paywuzFee,
+                'paywuz_fee_by_merchant' => $feeByMerchant,
                 'paid_amount' => 0,
                 'change_amount' => 0,
                 'paywuz_transaction_id' => $response['data']['transaction_id'] ?? null,
@@ -245,7 +320,20 @@ class CustomerOrderController extends Controller
 
             // Create sale items
             foreach ($saleItems as $item) {
-                SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+                $modifiers = $item['modifiers'] ?? [];
+                unset($item['modifiers']);
+
+                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+
+                // Save modifiers for this sale item
+                foreach ($modifiers as $modifier) {
+                    SaleItemModifier::create([
+                        'sale_item_id' => $saleItem->id,
+                        'product_modifier_id' => $modifier->id,
+                        'modifier_name' => $modifier->name,
+                        'price' => $modifier->price_adjustment,
+                    ]);
+                }
             }
 
             // Update table status
@@ -477,6 +565,16 @@ class CustomerOrderController extends Controller
 
         if ($table->tenant_id !== $tenant->id || $sale->table_id !== $table->id) {
             abort(404);
+        }
+
+        // SECURITY: Only allow success page if payment is actually paid
+        // Redirect to payment page if not paid (prevents bypassing webhook)
+        if ($sale->payment_status !== 'paid') {
+            return redirect()->route('customer.order.payment', [
+                'tenant' => $tenant->slug ?? $tenant->id,
+                'table' => $table->id,
+                'sale' => $sale->id,
+            ])->with('error', 'Pembayaran belum terkonfirmasi. Silakan bayar terlebih dahulu.');
         }
 
         return view('customer.success', [

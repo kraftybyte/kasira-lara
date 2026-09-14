@@ -69,17 +69,17 @@ class PaywuzWebhookController extends Controller
         switch ($status) {
             case 'success':
                 $sale->update([
-                    'status' => 'completed',
                     'payment_status' => 'paid',
-                    'paid_at' => now(),
+                    'paywuz_status' => 'success',
+                    // Keep status='pending' so order goes to Kitchen for processing
                 ]);
 
-                // Update table status if applicable
+                // Update table status to active (customer is being served)
                 if ($sale->table_id) {
-                    $sale->table->update(['status' => 'available']);
+                    $sale->table->update(['status' => 'active']);
                 }
 
-                Log::info('Paywuz Payment Success', [
+                Log::info('Paywuz Payment Success - Order Ready for Kitchen', [
                     'sale_id' => $sale->id,
                     'invoice' => $sale->invoice_number,
                     'amount' => $sale->grand_total,

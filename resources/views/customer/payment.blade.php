@@ -81,6 +81,34 @@
                         </div>
                     @endforeach
                 </div>
+
+                {{-- Price Breakdown --}}
+                <div class="border-t border-gray-200 mt-3 pt-3 space-y-1.5">
+                    <div class="flex justify-between text-sm">
+                        <span class="text-gray-500">Subtotal</span>
+                        <span class="font-medium">Rp {{ number_format($sale->subtotal, 0, ',', '.') }}</span>
+                    </div>
+                    @if($sale->tax > 0)
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">PPN</span>
+                            <span class="font-medium text-green-600">+ Rp {{ number_format($sale->tax, 0, ',', '.') }}</span>
+                        </div>
+                    @endif
+                    @if($sale->paywuz_fee > 0)
+                        <div class="flex justify-between text-sm">
+                            <span class="text-gray-500">
+                                Biaya Layanan
+                                @if($sale->paywuz_fee_by_merchant)
+                                    <span class="text-xs text-green-600">(ditanggung toko)</span>
+                                @else
+                                    <span class="text-xs text-gray-400">(ditanggung Anda)</span>
+                                @endif
+                            </span>
+                            <span class="font-medium">+ Rp {{ number_format($sale->paywuz_fee, 0, ',', '.') }}</span>
+                        </div>
+                    @endif
+                </div>
+
                 <div class="border-t border-gray-200 mt-3 pt-3 flex justify-between">
                     <span class="font-semibold text-gray-900">Total</span>
                     <span class="font-bold text-xl text-primary">Rp {{ number_format($sale->grand_total, 0, ',', '.') }}</span>

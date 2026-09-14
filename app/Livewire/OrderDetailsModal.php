@@ -88,6 +88,7 @@ class OrderDetailsModal extends Component
                     'display_status' => $displayStatus,
                     'payment_method' => $sale->payment_method,
                     'grand_total' => (float) $sale->grand_total,
+                    'notes' => $sale->notes,
                     'served_at' => $sale->served_at?->toIso8601String(),
                     'created_at' => $sale->created_at?->toIso8601String(),
                     'has_duration' => $hasDuration,
@@ -98,6 +99,7 @@ class OrderDetailsModal extends Component
                             'quantity' => (int) $item->quantity,
                             'unit_price' => (float) $item->unit_price,
                             'subtotal' => (float) $item->subtotal,
+                            'notes' => $item->notes,
                             'rate_type' => $item->product?->rate_type ?? 'fixed',
                             'is_duration' => $item->product?->rate_type === 'duration',
                         ];

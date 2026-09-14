@@ -26,7 +26,7 @@ class IngredientReport extends Page
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
+    protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedCube;
 
     protected static string|UnitEnum|null $navigationGroup = 'Laporan';
 

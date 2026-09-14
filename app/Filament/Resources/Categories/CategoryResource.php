@@ -20,6 +20,8 @@ class CategoryResource extends Resource
 
     protected static bool $shouldRegisterNavigation = false;
 
+    protected static ?int $navigationSort = 3;
+
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTag;
 
     public static function form(Schema $schema): Schema

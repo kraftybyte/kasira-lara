@@ -24,6 +24,8 @@ class IngredientResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
+    protected static ?int $navigationSort = 4;
+
     protected static ?string $navigationLabel = 'Bahan Baku';
 
     public static function form(Schema $schema): Schema

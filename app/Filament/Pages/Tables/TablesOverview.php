@@ -21,7 +21,7 @@ class TablesOverview extends Page
 
     protected static bool $shouldRegisterNavigation = false;
 
-    protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-table-cells';
+    protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-table-cells';
 
     #[Computed]
     public function tables(): Collection
