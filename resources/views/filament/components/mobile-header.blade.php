@@ -1,11 +1,11 @@
 <div>
     {{-- Mobile Header (only visible on mobile < 768px) --}}
     <div id="mobile-header" class="mobile-header lg:hidden fixed top-0 left-0 right-0 z-60 bg-white border-b border-gray-200" style="margin: 0; padding: 0;">
-        <div class="flex items-center justify-between px-3 sm:px-4 h-12" style="margin: 0;">
+        <div class="flex items-center justify-between px-3 sm:px-4 h-16" style="margin: 0;">
             {{-- Brand Logo --}}
             <div class="flex items-center gap-2">
                 @if (filament()->getBrandLogo())
-                    <img src="{{ filament()->getBrandLogo() }}" alt="{{ filament()->getBrandName() }}" class="h-6 w-auto">
+                    <img src="{{ filament()->getBrandLogo() }}" alt="{{ filament()->getBrandName() }}" class="h-9 w-auto">
                 @else
                     <span class="text-base font-bold text-gray-900">{{ filament()->getBrandName() }}</span>
                 @endif
@@ -36,12 +36,12 @@
         style="display: block;"
     >
         {{-- Menu Header --}}
-        <div class="flex items-center justify-between px-4 h-14 border-b border-gray-200">
+        <div class="flex items-center justify-between px-4 h-20 border-b border-gray-200">
             <div class="flex items-center gap-3">
                 @if (filament()->getBrandLogo())
-                    <img src="{{ filament()->getBrandLogo() }}" alt="{{ filament()->getBrandName() }}" class="h-7 w-auto">
+                    <img src="{{ filament()->getBrandLogo() }}" alt="{{ filament()->getBrandName() }}" class="h-9 w-auto">
                 @else
-                    <span class="text-base font-bold text-gray-900">{{ filament()->getBrandName() }}</span>
+                    <span class="text-xl font-bold text-gray-900">{{ filament()->getBrandName() }}</span>
                 @endif
             </div>
             <button

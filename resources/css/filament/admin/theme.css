@@ -1516,6 +1516,13 @@ textarea.fi-fo-field-wrp textarea {
    30. POS PAGE STYLING
 ========================================================= */
 
+/* Hide POS header stats on mobile */
+@media (max-width: 767px) {
+    .fi-page .fi-header {
+        display: none !important;
+    }
+}
+
 /* Product Grid */
 .fi-page .grid-cols-2 {
     display: grid;

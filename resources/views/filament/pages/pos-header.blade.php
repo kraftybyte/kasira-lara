@@ -12,8 +12,8 @@
 
     {{-- Right: Stats + Actions --}}
     <div class="flex items-center gap-3">
-        {{-- Stats Pills --}}
-        <div class="flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-gray-200/50 dark:bg-gray-800 dark:ring-gray-700/50">
+        {{-- Stats Pills - Hidden on mobile --}}
+        <div class="hidden lg:flex items-center gap-2 rounded-full bg-white px-4 py-2 shadow-sm ring-1 ring-gray-200/50 dark:bg-gray-800 dark:ring-gray-700/50">
             <div class="flex items-center gap-1.5">
                 <span class="flex h-6 w-6 items-center justify-center rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
                     <x-heroicon-o-check class="h-3 w-3" />
