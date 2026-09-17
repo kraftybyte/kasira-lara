@@ -101,6 +101,8 @@
 
 html, body {
     background: var(--bg) !important;
+    margin: 0 !important;
+    padding: 0 !important;
 }
 
 body {
@@ -896,28 +898,115 @@ body {
    18. MOBILE RESPONSIVE
 ========================================================= */
 
-@media (max-width: 1024px) {
+/* =========================================================
+   19b. MOBILE HEADER MENU (Phones only < 768px)
+   iPad and tablets show desktop layout
+========================================================= */
+
+.mobile-header {
+    display: none !important;
+}
+
+/* Mobile phones: show mobile header, hide desktop sidebar */
+@media (max-width: 767px) {
+    .mobile-header {
+        display: block !important;
+    }
+
+    /* Ensure mobile header starts from top edge */
+    .mobile-header {
+        top: 0 !important;
+        padding-top: 0 !important;
+    }
+
+    /* Ensure mobile menu panel starts from top edge */
+    #mobile-menu-panel {
+        top: 0 !important;
+        left: 0 !important;
+        width: 85vw !important;
+        max-width: 288px !important;
+        height: 100vh !important;
+    }
+
+    /* Show nav items */
+    #mobile-menu-panel nav {
+        display: block !important;
+    }
+
+    #mobile-menu-panel nav a {
+        display: flex !important;
+    }
+
+    /* Hide default sidebar on mobile - only show our custom header */
+    .fi-sidebar,
+    .fi-main-sidebar {
+        display: none !important;
+    }
+
+    /* Adjust main content for mobile header */
+    .fi-main-ctn {
+        padding-top: 48px !important;
+    }
+
+    /* Smaller header text on mobile */
+    .fi-header-heading {
+        font-size: 20px !important;
+    }
+
+    /* Tighter padding on mobile */
+    .fi-main-ctn {
+        padding-left: 16px !important;
+        padding-right: 16px !important;
+    }
+
+    /* Better mobile table scrolling */
+    .fi-ta-ctn {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Mobile-friendly form inputs */
+    .fi-input,
+    .fi-select-input {
+        font-size: 16px !important; /* Prevents zoom on iOS */
+    }
+
+    /* Touch-friendly buttons */
+    .fi-btn {
+        min-height: 44px !important;
+        min-width: 44px !important;
+    }
+
+    /* Better modal on mobile */
+    .fi-modal-window {
+        margin: 8px !important;
+        max-height: calc(100vh - 16px) !important;
+    }
+
+    /* Mobile-friendly dropdowns */
+    .fi-dropdown-panel {
+        max-height: 70vh !important;
+        overflow-y: auto !important;
+    }
+
+    /* Mobile menu nav items */
+    .mobile-nav-item {
+        touch-action: manipulation;
+    }
+}
+
+/* Tablets (768px - 1024px): show desktop layout */
+@media (min-width: 768px) and (max-width: 1024px) {
+    .mobile-header {
+        display: none !important;
+    }
+
     .fi-sidebar-nav {
         padding: var(--space-3) var(--space-2) !important;
     }
 
     .fi-sidebar-item-button {
         min-height: 42px !important;
-    }
-
-    .fi-main-ctn {
-        padding-top: var(--space-4) !important;
-    }
-}
-
-@media (max-width: 640px) {
-    .fi-header-heading {
-        font-size: 20px !important;
-    }
-
-    .fi-main-ctn {
-        padding-left: var(--space-4) !important;
-        padding-right: var(--space-4) !important;
     }
 }
 

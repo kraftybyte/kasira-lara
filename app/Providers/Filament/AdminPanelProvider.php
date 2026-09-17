@@ -5,6 +5,7 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\Pages\Login as BaseLogin;
 use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
+use App\Filament\Plugins\MobileHeaderPlugin;
 use App\Models\AppSetting;
 use App\Models\Tenant;
 use Filament\Http\Middleware\Authenticate;
@@ -86,9 +87,12 @@ class AdminPanelProvider extends PanelProvider
             // Disable global search in sidebar
             ->globalSearch(false)
 
-            // Enable dark mode and theme switcher
+            // Enable dark mode (no theme switcher)
             ->darkMode(true)
-            ->themeSwitcher(true)
+            ->themeSwitcher(false)
+
+            // Register mobile header plugin
+            ->plugin(new MobileHeaderPlugin)
 
             ->colors([
                 'primary' => Color::hex('#EF4444'),
