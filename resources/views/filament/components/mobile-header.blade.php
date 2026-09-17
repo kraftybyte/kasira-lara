@@ -82,11 +82,10 @@
                     ['label' => 'POS', 'icon' => 'heroicon-o-shopping-cart', 'url' => $tenantId ? "/admin/{$tenantId}/pos" : '/admin/pos'],
                     ['label' => 'Kitchen', 'icon' => 'heroicon-o-fire', 'url' => $tenantId ? "/admin/{$tenantId}/kitchen" : '/admin/kitchen'],
                     ['label' => 'Meja', 'icon' => 'heroicon-o-table-cells', 'url' => $tenantId ? "/admin/{$tenantId}/tables" : '/admin/tables'],
-                    ['label' => 'Orders', 'icon' => 'heroicon-o-document-text', 'url' => $tenantId ? "/admin/{$tenantId}/orders" : '/admin/orders'],
                     ['label' => 'Products', 'icon' => 'heroicon-o-cube', 'url' => $tenantId ? "/admin/{$tenantId}/products" : '/admin/products'],
                     ['label' => 'Categories', 'icon' => 'heroicon-o-tag', 'url' => $tenantId ? "/admin/{$tenantId}/categories" : '/admin/categories'],
                     ['label' => 'Customers', 'icon' => 'heroicon-o-users', 'url' => $tenantId ? "/admin/{$tenantId}/customers" : '/admin/customers'],
-                    ['label' => 'Reports', 'icon' => 'heroicon-o-chart-bar', 'url' => $tenantId ? "/admin/{$tenantId}/reports" : '/admin/reports'],
+                    ['label' => 'Sales', 'icon' => 'heroicon-o-currency-dollar', 'url' => $tenantId ? "/admin/{$tenantId}/sales" : '/admin/sales'],
                     ['label' => 'Settings', 'icon' => 'heroicon-o-cog-6-tooth', 'url' => '/admin/settings'],
                 ];
             @endphp
