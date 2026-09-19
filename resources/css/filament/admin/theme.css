@@ -169,7 +169,7 @@ body {
 
 .fi-sidebar-logo-only img,
 .fi-sidebar-logo-only svg {
-    max-height: 32px;
+    max-height: 100px;
     width: auto;
 }
 
@@ -192,7 +192,7 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: var(--space-2) !important;
+    margin-bottom: var(--space-1) !important;
 }
 
 .fi-sidebar-group-btn {
@@ -200,10 +200,10 @@ body {
     align-items: center !important;
     justify-content: flex-start !important;
     width: 100% !important;
-    height: 52px !important;
+    height: 44px !important;
     border-radius: var(--radius-sm) !important;
-    padding: 0 16px !important;
-    gap: 14px;
+    padding: 0 var(--space-3) !important;
+    gap: var(--space-3);
     background: transparent !important;
     background-image: none !important;
     box-shadow: none !important;
@@ -271,6 +271,7 @@ body {
     width: 100%;
     display: flex;
     justify-content: center;
+    margin-bottom: 2px !important;
 }
 
 .fi-sidebar-item-btn {
@@ -278,10 +279,10 @@ body {
     align-items: center !important;
     justify-content: flex-start !important;
     width: 100% !important;
-    height: 48px !important;
+    height: 40px !important;
     border-radius: var(--radius-sm) !important;
-    padding: 0 16px !important;
-    gap: 14px;
+    padding: 0 var(--space-3) !important;
+    gap: var(--space-3);
     background: transparent !important;
     background-image: none !important;
     box-shadow: none !important;

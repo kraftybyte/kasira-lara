@@ -1,6 +1,7 @@
 <?php
 
 declare(strict_types=1);
+use App\Models\Tenant;
 use BezhanSalleh\FilamentShield\Resources\Roles\RoleResource;
 use Filament\Pages\Dashboard;
 use Filament\Widgets\AccountWidget;
@@ -23,12 +24,12 @@ return [
         'slug' => 'shield/roles',
         'show_model_path' => false,
         'cluster' => null,
-        'enabled' => false,
+        'enabled' => false, // Disabled - use App\Filament\Resources\Roles\RoleResource instead
         'tabs' => [
-            'pages' => false,
-            'widgets' => false,
-            'resources' => false,
-            'custom_permissions' => false,
+            'pages' => true,
+            'widgets' => true,
+            'resources' => true,
+            'custom_permissions' => true,
         ],
     ],
 
@@ -43,7 +44,7 @@ return [
     |
     */
 
-    'tenant_model' => null,
+    'tenant_model' => Tenant::class,
 
     /*
     |--------------------------------------------------------------------------

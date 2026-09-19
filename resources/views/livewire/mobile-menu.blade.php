@@ -54,57 +54,82 @@
         </div>
 
         {{-- Tenant Info --}}
-        @if(filament()->hasTenancy() && filament()->hasTenantMenu())
-            @php
-                $tenant = filament()->getTenant();
-            @endphp
+        @if($tenant)
             <div class="px-4 py-3 border-b border-gray-200">
                 <div class="flex items-center gap-3">
                     <div class="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center text-white font-bold text-sm">
-                        {{ strtoupper(substr($tenant?->name ?? 'T', 0, 1)) }}
+                        {{ strtoupper(substr($tenant->name ?? 'T', 0, 1)) }}
                     </div>
                     <div class="flex-1 min-w-0">
-                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $tenant?->name ?? 'Pilih Tenant' }}</p>
+                        <p class="text-sm font-semibold text-gray-900 truncate">{{ $tenant->name ?? 'Pilih Tenant' }}</p>
                         <p class="text-xs text-gray-500">Tenant Aktif</p>
                     </div>
                 </div>
             </div>
         @endif
 
-        {{-- Navigation Items --}}
+        {{-- Navigation Items (Filtered by Permissions via Shield) --}}
         <nav class="flex-1 overflow-y-auto py-2">
-            @php
-                $tenant = filament()->getTenant();
-                $tenantId = $tenant?->id ?? '';
+            @forelse($navigation as $group)
+                @php
+                    $groupLabel = $group->getLabel();
+                    $groupItems = $group->getItems();
+                @endphp
 
-                $navItems = [
-                    ['label' => 'Dashboard', 'icon' => 'heroicon-o-home', 'url' => $tenantId ? "/admin/{$tenantId}" : '/admin'],
-                    ['label' => 'POS', 'icon' => 'heroicon-o-shopping-cart', 'url' => $tenantId ? "/admin/{$tenantId}/pos" : '/admin/pos'],
-                    ['label' => 'Kitchen', 'icon' => 'heroicon-o-fire', 'url' => $tenantId ? "/admin/{$tenantId}/kitchen" : '/admin/kitchen'],
-                    ['label' => 'Meja', 'icon' => 'heroicon-o-table-cells', 'url' => $tenantId ? "/admin/{$tenantId}/tables" : '/admin/tables'],
-                    ['label' => 'Products', 'icon' => 'heroicon-o-cube', 'url' => $tenantId ? "/admin/{$tenantId}/products" : '/admin/products'],
-                    ['label' => 'Categories', 'icon' => 'heroicon-o-tag', 'url' => $tenantId ? "/admin/{$tenantId}/categories" : '/admin/categories'],
-                    ['label' => 'Customers', 'icon' => 'heroicon-o-users', 'url' => $tenantId ? "/admin/{$tenantId}/customers" : '/admin/customers'],
-                    ['label' => 'Sales', 'icon' => 'heroicon-o-currency-dollar', 'url' => $tenantId ? "/admin/{$tenantId}/sales" : '/admin/sales'],
-                    ['label' => 'Settings', 'icon' => 'heroicon-o-cog-6-tooth', 'url' => '/admin/settings'],
-                ];
-            @endphp
+                {{-- Group Header --}}
+                @if($groupLabel)
+                    <div class="px-4 py-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+                        {{ $groupLabel }}
+                    </div>
+                @endif
 
-            @foreach($navItems as $item)
-                <a
-                    href="{{ $item['url'] }}"
-                    class="flex items-center gap-3 mx-2 px-3 py-3 rounded-lg text-sm font-medium transition-colors mobile-nav-item min-h-12"
-                    @if(request()->is(str_replace('/', '\\/', ltrim($item['url'], '/')))
-                        || request()->is(str_replace('/', '\\/', ltrim($item['url'], '/')) . '/*'))
-                        style="background: rgba(239, 68, 68, 0.1); color: #dc2626;"
-                    @else
-                        style="color: #374151;"
-                    @endif
-                >
-                    <x-dynamic-component :component="$item['icon']" class="h-5 w-5 shrink-0" />
-                    {{ $item['label'] }}
+                {{-- Group Items --}}
+                @foreach($groupItems as $item)
+                    @php
+                        $itemLabel = $item->getLabel();
+                        $itemIcon = $item->getIcon();
+                        $itemUrl = $item->getUrl();
+                        $isActive = $item->isActive();
+
+                        // Skip if no URL or placeholder
+                        if (empty($itemUrl) || $itemUrl === '#' || str_contains($itemUrl, '{')) {
+                            continue;
+                        }
+                    @endphp
+
+                    <a
+                        href="{{ $itemUrl }}"
+                        class="flex items-center gap-3 mx-2 px-3 py-3 rounded-lg text-sm font-medium transition-colors mobile-nav-item min-h-12"
+                        @if($isActive)
+                            style="background: rgba(239, 68, 68, 0.1); color: #dc2626;"
+                        @else
+                            style="color: #374151;"
+                        @endif
+                    >
+                        @if($itemIcon)
+                            @if(is_string($itemIcon))
+                                @php
+                                    $svgIcon = svg($itemIcon, 'w-5 h-5');
+                                    if (is_object($svgIcon) && method_exists($svgIcon, 'toHtml')) {
+                                        echo $svgIcon->toHtml();
+                                    }
+                                @endphp
+                            @elseif(is_object($itemIcon) && method_exists($itemIcon, 'toHtml'))
+                                {!! $itemIcon->toHtml() !!}
+                            @endif
+                        @endif
+                        {{ $itemLabel }}
+                    </a>
+                @endforeach
+            @empty
+                {{-- Fallback if no navigation --}}
+                <a href="{{ $tenant ? '/admin/' . $tenant->id : '/admin' }}"
+                   class="flex items-center gap-3 mx-2 px-3 py-3 rounded-lg text-sm font-medium transition-colors mobile-nav-item min-h-12"
+                   style="color: #374151;">
+                    <x-heroicon-o-home class="h-5 w-5" />
+                    Dashboard
                 </a>
-            @endforeach
+            @endforelse
         </nav>
 
         {{-- Footer Actions --}}

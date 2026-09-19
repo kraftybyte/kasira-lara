@@ -17,7 +17,7 @@ class MobileHeaderPlugin implements Plugin
     {
         $panel->renderHook(
             PanelsRenderHook::BODY_START,
-            fn () => view('filament.components.mobile-header')
+            fn () => view('filament.components.mobile-header-livewire')
         );
     }
 

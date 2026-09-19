@@ -6,8 +6,10 @@ use App\Filament\Auth\Pages\Login as BaseLogin;
 use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
 use App\Filament\Plugins\MobileHeaderPlugin;
+use App\Filament\Resources\Roles\RoleResource;
 use App\Models\AppSetting;
 use App\Models\Tenant;
+use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\AuthenticateSession;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -22,28 +24,13 @@ use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
 {
     public function boot(): void
     {
-        // Super admin and owner bypasses all permission checks
-        Gate::before(function ($user, $ability) {
-            if ($user && ($user->hasRole('super_admin') || $user->hasRole('owner'))) {
-                return true;
-            }
-        });
-
-        // Super admin can access all tenants
-        Gate::define('viewTenant', function ($user, $tenant) {
-            if ($user->hasRole('super_admin')) {
-                return true;
-            }
-
-            return $user->tenants()->where('tenants.id', $tenant->id)->exists();
-        });
+        // Shield handles authorization - super_admin and owner are defined via roles
     }
 
     public function panel(Panel $panel): Panel
@@ -82,6 +69,7 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
 
             // TENANCY - Tenant menu moved to header via custom views
+            // RoleResource is not scoped to tenant (handled by custom RoleResource class)
             ->tenant(Tenant::class)
 
             // Disable global search in sidebar
@@ -91,8 +79,9 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(true)
             ->themeSwitcher(false)
 
-            // Register mobile header plugin
+            // Register plugins
             ->plugin(new MobileHeaderPlugin)
+            ->plugin(FilamentShieldPlugin::make()->scopeToTenant(false))
 
             ->colors([
                 'primary' => Color::hex('#EF4444'),
@@ -104,6 +93,10 @@ class AdminPanelProvider extends PanelProvider
                 in: app_path('Filament/Resources'),
                 for: 'App\Filament\Resources'
             )
+
+            ->resources([
+                RoleResource::class,
+            ])
 
             ->discoverPages(
                 in: app_path('Filament/Pages'),
