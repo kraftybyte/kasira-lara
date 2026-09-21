@@ -11,7 +11,6 @@ use App\Filament\Resources\Roles\Pages\ViewRole;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use BezhanSalleh\FilamentShield\Support\Utils;
 use BezhanSalleh\FilamentShield\Traits\HasShieldFormComponents;
-use BezhanSalleh\PluginEssentials\Concerns\Resource as Essentials;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
@@ -32,14 +31,27 @@ use Override;
 
 class RoleResource extends Resource
 {
-    use Essentials\BelongsToParent;
-    use Essentials\BelongsToTenant;
-    use Essentials\HasGlobalSearch;
-    use Essentials\HasLabels;
-    use Essentials\HasNavigation;
     use HasShieldFormComponents;
 
     protected static ?string $recordTitleAttribute = 'name';
+
+    #[Override]
+    public static function getNavigationIcon(): ?string
+    {
+        return 'heroicon-s-shield-check';
+    }
+
+    #[Override]
+    public static function getNavigationLabel(): string
+    {
+        return 'Akses';
+    }
+
+    #[Override]
+    public static function getNavigationGroup(): ?string
+    {
+        return 'Pengaturan';
+    }
 
     #[Override]
     public static function form(Schema $schema): Schema

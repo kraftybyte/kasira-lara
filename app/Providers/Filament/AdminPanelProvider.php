@@ -29,7 +29,7 @@ class AdminPanelProvider extends PanelProvider
 {
     public function boot(): void
     {
-        // Shield handles authorization - super_admin and owner are defined via roles
+        //
     }
 
     public function panel(Panel $panel): Panel
@@ -66,7 +66,6 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.5rem')
 
             // TENANCY - Tenant menu moved to header via custom views
-            // RoleResource is not scoped to tenant (handled by custom RoleResource class)
             ->tenant(Tenant::class)
 
             // Disable global search in sidebar
@@ -78,8 +77,7 @@ class AdminPanelProvider extends PanelProvider
 
             // Plugins
             ->plugin(FilamentShieldPlugin::make()
-                ->scopeToTenant(false)
-                ->registerNavigation(false))
+                ->scopeToTenant(false))
 
             // Brand primary color
             ->colors([
@@ -132,6 +130,5 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 IdentifyTenant::class,
             ]);
-
     }
 }
