@@ -5,7 +5,6 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\Pages\Login as BaseLogin;
 use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
-use App\Filament\Resources\Roles\RoleResource;
 use App\Models\AppSetting;
 use App\Models\Tenant;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -75,9 +74,10 @@ class AdminPanelProvider extends PanelProvider
             ->darkMode(false)
             ->themeSwitcher(false)
 
-            // Plugins
+            // Plugins - disable Shield's navigation since we use RoleResource
             ->plugin(FilamentShieldPlugin::make()
-                ->scopeToTenant(false))
+                ->scopeToTenant(false)
+                ->registerNavigation(false))
 
             // Brand primary color
             ->colors([
@@ -90,10 +90,6 @@ class AdminPanelProvider extends PanelProvider
                 in: app_path('Filament/Resources'),
                 for: 'App\Filament\Resources'
             )
-
-            ->resources([
-                RoleResource::class,
-            ])
 
             ->discoverPages(
                 in: app_path('Filament/Pages'),

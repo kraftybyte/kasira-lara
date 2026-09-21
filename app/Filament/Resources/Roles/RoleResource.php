@@ -8,7 +8,6 @@ use App\Filament\Resources\Roles\Pages\CreateRole;
 use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
 use App\Filament\Resources\Roles\Pages\ViewRole;
-use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use BezhanSalleh\FilamentShield\Support\Utils;
 use BezhanSalleh\FilamentShield\Traits\HasShieldFormComponents;
 use Filament\Actions\DeleteAction;
@@ -25,6 +24,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 use Override;
@@ -33,7 +33,31 @@ class RoleResource extends Resource
 {
     use HasShieldFormComponents;
 
+    /**
+     * Spatie's Role model does not have tenant relationship - disable tenant scoping.
+     */
+    protected static bool $isScopedToTenant = false;
+
+    protected static ?string $tenantOwnershipRelationshipName = null;
+
     protected static ?string $recordTitleAttribute = 'name';
+
+    /**
+     * Override to disable tenant scoping for roles.
+     */
+    #[Override]
+    public static function isScopedToTenant(): bool
+    {
+        return false;
+    }
+
+    /**
+     * Override to prevent tenant ownership checks for roles.
+     */
+    public static function getTenantOwnershipRelationshipName(): string
+    {
+        return '';
+    }
 
     #[Override]
     public static function getNavigationIcon(): ?string
@@ -51,6 +75,15 @@ class RoleResource extends Resource
     public static function getNavigationGroup(): ?string
     {
         return 'Pengaturan';
+    }
+
+    /**
+     * Bypass tenant scoping for roles - Spatie's Role model doesn't have tenant relationship.
+     */
+    #[Override]
+    public static function getEloquentQuery(): Builder
+    {
+        return parent::getEloquentQuery()->withoutGlobalScopes();
     }
 
     #[Override]
