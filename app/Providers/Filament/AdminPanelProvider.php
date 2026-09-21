@@ -5,7 +5,6 @@ namespace App\Providers\Filament;
 use App\Filament\Auth\Pages\Login as BaseLogin;
 use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
-use App\Filament\Plugins\MobileHeaderPlugin;
 use App\Filament\Resources\Roles\RoleResource;
 use App\Models\AppSetting;
 use App\Models\Tenant;
@@ -54,8 +53,6 @@ class AdminPanelProvider extends PanelProvider
         }
 
         return $panel
-            ->sidebarWidth('280px')
-            ->sidebarCollapsibleOnDesktop(false)
             ->default()
             ->id('admin')
             ->path('admin')
@@ -64,7 +61,7 @@ class AdminPanelProvider extends PanelProvider
             ->login(BaseLogin::class)
 
             // Branding - use app logo if available
-            ->brandName($appSetting?->app_name ?? 'KasirAja')
+            ->brandName($appSetting?->app_name ?? 'Kasira')
             ->brandLogo($brandLogo)
             ->brandLogoHeight('2.5rem')
 
@@ -76,13 +73,13 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearch(false)
 
             // Enable dark mode (no theme switcher)
-            ->darkMode(true)
+            ->darkMode(false)
             ->themeSwitcher(false)
 
-            // Register plugins
-            ->plugin(new MobileHeaderPlugin)
+            // Plugins
             ->plugin(FilamentShieldPlugin::make()->scopeToTenant(false))
 
+            // Brand primary color
             ->colors([
                 'primary' => Color::hex('#EF4444'),
             ])

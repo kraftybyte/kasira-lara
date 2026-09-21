@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Filament\Resources\Reservations;
+namespace App\Filament\Resources\Reservations\Schemas;
 
 use App\Models\Customer;
 use App\Models\Table;

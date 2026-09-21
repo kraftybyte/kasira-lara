@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Reservations;
 use App\Filament\Resources\Reservations\Pages\CreateReservation;
 use App\Filament\Resources\Reservations\Pages\EditReservation;
 use App\Filament\Resources\Reservations\Pages\ListReservations;
+use App\Filament\Resources\Reservations\Schemas\ReservationForm;
 use App\Filament\Resources\Reservations\Tables\ReservationTable;
 use App\Models\Reservation;
 use BackedEnum;

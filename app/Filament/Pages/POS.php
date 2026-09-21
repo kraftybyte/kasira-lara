@@ -189,6 +189,19 @@ class POS extends Page
         return $settings?->bank_account_name;
     }
 
+    public function getStoreBankQrImageProperty(): ?string
+    {
+        $tenant = Filament::getTenant();
+
+        if (! $tenant) {
+            return null;
+        }
+
+        $settings = TenantSetting::where('tenant_id', $tenant->id)->first();
+
+        return $settings?->bank_qr_image;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MODIFIER MODAL

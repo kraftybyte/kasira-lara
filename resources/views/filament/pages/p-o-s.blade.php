@@ -940,6 +940,11 @@
                                             <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $this->storeBankAccountName ?? '-' }}</span>
                                         </div>
                                     </div>
+                                    @if ($this->storeBankQrImage)
+                                        <div class="flex items-center justify-center rounded-lg bg-white p-4 dark:bg-gray-900">
+                                            <img src="{{ Storage::disk('public')->url($this->storeBankQrImage) }}" alt="QR Code" class="h-32 w-auto object-contain" />
+                                        </div>
+                                    @endif
                                 </div>
                                 <div class="rounded-2xl bg-blue-50 p-5 text-center dark:bg-blue-900/30">
                                     <p class="mb-1 text-xs font-medium uppercase tracking-wider text-blue-600 dark:text-blue-400">Total Bayar</p>

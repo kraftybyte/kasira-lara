@@ -12,7 +12,6 @@ use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
-use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use UnitEnum;
 
@@ -261,104 +260,5 @@ class IngredientReport extends Page
                 $this->endDate = now()->endOfMonth()->format('Y-m-d');
                 break;
         }
-    }
-
-    public function exportToCsv(): Response
-    {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
-            return response()->make('', 400);
-        }
-
-        $filename = 'laporan-bahan-baku-'.$tenant->name.'-'.now()->format('Y-m-d-His').'.csv';
-
-        $handle = fopen('php://temp', 'r+');
-
-        // Header
-        fputcsv($handle, [
-            'Nama Bahan',
-            'SKU',
-            'Supplier',
-            'Satuan',
-            'Stok',
-            'Stok Minimum',
-            'Harga Beli',
-            'Total Nilai Stok',
-            'Status',
-        ]);
-
-        foreach ($this->ingredients as $ingredient) {
-            $status = 'Normal';
-            if ((float) $ingredient->stock <= 0) {
-                $status = 'Habis';
-            } elseif ($ingredient->minimum_stock && (float) $ingredient->stock <= (float) $ingredient->minimum_stock) {
-                $status = 'Rendah';
-            }
-
-            fputcsv($handle, [
-                $ingredient->name,
-                $ingredient->sku ?? '-',
-                $ingredient->supplier?->name ?? '-',
-                $ingredient->unit,
-                number_format((float) $ingredient->stock, 3, ',', '.'),
-                $ingredient->minimum_stock ? number_format((float) $ingredient->minimum_stock, 3, ',', '.') : '-',
-                number_format((float) $ingredient->cost_price, 0, ',', '.'),
-                number_format((float) $ingredient->stock * (float) $ingredient->cost_price, 0, ',', '.'),
-                $status,
-            ]);
-        }
-
-        rewind($handle);
-        $content = stream_get_contents($handle);
-        fclose($handle);
-
-        return response()->make($content, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ]);
-    }
-
-    public function exportUsageToCsv(): Response
-    {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
-            return response()->make('', 400);
-        }
-
-        $filename = 'laporan-penggunaan-bahan-'.$tenant->name.'-'.now()->format('Y-m-d-His').'.csv';
-
-        $handle = fopen('php://temp', 'r+');
-
-        // Header
-        fputcsv($handle, [
-            'Nama Bahan',
-            'Supplier',
-            'Satuan',
-            'Digunakan',
-            'Sisa Stok',
-            'Produk',
-        ]);
-
-        foreach ($this->ingredientUsage as $usage) {
-            fputcsv($handle, [
-                $usage['name'],
-                $usage['supplier'] ?? '-',
-                $usage['unit'],
-                number_format($usage['used'], 3, ',', '.'),
-                number_format($usage['remaining'], 3, ',', '.'),
-                implode(', ', array_unique($usage['products'])),
-            ]);
-        }
-
-        rewind($handle);
-        $content = stream_get_contents($handle);
-        fclose($handle);
-
-        return response()->make($content, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ]);
     }
 }

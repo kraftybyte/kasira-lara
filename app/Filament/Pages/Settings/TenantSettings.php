@@ -86,6 +86,7 @@ class TenantSettings extends Page implements HasForms
             'bank_name' => $this->settings->bank_name,
             'bank_account' => $this->settings->bank_account,
             'bank_account_name' => $this->settings->bank_account_name,
+            'bank_qr_image' => $this->settings->bank_qr_image,
         ];
     }
 
@@ -224,8 +225,8 @@ class TenantSettings extends Page implements HasForms
                             ->label('Rekening Bank')
                             ->icon('heroicon-o-building-library')
                             ->schema([
-                                Section::make('Informasi Rekening untuk Transfer Manual')
-                                    ->description('Digunakan untuk opsi pembayaran Transfer Manual di POS')
+                                Section::make('Informasi Rekening')
+                                    ->description('Digunakan untuk pembayaran Transfer Manual')
                                     ->schema([
                                         TextInput::make('bank_name')
                                             ->label('Nama Bank')
@@ -238,6 +239,16 @@ class TenantSettings extends Page implements HasForms
                                         TextInput::make('bank_account_name')
                                             ->label('Nama Pemilik Rekening')
                                             ->placeholder('Contoh: Toko Sejahtera'),
+                                    ]),
+
+                                Section::make('QR Code Pembayaran')
+                                    ->description('Upload QR Code untuk pembayaran Manual')
+                                    ->schema([
+                                        FileUpload::make('bank_qr_image')
+                                            ->label('Gambar QR')
+                                            ->image()
+                                            ->imagePreviewHeight(150)
+                                            ->directory('bank-qr-codes'),
                                     ]),
                             ]),
 
@@ -319,6 +330,7 @@ class TenantSettings extends Page implements HasForms
             $this->settings->bank_name = $data['bank_name'] ?? null;
             $this->settings->bank_account = $data['bank_account'] ?? null;
             $this->settings->bank_account_name = $data['bank_account_name'] ?? null;
+            $this->settings->bank_qr_image = $data['bank_qr_image'] ?? null;
 
             $this->settings->save();
 

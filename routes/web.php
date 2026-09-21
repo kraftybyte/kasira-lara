@@ -3,6 +3,7 @@
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PaywuzWebhookController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\ReportExportController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'welcome')->name('home');
@@ -63,3 +64,24 @@ Route::middleware(['auth'])
 
 Route::post('/webhook/paywuz', [PaywuzWebhookController::class, 'handle'])
     ->name('webhook.paywuz');
+
+/*
+|--------------------------------------------------------------------------
+| Report Exports
+|--------------------------------------------------------------------------
+|
+| Dedicated routes for exporting reports as files.
+|
+*/
+
+Route::get('/admin/{tenant}/reports/sales/pdf', [ReportExportController::class, 'salesPdf'])
+    ->name('reports.sales.pdf');
+
+Route::get('/admin/{tenant}/reports/sales/csv', [ReportExportController::class, 'salesCsv'])
+    ->name('reports.sales.csv');
+
+Route::get('/admin/{tenant}/reports/ingredients/csv', [ReportExportController::class, 'ingredientsCsv'])
+    ->name('reports.ingredients.csv');
+
+Route::get('/admin/{tenant}/reports/ingredients/usage/csv', [ReportExportController::class, 'ingredientsUsageCsv'])
+    ->name('reports.ingredients.usage.csv');

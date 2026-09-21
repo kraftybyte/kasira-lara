@@ -36,17 +36,14 @@
             </x-filament::input.wrapper>
         </div>
 
-	        <button type="button" wire:click="exportToPdf" wire:loading.attr="disabled" class="btn btn-secondary btn-md">
-	            <x-heroicon-o-document-arrow-down class="h-4 w-4" wire:loading.remove />
-	            <svg wire:loading class="h-4 w-4 animate-spin" fill="none" stroke="currentColor" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018 8 8 8 8-8 0 018-8 8 8 0 01-8 8z"></path></svg>
-	            PDF
-	        </button>
-	        <button type="button" wire:click="exportToCsv" wire:loading.attr="disabled" class="btn btn-secondary btn-md ml-2">
-	            <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading class="h-4 w-4 animate-spin" />
-	            <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading.remove class="h-4 w-4" />
-	            <span wire:loading wire:target="exportToCsv">Generate...</span>
-	            <span wire:loading.remove wire:target="exportToCsv">Export CSV</span>
-	        </button>
+        <a href="{{ route('reports.sales.pdf', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
+            <x-heroicon-o-document-arrow-down class="h-4 w-4" />
+            PDF
+        </a>
+        <a href="{{ route('reports.sales.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md ml-2">
+            <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+            Export CSV
+        </a>
     </div>
 
     {{-- Stats Grid --}}
@@ -246,7 +243,7 @@
                     <input
                         type="text"
                         wire:model.live.debounce.300ms="tableSearch"
-                        placeholder=".    Cari data"
+                        placeholder="    Cari data"
                         class="h-8 rounded-lg border border-gray-200 bg-white px-3 pl-9 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     />
                     <x-heroicon-o-magnifying-glass class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />

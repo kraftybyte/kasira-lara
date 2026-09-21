@@ -8,13 +8,11 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Tenant;
 use BackedEnum;
-use Barryvdh\DomPDF\Facade\Pdf;
 use Carbon\Carbon;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Pagination\Paginator;
-use Illuminate\Http\Response;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use UnitEnum;
@@ -204,35 +202,6 @@ class SalesReport extends Page
         return ($this->totalProfit / $this->totalRevenue) * 100;
     }
 
-    public function exportToPdf(): Response
-    {
-        $tenant = $this->tenant;
-        if (! $tenant) {
-            return response()->json(['error' => 'Tenant not found'], 400);
-        }
-
-        $pdf = Pdf::loadView('reports.sales-pdf', [
-            'tenant' => $tenant,
-            'dateRange' => $this->dateRange,
-            'startDate' => $this->startDate,
-            'endDate' => $this->endDate,
-            'sales' => $this->sales,
-            'stats' => [
-                'totalRevenue' => $this->totalRevenue,
-                'totalProfit' => $this->totalProfit,
-                'profitMargin' => $this->profitMargin,
-                'totalSales' => $this->totalSales,
-                'averageTransaction' => $this->averageTransaction,
-                'topProducts' => $this->topProducts,
-                'salesByPayment' => $this->salesByPaymentMethod,
-            ],
-        ]);
-
-        $pdf->setPaper('A4', 'landscape');
-
-        return $pdf->download("laporan-penjualan-{$tenant->name}-{$this->startDate}.pdf");
-    }
-
     public function getSalesByPaymentMethodProperty(): array
     {
         return [
@@ -369,62 +338,5 @@ class SalesReport extends Page
                 $this->endDate = now()->endOfMonth()->format('Y-m-d');
                 break;
         }
-    }
-
-    public function exportToCsv(): Response
-    {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
-            return response()->make('', 400);
-        }
-
-        $sales = $this->sales;
-
-        $filename = 'laporan-penjualan-'.$tenant->name.'-'.now()->format('Y-m-d-His').'.csv';
-
-        $handle = fopen('php://temp', 'r+');
-
-        // Header
-        fputcsv($handle, [
-            'Invoice',
-            'Tanggal',
-            'Kasir',
-            'Customer',
-            'Meja',
-            'Subtotal',
-            'Diskon',
-            'PPN',
-            'Total',
-            'Metode Bayar',
-            'Dibayar',
-            'Kembalian',
-        ]);
-
-        foreach ($sales as $sale) {
-            fputcsv($handle, [
-                $sale->invoice_number,
-                $sale->created_at->format('d/m/Y H:i'),
-                $sale->user?->name ?? '-',
-                $sale->customer?->name ?? 'Walk-in',
-                $sale->table?->name ?? '-',
-                number_format((float) $sale->subtotal, 0, ',', '.'),
-                number_format((float) $sale->discount, 0, ',', '.'),
-                number_format((float) $sale->tax, 0, ',', '.'),
-                number_format((float) $sale->grand_total, 0, ',', '.'),
-                $sale->payment_method,
-                number_format((float) $sale->paid_amount, 0, ',', '.'),
-                number_format((float) $sale->change_amount, 0, ',', '.'),
-            ]);
-        }
-
-        rewind($handle);
-        $content = stream_get_contents($handle);
-        fclose($handle);
-
-        return response()->make($content, 200, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
-        ]);
     }
 }

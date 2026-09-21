@@ -14,18 +14,14 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <button type="button" wire:click="exportToCsv" wire:loading.attr="disabled" class="btn btn-secondary btn-md">
-                <x-heroicon-s-arrow-down-tray wire:target="exportToCsv" wire:loading class="h-4 w-4 animate-spin" />
-                <x-heroicon-o-arrow-down-tray wire:target="exportToCsv" wire:loading.remove class="h-4 w-4" />
-                <span wire:loading wire:target="exportToCsv">Mengekspor...</span>
-                <span wire:loading.remove wire:target="exportToCsv">Export Stok</span>
-            </button>
-            <button type="button" wire:click="exportUsageToCsv" wire:loading.attr="disabled" class="btn btn-secondary btn-md">
-                <x-heroicon-s-arrow-down-tray wire:target="exportUsageToCsv" wire:loading class="h-4 w-4 animate-spin" />
-                <x-heroicon-o-arrow-down-tray wire:target="exportUsageToCsv" wire:loading.remove class="h-4 w-4" />
-                <span wire:loading wire:target="exportUsageToCsv">Mengekspor...</span>
-                <span wire:loading.remove wire:target="exportUsageToCsv">Export Penggunaan</span>
-            </button>
+            <a href="{{ route('reports.ingredients.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id]) }}" target="_blank" class="btn btn-secondary btn-md">
+                <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+                Export Stok
+            </a>
+            <a href="{{ route('reports.ingredients.usage.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate]) }}" target="_blank" class="btn btn-secondary btn-md">
+                <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+                Export Penggunaan
+            </a>
         </div>
     </div>
 
