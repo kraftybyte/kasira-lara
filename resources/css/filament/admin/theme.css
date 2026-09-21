@@ -8,6 +8,48 @@
     background: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
 }
 
+/* ==================== SIDEBAR ACTIVE NAV ITEM ==================== */
+/* Active sidebar navigation item with gradient background and white icon */
+/* Override Filament's default active state styles */
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+    --tw-gradient-from: #EF4444 !important;
+    --tw-gradient-to: #F97316 !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon {
+    color: white !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: white !important;
+    font-weight: 600;
+}
+
+/* Dark mode support */
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.dark .filament-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+}
+
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon,
+.dark .filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon {
+    color: white !important;
+}
+
+/* Sidebar group header */
+.fi-sidebar-group-label {
+    color: #9CA3AF !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
 /* ==================== FILAMENT PRIMARY BUTTON GRADIENT ==================== */
 /* Override Filament buttons with primary color to use gradient */
 .fi-btn.fi-color-primary,

@@ -26,7 +26,6 @@ use Filament\Schemas\Schema;
 use Filament\Support\Enums\FontWeight;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rules\Unique;
 use Override;
@@ -40,54 +39,7 @@ class RoleResource extends Resource
     use Essentials\HasNavigation;
     use HasShieldFormComponents;
 
-    /**
-     * Disable tenant scoping for RoleResource since Spatie's Role model
-     * does not have a tenant relationship.
-     */
-    protected static bool $isScopedToTenant = false;
-
-    /**
-     * Skip authorization for RoleResource since permissions are managed separately.
-     */
-    protected static bool $shouldSkipAuthorization = true;
-
     protected static ?string $recordTitleAttribute = 'name';
-
-    /**
-     * Override to always return false - roles are global and not scoped to tenant.
-     */
-    public static function scopeToTenant(bool $condition = true): void
-    {
-        static::$isScopedToTenant = false;
-    }
-
-    /**
-     * Override isScopedToTenant to always return false.
-     */
-    public static function isScopedToTenant(): bool
-    {
-        return false;
-    }
-
-    /**
-     * Override getEloquentQuery to bypass tenant filtering for roles.
-     * Roles are global and should not be filtered by tenant.
-     */
-    #[Override]
-    public static function getEloquentQuery(): Builder
-    {
-        // Return query without any global scopes (including tenant scopes)
-        return Utils::getRoleModel()::query()->withoutGlobalScopes();
-    }
-
-    /**
-     * Override scopeEloquentQueryToTenant to not apply any filtering.
-     */
-    public static function scopeEloquentQueryToTenant(Builder $query, $tenant): Builder
-    {
-        // Don't apply tenant filtering to roles
-        return $query;
-    }
 
     #[Override]
     public static function form(Schema $schema): Schema

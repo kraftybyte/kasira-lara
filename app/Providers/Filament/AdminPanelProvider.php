@@ -77,7 +77,9 @@ class AdminPanelProvider extends PanelProvider
             ->themeSwitcher(false)
 
             // Plugins
-            ->plugin(FilamentShieldPlugin::make()->scopeToTenant(false))
+            ->plugin(FilamentShieldPlugin::make()
+                ->scopeToTenant(false)
+                ->registerNavigation(false))
 
             // Brand primary color
             ->colors([
