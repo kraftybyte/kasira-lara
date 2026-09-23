@@ -199,7 +199,95 @@ class POS extends Page
 
         $settings = TenantSetting::where('tenant_id', $tenant->id)->first();
 
-        return $settings?->bank_qr_image;
+        $qrPath = $settings?->bank_qr_image;
+
+        if (empty($qrPath)) {
+            return null;
+        }
+
+        // If it's stored as a direct path string
+        if (is_string($qrPath)) {
+            return $qrPath;
+        }
+
+        // If it's stored as JSON array (Filament FileUpload format)
+        if (is_array($qrPath)) {
+            foreach ($qrPath as $item) {
+                if (is_array($item) && isset($item['path'])) {
+                    return $item['path'];
+                }
+            }
+        }
+
+        return null;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | PAYMENT METHODS ENABLED
+    |--------------------------------------------------------------------------
+    */
+
+    public function getIsPaymentQrisAutoEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_qris_auto ?? true;
+    }
+
+    public function getIsPaymentVaEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_va ?? true;
+    }
+
+    public function getIsPaymentTransferEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_transfer ?? true;
+    }
+
+    public function getIsPaymentQrisManualEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_qris_manual ?? true;
+    }
+
+    public function getIsPaymentCashEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_cash ?? true;
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | QR MEJA PAYMENT METHODS ENABLED
+    |--------------------------------------------------------------------------
+    */
+
+    public function getIsTableQrQrisAutoEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->table_qr_qris_auto ?? true;
+    }
+
+    public function getIsTableQrVaEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->table_qr_va ?? true;
+    }
+
+    public function getIsTableQrPayAtCounterEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->table_qr_pay_at_counter ?? true;
     }
 
     /*

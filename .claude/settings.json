@@ -9,7 +9,9 @@
       "Bash(vendor/bin/pint --format agent)",
       "Bash(php artisan *)",
       "Bash(gh pr *)",
-      "Bash(rm -f /Users/macbook/Kasira-Laravel/resources/views/vendor/filament-panels/livewire/sidebar.blade.php)"
+      "Bash(rm -f /Users/macbook/Kasira-Laravel/resources/views/vendor/filament-panels/livewire/sidebar.blade.php)",
+      "mcp__laravel-boost__database-query",
+      "Bash(vendor/bin/pint --dirty --format agent app/Filament/Pages/Settings/TenantSettings.php)"
     ],
     "additionalDirectories": [
       "/Users/macbook/Kasira-Laravel",

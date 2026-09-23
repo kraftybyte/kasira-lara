@@ -122,28 +122,42 @@ class SalesTable
                 TextColumn::make('payments.method')
                     ->label('Pembayaran')
                     ->badge()
+                    ->color(
+                        function ($state) {
+                            return match (strtolower((string) $state)) {
+                                'cash' => 'success',
+                                'qris' => 'info',
+                                'qris_manual' => 'warning',
+                                'va', 'virtual_account' => 'primary',
+                                'transfer', 'bank_transfer' => 'gray',
+                                default => 'gray',
+                            };
+                        }
+                    )
                     ->formatStateUsing(function ($state) {
 
                         return match (strtolower((string) $state)) {
 
-                            'cash' => 'Tunai',
+                            'cash' => '💵 Tunai',
 
-                            'qris' => 'QRIS',
+                            'qris' => '📱 QRIS',
 
-                            'transfer' => 'Transfer',
+                            'qris_manual' => '📷 QR Manual',
 
-                            'bank_transfer' => 'Transfer',
+                            'transfer' => '🏦 Transfer',
 
-                            'debit' => 'Debit',
+                            'bank_transfer' => '🏦 Transfer',
 
-                            'credit' => 'Credit Card',
+                            'debit' => '💳 Debit',
 
-                            'credit_card' => 'Credit Card',
+                            'credit' => '💳 Credit Card',
 
-                            'va' => 'VA',
+                            'credit_card' => '💳 Credit Card',
+
+                            'va', 'virtual_account' => '🏧 VA',
 
                             default => $state
-                                ? ucfirst(
+                                ? '💰 '.ucfirst(
                                     str_replace(
                                         '_',
                                         ' ',

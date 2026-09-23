@@ -86,7 +86,19 @@ class TenantSettings extends Page implements HasForms
             'bank_name' => $this->settings->bank_name,
             'bank_account' => $this->settings->bank_account,
             'bank_account_name' => $this->settings->bank_account_name,
-            'bank_qr_image' => $this->settings->bank_qr_image,
+            'bank_qr_image' => $this->formatFileUploadState($this->settings->bank_qr_image),
+
+            // Payment Methods Enabled
+            'payment_qris_auto' => $this->settings->payment_qris_auto ?? true,
+            'payment_va' => $this->settings->payment_va ?? true,
+            'payment_transfer' => $this->settings->payment_transfer ?? true,
+            'payment_qris_manual' => $this->settings->payment_qris_manual ?? true,
+            'payment_cash' => $this->settings->payment_cash ?? true,
+
+            // QR Meja Payment Methods
+            'table_qr_qris_auto' => $this->settings->table_qr_qris_auto ?? true,
+            'table_qr_va' => $this->settings->table_qr_va ?? true,
+            'table_qr_pay_at_counter' => $this->settings->table_qr_pay_at_counter ?? true,
         ];
     }
 
@@ -219,6 +231,38 @@ class TenantSettings extends Page implements HasForms
                                             ->label('')
                                             ->content(view('filament.pages.settings.partials.test-connection-button')),
                                     ]),
+
+                                Section::make('Metode Pembayaran di POS')
+                                    ->description('Pilih metode pembayaran yang muncul di kasir')
+                                    ->schema([
+                                        Toggle::make('payment_qris_auto')
+                                            ->label('QR Otomatis (Payment Gateway)'),
+
+                                        Toggle::make('payment_va')
+                                            ->label('Virtual Account'),
+
+                                        Toggle::make('payment_transfer')
+                                            ->label('Transfer Manual'),
+
+                                        Toggle::make('payment_qris_manual')
+                                            ->label('QRIS Manual (Upload)'),
+
+                                        Toggle::make('payment_cash')
+                                            ->label('Cash / Tunai'),
+                                    ])->columns(2),
+
+                                Section::make('QR Meja')
+                                    ->description('Pilih metode pembayaran saat pelanggan scan QR meja')
+                                    ->schema([
+                                        Toggle::make('table_qr_qris_auto')
+                                            ->label('QRIS Otomatis'),
+
+                                        Toggle::make('table_qr_va')
+                                            ->label('Virtual Account'),
+
+                                        Toggle::make('table_qr_pay_at_counter')
+                                            ->label('Bayar di Kasir'),
+                                    ])->columns(3),
                             ]),
 
                         Tab::make('bank')
@@ -248,7 +292,8 @@ class TenantSettings extends Page implements HasForms
                                             ->label('Gambar QR')
                                             ->image()
                                             ->imagePreviewHeight(150)
-                                            ->directory('bank-qr-codes'),
+                                            ->directory('bank-qr-codes')
+                                            ->disk('public'),
                                     ]),
                             ]),
 
@@ -269,6 +314,41 @@ class TenantSettings extends Page implements HasForms
                             ]),
                     ]),
             ]);
+    }
+
+    /**
+     * Format value for FileUpload field
+     * Filament 4 FileUpload expects array format: ['path' => 'storage/file.png']
+     */
+    protected function formatFileUploadState(mixed $value): ?array
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        // Already an array with correct format
+        if (is_array($value)) {
+            foreach ($value as $item) {
+                if (is_array($item) && isset($item['path'])) {
+                    return $value;
+                }
+            }
+        }
+
+        // String path - convert to Filament format
+        if (is_string($value)) {
+            // Remove JSON encoding if present
+            $decoded = json_decode($value, true);
+            if (is_string($decoded)) {
+                $value = $decoded;
+            }
+        }
+
+        if (! empty($value) && is_string($value)) {
+            return [$value => ['path' => $value]];
+        }
+
+        return null;
     }
 
     public function save(): void
@@ -330,7 +410,35 @@ class TenantSettings extends Page implements HasForms
             $this->settings->bank_name = $data['bank_name'] ?? null;
             $this->settings->bank_account = $data['bank_account'] ?? null;
             $this->settings->bank_account_name = $data['bank_account_name'] ?? null;
-            $this->settings->bank_qr_image = $data['bank_qr_image'] ?? null;
+
+            // Payment Methods Enabled
+            $this->settings->payment_qris_auto = $data['payment_qris_auto'] ?? false;
+            $this->settings->payment_va = $data['payment_va'] ?? false;
+            $this->settings->payment_transfer = $data['payment_transfer'] ?? false;
+            $this->settings->payment_qris_manual = $data['payment_qris_manual'] ?? false;
+            $this->settings->payment_cash = $data['payment_cash'] ?? false;
+
+            // QR Meja Payment Methods
+            $this->settings->table_qr_qris_auto = $data['table_qr_qris_auto'] ?? false;
+            $this->settings->table_qr_va = $data['table_qr_va'] ?? false;
+            $this->settings->table_qr_pay_at_counter = $data['table_qr_pay_at_counter'] ?? false;
+
+            // Handle QR image - Filament 4 FileUpload returns array with path
+            $qrImage = $data['bank_qr_image'] ?? null;
+            if (is_array($qrImage)) {
+                // Extract path from Filament 4 FileUpload format
+                foreach ($qrImage as $uuid => $item) {
+                    if (is_array($item) && isset($item['path'])) {
+                        $qrImage = $item['path'];
+                        break;
+                    }
+                }
+                // If still array, set to null
+                if (is_array($qrImage)) {
+                    $qrImage = null;
+                }
+            }
+            $this->settings->bank_qr_image = $qrImage;
 
             $this->settings->save();
 

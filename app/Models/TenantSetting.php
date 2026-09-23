@@ -47,6 +47,19 @@ class TenantSetting extends Model
         'bank_name',
         'bank_account',
         'bank_account_name',
+        'bank_qr_image',
+
+        // Payment Methods Enabled (POS Modal)
+        'payment_qris_auto',
+        'payment_va',
+        'payment_transfer',
+        'payment_qris_manual',
+        'payment_cash',
+
+        // QR Meja Payment Methods
+        'table_qr_qris_auto',
+        'table_qr_va',
+        'table_qr_pay_at_counter',
     ];
 
     /**
@@ -71,6 +84,20 @@ class TenantSetting extends Model
         'loyalty_points_per_rupiah' => 'decimal:2',
         'loyalty_points_value' => 'decimal:2',
         'loyalty_minimum_redeem' => 'integer',
+
+        'bank_qr_image' => 'array',
+
+        // Payment Methods
+        'payment_qris_auto' => 'boolean',
+        'payment_va' => 'boolean',
+        'payment_transfer' => 'boolean',
+        'payment_qris_manual' => 'boolean',
+        'payment_cash' => 'boolean',
+
+        // QR Meja Payment Methods
+        'table_qr_qris_auto' => 'boolean',
+        'table_qr_va' => 'boolean',
+        'table_qr_pay_at_counter' => 'boolean',
     ];
 
     public function tenant(): BelongsTo
