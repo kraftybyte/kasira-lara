@@ -279,7 +279,10 @@ class SalesTable
                 |--------------------------------------------------------------------------
                 */
 
-                EditAction::make(),
+                EditAction::make()
+                    ->visible(function () {
+                        return auth()->user()->can('Update:Sale');
+                    }),
 
                 /*
                 |--------------------------------------------------------------------------
@@ -321,7 +324,10 @@ class SalesTable
 
                 BulkActionGroup::make([
 
-                    DeleteBulkAction::make(),
+                    DeleteBulkAction::make()
+                        ->visible(function () {
+                            return auth()->user()->can('DeleteAny:Sale');
+                        }),
 
                 ]),
 

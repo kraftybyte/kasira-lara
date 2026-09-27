@@ -25,6 +25,15 @@ class Kitchen extends Page
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedFire;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // All roles can access Kitchen: super_admin, owner, kepala_toko, cashier, kitchen
+        // Kitchen staff need to see orders
+        return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko', 'cashier', 'kitchen']);
+    }
+
     public function getTenant()
     {
         return Filament::getTenant();

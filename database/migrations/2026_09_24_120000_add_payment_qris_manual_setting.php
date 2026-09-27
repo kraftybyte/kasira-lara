@@ -11,9 +11,11 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('tenant_settings', function (Blueprint $table) {
-            $table->boolean('payment_qris_manual')->default(true)->after('payment_transfer');
-        });
+        if (! Schema::hasColumn('tenant_settings', 'payment_qris_manual')) {
+            Schema::table('tenant_settings', function (Blueprint $table) {
+                $table->boolean('payment_qris_manual')->default(true)->after('payment_transfer');
+            });
+        }
     }
 
     /**

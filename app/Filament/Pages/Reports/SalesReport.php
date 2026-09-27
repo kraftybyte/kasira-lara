@@ -31,6 +31,15 @@ class SalesReport extends Page
 
     protected static string|UnitEnum|null $navigationGroup = 'Laporan';
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Only: super_admin, owner, kepala_toko can access Sales Report
+        // NOT: cashier, kitchen
+        return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | STATE
@@ -43,9 +52,9 @@ class SalesReport extends Page
 
     public string $endDate = '';
 
-    public ?int $statusFilter = null;
+    public ?string $statusFilter = null;
 
-    public ?int $paymentMethodFilter = null;
+    public ?string $paymentMethodFilter = null;
 
     public string $tableSearch = '';
 
@@ -101,16 +110,12 @@ class SalesReport extends Page
 
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
-        } else {
-            // Default: show completed sales only
-            $query->where('status', 'completed');
         }
 
         if ($this->paymentMethodFilter) {
             $query->where('payment_method', $this->paymentMethodFilter);
         }
 
-        // Search filter
         if ($this->tableSearch) {
             $search = $this->tableSearch;
             $query->where(function ($q) use ($search) {
@@ -126,7 +131,7 @@ class SalesReport extends Page
 
         return $query->with(['customer', 'user', 'table'])
             ->orderByDesc('created_at')
-            ->paginate(25);
+            ->paginate(100);
     }
 
     public function getTotalSalesProperty(): int
@@ -207,18 +212,45 @@ class SalesReport extends Page
         return [
             'cash' => [
                 'label' => 'Tunai',
+                'icon' => 'banknotes',
+                'color' => 'emerald',
                 'count' => $this->sales->where('payment_method', 'cash')->count(),
                 'amount' => $this->sales->where('payment_method', 'cash')->sum('grand_total'),
             ],
             'qris' => [
-                'label' => 'QRIS',
+                'label' => 'QRIS Auto',
+                'icon' => 'qr-code',
+                'color' => 'blue',
                 'count' => $this->sales->where('payment_method', 'qris')->count(),
                 'amount' => $this->sales->where('payment_method', 'qris')->sum('grand_total'),
             ],
+            'qris_manual' => [
+                'label' => 'QRIS Manual',
+                'icon' => 'qr-code',
+                'color' => 'purple',
+                'count' => $this->sales->where('payment_method', 'qris_manual')->count(),
+                'amount' => $this->sales->where('payment_method', 'qris_manual')->sum('grand_total'),
+            ],
+            'va' => [
+                'label' => 'Virtual Account',
+                'icon' => 'building-office',
+                'color' => 'indigo',
+                'count' => $this->sales->where('payment_method', 'va')->count(),
+                'amount' => $this->sales->where('payment_method', 'va')->sum('grand_total'),
+            ],
             'transfer' => [
                 'label' => 'Transfer',
+                'icon' => 'building-library',
+                'color' => 'violet',
                 'count' => $this->sales->where('payment_method', 'transfer')->count(),
                 'amount' => $this->sales->where('payment_method', 'transfer')->sum('grand_total'),
+            ],
+            'transfer_manual' => [
+                'label' => 'Transfer Manual',
+                'icon' => 'building-library',
+                'color' => 'pink',
+                'count' => $this->sales->where('payment_method', 'transfer_manual')->count(),
+                'amount' => $this->sales->where('payment_method', 'transfer_manual')->sum('grand_total'),
             ],
         ];
     }

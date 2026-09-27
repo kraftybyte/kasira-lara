@@ -29,6 +29,14 @@ class IngredientReport extends Page
 
     protected static string|UnitEnum|null $navigationGroup = 'Laporan';
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Only: super_admin, owner, kepala_toko can access Ingredient Report
+        return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | STATE

@@ -45,6 +45,23 @@ class TenantSettings extends Page implements HasForms
 
     public bool $canEditPaywuz = false;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Super admin can always access
+        if ($user->hasRole('super_admin')) {
+            return true;
+        }
+
+        // Owner can access TenantSettings
+        if ($user->hasRole('owner')) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function mount(): void
     {
         $tenant = Filament::getTenant();
@@ -61,7 +78,6 @@ class TenantSettings extends Page implements HasForms
 
         $this->data = [
             'store_name' => $this->settings->store_name ?? $tenant->name,
-            'logo' => $this->settings->logo,
             'address' => $this->settings->address,
             'phone' => $this->settings->phone,
             'email' => $this->settings->email,
@@ -86,7 +102,7 @@ class TenantSettings extends Page implements HasForms
             'bank_name' => $this->settings->bank_name,
             'bank_account' => $this->settings->bank_account,
             'bank_account_name' => $this->settings->bank_account_name,
-            'bank_qr_image' => $this->formatFileUploadState($this->settings->bank_qr_image),
+            // Note: logo and bank_qr_image handled by model binding
 
             // Payment Methods Enabled
             'payment_qris_auto' => $this->settings->payment_qris_auto ?? true,
@@ -144,7 +160,8 @@ class TenantSettings extends Page implements HasForms
                                                 ->label('')
                                                 ->image()
                                                 ->imagePreviewHeight(100)
-                                                ->directory('receipt-logos'),
+                                                ->directory('receipt-logos')
+                                                ->model($this->settings),
                                         ])->columns(2),
                                     ]),
 
@@ -286,15 +303,17 @@ class TenantSettings extends Page implements HasForms
                                     ]),
 
                                 Section::make('QR Code Pembayaran')
-                                    ->description('Upload QR Code untuk pembayaran Manual')
                                     ->schema([
-                                        FileUpload::make('bank_qr_image')
-                                            ->label('Gambar QR')
-                                            ->image()
-                                            ->imagePreviewHeight(150)
-                                            ->directory('bank-qr-codes')
-                                            ->disk('public'),
+                                        Group::make([
+                                            FileUpload::make('bank_qr_image')
+                                                ->label('')
+                                                ->image()
+                                                ->imagePreviewHeight(150)
+                                                ->directory('bank-qr-codes')
+                                                ->model($this->settings),
+                                        ])->columns(2),
                                     ]),
+
                             ]),
 
                         Tab::make('about')
@@ -314,41 +333,6 @@ class TenantSettings extends Page implements HasForms
                             ]),
                     ]),
             ]);
-    }
-
-    /**
-     * Format value for FileUpload field
-     * Filament 4 FileUpload expects array format: ['path' => 'storage/file.png']
-     */
-    protected function formatFileUploadState(mixed $value): ?array
-    {
-        if (empty($value)) {
-            return null;
-        }
-
-        // Already an array with correct format
-        if (is_array($value)) {
-            foreach ($value as $item) {
-                if (is_array($item) && isset($item['path'])) {
-                    return $value;
-                }
-            }
-        }
-
-        // String path - convert to Filament format
-        if (is_string($value)) {
-            // Remove JSON encoding if present
-            $decoded = json_decode($value, true);
-            if (is_string($decoded)) {
-                $value = $decoded;
-            }
-        }
-
-        if (! empty($value) && is_string($value)) {
-            return [$value => ['path' => $value]];
-        }
-
-        return null;
     }
 
     public function save(): void
@@ -378,7 +362,6 @@ class TenantSettings extends Page implements HasForms
         try {
             // Common fields (owner & super_admin can edit)
             $this->settings->store_name = $data['store_name'] ?? null;
-            $this->settings->logo = $data['logo'] ?? null;
             $this->settings->address = $data['address'] ?? null;
             $this->settings->phone = $data['phone'] ?? null;
             $this->settings->email = $data['email'] ?? null;
@@ -410,6 +393,7 @@ class TenantSettings extends Page implements HasForms
             $this->settings->bank_name = $data['bank_name'] ?? null;
             $this->settings->bank_account = $data['bank_account'] ?? null;
             $this->settings->bank_account_name = $data['bank_account_name'] ?? null;
+            // Note: logo and bank_qr_image handled by model binding
 
             // Payment Methods Enabled
             $this->settings->payment_qris_auto = $data['payment_qris_auto'] ?? false;
@@ -422,23 +406,6 @@ class TenantSettings extends Page implements HasForms
             $this->settings->table_qr_qris_auto = $data['table_qr_qris_auto'] ?? false;
             $this->settings->table_qr_va = $data['table_qr_va'] ?? false;
             $this->settings->table_qr_pay_at_counter = $data['table_qr_pay_at_counter'] ?? false;
-
-            // Handle QR image - Filament 4 FileUpload returns array with path
-            $qrImage = $data['bank_qr_image'] ?? null;
-            if (is_array($qrImage)) {
-                // Extract path from Filament 4 FileUpload format
-                foreach ($qrImage as $uuid => $item) {
-                    if (is_array($item) && isset($item['path'])) {
-                        $qrImage = $item['path'];
-                        break;
-                    }
-                }
-                // If still array, set to null
-                if (is_array($qrImage)) {
-                    $qrImage = null;
-                }
-            }
-            $this->settings->bank_qr_image = $qrImage;
 
             $this->settings->save();
 

@@ -945,13 +945,27 @@
                                             <p class="text-sm font-semibold text-white/90">{{ $vaBankName ?? 'Virtual Account' }}</p>
                                         </div>
                                         <div class="p-5 text-center">
-                                            <p class="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500">Nomor Virtual Account</p>
-                                            <div class="flex items-center justify-center gap-3">
-                                                <span class="font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $vaAccountNumber ?? '-' }}</span>
-                                                <button type="button" x-on:click="navigator.clipboard.writeText('{{ $vaAccountNumber ?? '' }}')" class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition hover:bg-green-100 hover:text-green-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400">
-                                                    <x-heroicon-o-document-duplicate class="h-5 w-5" />
-                                                </button>
-                                            </div>
+                                            @if($vaAccountNumber)
+                                                <p class="mb-3 text-xs font-medium uppercase tracking-wider text-gray-500">Nomor Virtual Account</p>
+                                                <div class="flex items-center justify-center gap-3">
+                                                    <span class="font-mono text-xl font-bold text-gray-900 dark:text-white">{{ $vaAccountNumber }}</span>
+                                                    <button type="button" x-on:click="navigator.clipboard.writeText('{{ $vaAccountNumber }}')" class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 text-gray-600 transition hover:bg-green-100 hover:text-green-600 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-green-900/30 dark:hover:text-green-400">
+                                                        <x-heroicon-o-document-duplicate class="h-5 w-5" />
+                                                    </button>
+                                                </div>
+                                            @elseif($vaPaymentUrl)
+                                                <p class="mb-3 text-xs font-medium uppercase tracking-wider text-amber-600">Customer belum pilih bank</p>
+                                                <div class="flex flex-col items-center gap-3">
+                                                    <a href="{{ $vaPaymentUrl }}" target="_blank" class="inline-flex items-center gap-2 rounded-xl bg-blue-500 px-6 py-3 text-sm font-bold text-white shadow-lg transition hover:bg-blue-600">
+                                                        Buka Link Pembayaran
+                                                    </a>
+                                                    <button type="button" wire:click="checkVaPaymentStatus" class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400">
+                                                        Cek setelah customer pilih bank
+                                                    </button>
+                                                </div>
+                                            @else
+                                                <p class="text-gray-400">Memuat...</p>
+                                            @endif
                                         </div>
                                         @if ($vaExpiryTime)
                                             <div class="flex items-center justify-center gap-2 border-t border-gray-100 bg-amber-50 px-5 py-3 dark:border-gray-700 dark:bg-amber-900/20">

@@ -34,6 +34,12 @@ class GlobalSettings extends Page implements HasForms
 
     public AppSetting $settings;
 
+    public static function canAccess(): bool
+    {
+        // Only super_admin can access GlobalSettings
+        return auth()->user()?->hasRole('super_admin') ?? false;
+    }
+
     public function mount(): void
     {
         // Only super_admin can access

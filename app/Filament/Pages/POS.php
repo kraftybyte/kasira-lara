@@ -40,6 +40,23 @@ class POS extends Page
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Super admin and owner can always access
+        if ($user->hasRole('super_admin') || $user->hasRole('owner')) {
+            return true;
+        }
+
+        // Cashier and kepala_toko can access POS
+        if ($user->hasRole('cashier') || $user->hasRole('kepala_toko')) {
+            return true;
+        }
+
+        return false;
+    }
+
     public function getHeader(): ?View
     {
         return view('filament.pages.pos-header', [
@@ -133,6 +150,8 @@ class POS extends Page
     public ?string $vaBankName = null;
 
     public ?string $vaExpiryTime = null;
+
+    public ?string $vaPaymentUrl = null;
 
     public bool $isGeneratingVa = false;
 
@@ -3211,6 +3230,7 @@ class POS extends Page
         $this->vaBankCode = null;
         $this->vaBankName = null;
         $this->vaExpiryTime = null;
+        $this->vaPaymentUrl = null;
         $this->isGeneratingVa = false;
         $this->isCheckingVaPayment = false;
         $this->currentVaSale = null;
@@ -3370,25 +3390,36 @@ class POS extends Page
             if (isset($response['success']) && $response['success']) {
                 $data = $response['data'] ?? [];
                 $transactionId = $data['id'] ?? $data['transactionId'] ?? null;
-                $accountNumber = $data['accountNumber'] ?? $data['vaNumber'] ?? null;
-                $expiryTime = $data['expiryTime'] ?? $data['expiredAt'] ?? null;
+                // Paywuz returns paymentNumber for VA
+                $accountNumber = $data['paymentNumber'] ?? $data['accountNumber'] ?? $data['vaNumber'] ?? null;
+                $expiryTime = $data['expiresAt'] ?? $data['expiryTime'] ?? $data['expiredAt'] ?? null;
+                $paymentUrl = $data['paymentUrl'] ?? null;
 
                 $sale->update([
                     'paywuz_transaction_id' => $transactionId,
-                    'paywuz_qr_url' => $accountNumber,
+                    'paywuz_qr_url' => $paymentUrl,
                     'paywuz_status' => 'pending',
                 ]);
 
                 $this->currentVaSale = $sale->fresh();
                 $this->vaTransactionId = $transactionId;
                 $this->vaAccountNumber = $accountNumber;
+                $this->vaPaymentUrl = $paymentUrl;
                 $this->vaExpiryTime = $expiryTime ? date('d M Y H:i', strtotime($expiryTime)) : now()->addHours(24)->format('d M Y H:i');
 
-                Notification::make()
-                    ->title('Virtual Account Generated')
-                    ->body("No. VA: {$accountNumber}")
-                    ->success()
-                    ->send();
+                if ($accountNumber) {
+                    Notification::make()
+                        ->title('Virtual Account Generated')
+                        ->body("No. VA: {$accountNumber}")
+                        ->success()
+                        ->send();
+                } else {
+                    Notification::make()
+                        ->title('Link Pembayaran Dibuat')
+                        ->body('Customer pilih bank di link pembayaran')
+                        ->success()
+                        ->send();
+                }
             } else {
                 // API failed - use demo mode with generated VA number
                 $demoVaNumber = $this->generateDemoVaNumber($bankCode, $invoiceNumber);

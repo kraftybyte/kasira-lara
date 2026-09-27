@@ -64,15 +64,9 @@ class ViewSale extends ViewRecord
                 ->label('Batalkan Transaksi')
                 ->icon('heroicon-o-x-circle')
                 ->color('danger')
-
-                /*
-                |--------------------------------------------------------------------------
-                | Hanya muncul jika transaksi belum dibatalkan
-                |--------------------------------------------------------------------------
-                */
-
                 ->visible(
                     fn (): bool => $this->record->status !== 'cancelled'
+                        && auth()->user()->can('forceDelete', $this->record)
                 )
 
                 /*

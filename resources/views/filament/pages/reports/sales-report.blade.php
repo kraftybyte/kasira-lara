@@ -1,11 +1,12 @@
 <x-filament-panels::page>
 
     {{-- Header --}}
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex flex-wrap items-start justify-between gap-4">
         <div>
-            <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Laporan Penjualan</h1>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">Laporan Penjualan</h1>
             <div class="mt-1.5 flex items-center gap-3">
-                <span class="badge-info">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                    <x-heroicon-o-building-storefront class="h-3.5 w-3.5" />
                     {{ $this->tenant?->name ?? 'Tenant' }}
                 </span>
                 <span class="text-sm text-gray-500 dark:text-gray-400">
@@ -13,14 +14,24 @@
                 </span>
             </div>
         </div>
+        <div class="flex items-center gap-2">
+            <a href="{{ route('reports.sales.pdf', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
+                <x-heroicon-o-document-arrow-down class="h-4 w-4" />
+                PDF
+            </a>
+            <a href="{{ route('reports.sales.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
+                <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
+                CSV
+            </a>
+        </div>
     </div>
 
-    {{-- Date Range --}}
+    {{-- Date Range & Filters --}}
     <div class="mb-6 flex flex-wrap items-center gap-3">
-        <div class="flex border border-gray-200 bg-white p-1 dark:border-gray-700 dark:bg-gray-800">
+        <div class="flex items-center gap-1 rounded-lg bg-gray-100 p-1 dark:bg-gray-800">
             @foreach(['today' => 'Hari Ini', 'yesterday' => 'Kemarin', 'week' => 'Minggu Ini', 'month' => 'Bulan Ini'] as $key => $label)
                 <button type="button" wire:click="setDateRange('{{ $key }}')"
-                    class="btn btn-sm {{ $dateRange === $key ? 'btn-primary' : 'btn-ghost' }}">
+                    class="rounded-md px-3 py-1.5 text-xs font-medium transition-colors {{ $dateRange === $key ? 'bg-white text-gray-900 shadow-sm dark:bg-gray-700 dark:text-white' : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white' }}">
                     {{ $label }}
                 </button>
             @endforeach
@@ -36,80 +47,92 @@
             </x-filament::input.wrapper>
         </div>
 
-        <a href="{{ route('reports.sales.pdf', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
-            <x-heroicon-o-document-arrow-down class="h-4 w-4" />
-            PDF
-        </a>
-        <a href="{{ route('reports.sales.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md ml-2">
-            <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
-            Export CSV
-        </a>
+        {{-- Status Filter --}}
+        <x-filament::input.wrapper>
+            <x-filament::input.select wire:model.live="statusFilter">
+                <option value="">Semua Status</option>
+                <option value="completed">Completed</option>
+                <option value="pending">Pending</option>
+                <option value="open">Open</option>
+                <option value="cancelled">Cancelled</option>
+            </x-filament::input.select>
+        </x-filament::input.wrapper>
     </div>
 
     {{-- Stats Grid --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
+    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {{-- Total Revenue --}}
-        <div class="card-hover p-5">
-            <div class="stat-icon bg-green-100 text-green-600 dark:bg-green-500/20 dark:text-green-400">
-                <x-heroicon-o-currency-dollar class="h-6 w-6" />
-            </div>
-            <div class="mt-4">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total Penjualan</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->totalRevenue, 0, ',', '.') }}</p>
+        <div class="card-hover p-4">
+            <div class="flex items-start gap-3">
+                <div class="stat-icon gradient-bg text-white shrink-0">
+                    <x-heroicon-o-currency-dollar class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] font-medium text-gray-500 dark:text-gray-400">Total Penjualan</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate" title="Rp {{ number_format($this->totalRevenue, 0, ',', '.') }}">Rp {{ number_format($this->totalRevenue, 0, ',', '.') }}</p>
+                </div>
             </div>
         </div>
 
         {{-- Transaction Count --}}
-        <div class="card-hover p-5">
-            <div class="stat-icon bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                <x-heroicon-o-document-text class="h-6 w-6" />
-            </div>
-            <div class="mt-4">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Jumlah Transaksi</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">{{ number_format($this->totalSales, 0, ',', '.') }}</p>
+        <div class="card-hover p-4">
+            <div class="flex items-start gap-3">
+                <div class="stat-icon bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400 shrink-0">
+                    <x-heroicon-o-document-text class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] font-medium text-gray-500 dark:text-gray-400">Transaksi</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight">{{ number_format($this->totalSales, 0, ',', '.') }}</p>
+                </div>
             </div>
         </div>
 
         {{-- Profit --}}
-        <div class="card-hover p-5">
-            <div class="stat-icon bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                <x-heroicon-o-chart-bar class="h-6 w-6" />
-            </div>
-            <div class="mt-4">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Profit</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->totalProfit, 0, ',', '.') }}</p>
-                <p class="text-xs text-gray-500">Margin: {{ number_format($this->profitMargin, 1) }}%</p>
+        <div class="card-hover p-4">
+            <div class="flex items-start gap-3">
+                <div class="stat-icon bg-emerald-100 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400 shrink-0">
+                    <x-heroicon-o-chart-bar class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] font-medium text-gray-500 dark:text-gray-400">Profit</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate" title="Rp {{ number_format($this->totalProfit, 0, ',', '.') }}">Rp {{ number_format($this->totalProfit, 0, ',', '.') }}</p>
+                    <p class="text-[10px] text-gray-500 leading-tight">Margin: {{ number_format($this->profitMargin, 1) }}%</p>
+                </div>
             </div>
         </div>
 
         {{-- Average --}}
-        <div class="card-hover p-5">
-            <div class="stat-icon bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400">
-                <x-heroicon-o-chart-bar class="h-6 w-6" />
-            </div>
-            <div class="mt-4">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Rata-rata Transaksi</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->averageTransaction, 0, ',', '.') }}</p>
+        <div class="card-hover p-4">
+            <div class="flex items-start gap-3">
+                <div class="stat-icon bg-purple-100 text-purple-600 dark:bg-purple-500/20 dark:text-purple-400 shrink-0">
+                    <x-heroicon-o-calculator class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] font-medium text-gray-500 dark:text-gray-400">Rata-rata</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate" title="Rp {{ number_format($this->averageTransaction, 0, ',', '.') }}">Rp {{ number_format($this->averageTransaction, 0, ',', '.') }}</p>
+                </div>
             </div>
         </div>
 
         {{-- PPN --}}
-        <div class="card-hover p-5">
-            <div class="stat-icon bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                <x-heroicon-o-receipt-percent class="h-6 w-6" />
-            </div>
-            <div class="mt-4">
-                <p class="text-sm font-medium text-gray-500 dark:text-gray-400">Total PPN</p>
-                <p class="mt-1 text-2xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->totalTax, 0, ',', '.') }}</p>
+        <div class="card-hover p-4">
+            <div class="flex items-start gap-3">
+                <div class="stat-icon bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400 shrink-0">
+                    <x-heroicon-o-receipt-percent class="h-5 w-5" />
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] font-medium text-gray-500 dark:text-gray-400">Total PPN</p>
+                    <p class="text-lg font-bold text-gray-900 dark:text-white leading-tight truncate" title="Rp {{ number_format($this->totalTax, 0, ',', '.') }}">Rp {{ number_format($this->totalTax, 0, ',', '.') }}</p>
+                </div>
             </div>
         </div>
     </div>
 
     {{-- Low Stock Alert --}}
     @if($this->lowStockIngredients->count() > 0)
-        <div class="alert-danger mb-6">
-            <div class="flex items-start gap-4">
-                <div class="stat-icon h-10 w-10 shrink-0 bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+        <div class="mb-6 overflow-hidden rounded-xl border border-red-200 bg-red-50 dark:border-red-500/30 dark:bg-red-500/10">
+            <div class="flex items-start gap-4 p-4">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                     <x-heroicon-o-exclamation-triangle class="h-5 w-5" />
                 </div>
                 <div class="flex-1">
@@ -117,7 +140,9 @@
                     <p class="mt-1 text-xs text-red-700 dark:text-red-400">Bahan berikut sudah mencapai stok minimum:</p>
                     <div class="mt-3 flex flex-wrap gap-2">
                         @foreach($this->lowStockIngredients as $ingredient)
-                            <span class="badge-danger">{{ $ingredient->name }}: {{ (int) $ingredient->stock }} {{ $ingredient->unit }}</span>
+                            <span class="inline-flex items-center gap-1 rounded-full bg-red-100 px-2.5 py-1 text-xs font-medium text-red-700 dark:bg-red-500/20 dark:text-red-400">
+                                {{ $ingredient->name }}: {{ (int) $ingredient->stock }} {{ $ingredient->unit }}
+                            </span>
                         @endforeach
                     </div>
                 </div>
@@ -126,60 +151,69 @@
     @endif
 
     {{-- Two Column Layout --}}
-    <div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+    <div class="mb-6 grid grid-cols-1 gap-5 lg:grid-cols-2">
         {{-- Top Products --}}
-        <div class="card overflow-hidden">
+        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
             <div class="section-header">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Produk Terlaris</h3>
+                <div class="flex items-center gap-2">
+                    <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-amber-100 text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
+                        <x-heroicon-o-trophy class="h-4 w-4" />
+                    </div>
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Produk Terlaris</h2>
+                </div>
             </div>
-            <div class="p-5">
+            <div class="p-4">
                 @if($this->topProducts->count() > 0)
                     <div class="space-y-3">
                         @foreach($this->topProducts as $index => $product)
-                            <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition-colors hover:bg-gray-100/50 dark:border-gray-700 dark:bg-gray-800/30 dark:hover:bg-gray-800/50">
-                                <div class="flex items-center gap-3">
-                                    <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-linear-to-br from-red-500 to-orange-500 text-xs font-bold text-white shadow-sm">
-                                        {{ $index + 1 }}
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $product->product_name }}</p>
-                                        <p class="text-xs text-gray-500">{{ number_format((float) $product->total_qty, 0) }} terjual</p>
-                                    </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-full {{ $index === 0 ? 'bg-amber-100 text-amber-600 dark:bg-amber-500/20' : 'bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-400' }}">
+                                    @if($index === 0)
+                                        <x-heroicon-o-trophy class="h-4 w-4" />
+                                    @else
+                                        <span class="text-xs font-bold">{{ $index + 1 }}</span>
+                                    @endif
                                 </div>
-                                <p class="text-sm font-semibold text-gray-900 dark:text-white">Rp {{ number_format((float) $product->total_sales, 0, ',', '.') }}</p>
+                                <div class="flex-1 min-w-0">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ $product->product_name }}</p>
+                                    <p class="text-xs text-gray-500">{{ number_format((float) $product->total_qty, 0) }} terjual</p>
+                                </div>
+                                <div class="text-right">
+                                    <p class="text-sm font-bold text-red-500">Rp {{ number_format((float) $product->total_sales, 0, ',', '.') }}</p>
+                                </div>
                             </div>
                         @endforeach
                     </div>
                 @else
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <x-heroicon-o-cube class="h-7 w-7" />
-                        </div>
-                        <h3 class="mt-3 text-sm font-semibold text-gray-900 dark:text-white">Belum ada data</h3>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Tidak ada produk terjual dalam periode ini</p>
+                    <div class="py-12 text-center">
+                        <x-heroicon-o-trophy class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                        <p class="mt-2 text-sm text-gray-500">Belum ada produk terjual</p>
                     </div>
                 @endif
             </div>
         </div>
 
         {{-- Ingredient Usage --}}
-        <div class="card overflow-hidden">
+        <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
             <div class="section-header">
-                <h3 class="text-base font-semibold text-gray-900 dark:text-white">Penggunaan Bahan Baku</h3>
+                <div class="flex items-center gap-2">
+                    <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                        <x-heroicon-o-cube class="h-4 w-4" />
+                    </div>
+                    <h2 class="text-base font-semibold text-gray-900 dark:text-white">Penggunaan Bahan Baku</h2>
+                </div>
             </div>
-            <div class="p-5">
+            <div class="p-4">
                 @if($this->ingredientUsage->count() > 0)
                     <div class="space-y-3">
                         @foreach($this->ingredientUsage as $usage)
-                            <div class="flex items-center justify-between rounded-xl border border-gray-100 bg-gray-50/50 p-4 transition-colors hover:bg-gray-100/50 dark:border-gray-700 dark:bg-gray-800/30 dark:hover:bg-gray-800/50">
-                                <div class="flex items-center gap-3">
-                                    <div class="stat-icon h-9 w-9 bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
-                                        <x-heroicon-o-cube class="h-4 w-4" />
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-medium text-gray-900 dark:text-white">{{ $usage['name'] }}</p>
-                                        <p class="text-xs text-gray-500">Stok: {{ (int) $usage['stock'] }} {{ $usage['unit'] }}</p>
-                                    </div>
+                            <div class="flex items-center gap-3">
+                                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-blue-600 dark:bg-blue-500/20 dark:text-blue-400">
+                                    <x-heroicon-o-cube class="h-4 w-4" />
+                                </div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="truncate text-sm font-medium text-gray-900 dark:text-white">{{ $usage['name'] }}</p>
+                                    <p class="text-xs text-gray-500">Stok: {{ (int) $usage['stock'] }} {{ $usage['unit'] }}</p>
                                 </div>
                                 <div class="text-right">
                                     <p class="text-sm font-semibold text-red-600 dark:text-red-400">
@@ -190,12 +224,9 @@
                         @endforeach
                     </div>
                 @else
-                    <div class="empty-state">
-                        <div class="empty-state-icon">
-                            <x-heroicon-o-cube class="h-7 w-7" />
-                        </div>
-                        <h3 class="mt-3 text-sm font-semibold text-gray-900 dark:text-white">Belum ada penggunaan</h3>
-                        <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">Produk dengan bahan baku belum terjual</p>
+                    <div class="py-12 text-center">
+                        <x-heroicon-o-cube class="mx-auto h-12 w-12 text-gray-300 dark:text-gray-600" />
+                        <p class="mt-2 text-sm text-gray-500">Belum ada penggunaan bahan</p>
                     </div>
                 @endif
             </div>
@@ -203,47 +234,58 @@
     </div>
 
     {{-- Payment Methods --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="mb-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
         @foreach($this->salesByPaymentMethod as $method => $data)
             @php
-                $colors = match($method) {
-                    'cash' => ['bg' => 'bg-green-100 dark:bg-green-500/20', 'text' => 'text-green-600 dark:text-green-400', 'icon' => 'banknotes'],
-                    'qris' => ['bg' => 'bg-blue-100 dark:bg-blue-500/20', 'text' => 'text-blue-600 dark:text-blue-400', 'icon' => 'qr'],
-                    default => ['bg' => 'bg-purple-100 dark:bg-purple-500/20', 'text' => 'text-purple-600 dark:text-purple-400', 'icon' => 'transfer'],
+                $colorClasses = match($data['color'] ?? 'gray') {
+                    'emerald' => 'bg-emerald-500 text-white',
+                    'blue' => 'bg-blue-500 text-white',
+                    'purple' => 'bg-purple-500 text-white',
+                    'indigo' => 'bg-indigo-500 text-white',
+                    'violet' => 'bg-violet-500 text-white',
+                    'pink' => 'bg-pink-500 text-white',
+                    default => 'bg-gray-500 text-white',
                 };
             @endphp
-            <div class="card-hover p-5">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $data['label'] }}</p>
-                        <p class="mt-2 text-xl font-bold text-gray-900 dark:text-white">Rp {{ number_format($data['amount'], 0, ',', '.') }}</p>
-                        <p class="mt-1 text-xs text-gray-500">{{ $data['count'] }} transaksi</p>
-                    </div>
-                    <div class="stat-icon {{ $colors['bg'] }} {{ $colors['text'] }}">
-                        @if($method === 'cash')
-                            <x-heroicon-o-banknotes class="h-6 w-6" />
-                        @elseif($method === 'qris')
-                            <x-heroicon-o-qr-code class="h-6 w-6" />
-                        @else
-                            <x-heroicon-o-arrows-right-left class="h-6 w-6" />
-                        @endif
-                    </div>
+            <div class="card-hover p-3 flex items-center gap-3">
+                <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg {{ $colorClasses }}">
+                    @if($data['icon'] === 'banknotes')
+                        <x-heroicon-o-banknotes class="h-5 w-5" />
+                    @elseif($data['icon'] === 'qr-code')
+                        <x-heroicon-o-qr-code class="h-5 w-5" />
+                    @elseif($data['icon'] === 'building-office')
+                        <x-heroicon-o-building-office class="h-5 w-5" />
+                    @elseif($data['icon'] === 'building-library')
+                        <x-heroicon-o-building-library class="h-5 w-5" />
+                    @else
+                        <x-heroicon-o-credit-card class="h-5 w-5" />
+                    @endif
+                </div>
+                <div class="min-w-0 flex-1">
+                    <p class="text-[10px] text-gray-500 dark:text-gray-400 truncate">{{ $data['label'] }}</p>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white truncate">Rp {{ number_format($data['amount'], 0, ',', '.') }}</p>
+                    <p class="text-[10px] text-gray-500">{{ $data['count'] }} transaksi</p>
                 </div>
             </div>
         @endforeach
     </div>
 
     {{-- Transactions Table --}}
-    <div class="card overflow-hidden">
+    <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900">
         <div class="section-header">
-            <h3>Detail Transaksi</h3>
+            <div class="flex items-center gap-2">
+                <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
+                    <x-heroicon-o-document-text class="h-4 w-4" />
+                </div>
+                <h2 class="text-base font-semibold text-gray-900 dark:text-white">Detail Transaksi</h2>
+            </div>
             <div class="flex items-center gap-3">
                 {{-- Search --}}
                 <div class="relative">
                     <input
                         type="text"
                         wire:model.live.debounce.300ms="tableSearch"
-                        placeholder="    Cari data"
+                        placeholder="    Cari invoice..."
                         class="h-8 rounded-lg border border-gray-200 bg-white px-3 pl-9 text-sm focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white"
                     />
                     <x-heroicon-o-magnifying-glass class="absolute left-2.5 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
@@ -251,18 +293,18 @@
             </div>
         </div>
 
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto" style="max-height: 500px; overflow-y: auto;">
             <table class="w-full">
-                <thead class="table-header">
-                    <tr>
-                        <th>Invoice</th>
-                        <th>Tanggal</th>
-                        <th>Kasir</th>
-                        <th>Customer</th>
-                        <th class="text-right">Subtotal</th>
-                        <th class="text-right">PPN</th>
-                        <th class="text-right">Total</th>
-                        <th>Metode</th>
+                <thead class="sticky top-0 z-10">
+                    <tr class="table-header">
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Invoice</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Tanggal</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Kasir</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Customer</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Subtotal</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">PPN</th>
+                        <th class="px-4 py-3 text-right text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Total</th>
+                        <th class="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wider text-gray-500 dark:text-gray-400">Metode</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -292,18 +334,24 @@
                             <td class="px-4 py-3">
                                 @php
                                     $badgeClass = match($sale->payment_method) {
-                                        'cash' => 'badge badge-success',
-                                        'qris' => 'badge badge-info',
-                                        'transfer' => 'badge badge-transfer',
-                                        default => 'badge badge-warning',
+                                        'cash' => 'badge-success',
+                                        'qris' => 'badge-info',
+                                        'qris_manual' => 'badge-violet',
+                                        'va' => 'badge-indigo',
+                                        'transfer' => 'badge-transfer',
+                                        'transfer_manual' => 'badge-transfer',
+                                        default => 'badge-warning',
                                     };
                                     $labels = [
                                         'cash' => 'Tunai',
-                                        'qris' => 'QRIS',
+                                        'qris' => 'QRIS Auto',
+                                        'qris_manual' => 'QRIS Manual',
+                                        'va' => 'VA',
                                         'transfer' => 'Transfer',
+                                        'transfer_manual' => 'Transfer Manual',
                                     ];
                                 @endphp
-                                <span class="{{ $badgeClass }}">
+                                <span class="badge {{ $badgeClass }}">
                                     {{ $labels[$sale->payment_method] ?? ucfirst($sale->payment_method) }}
                                 </span>
                             </td>
@@ -325,16 +373,6 @@
             </table>
         </div>
 
-        {{-- Pagination --}}
-        @if($this->sales->hasPages())
-            <div class="flex items-center justify-between border-t border-gray-100 px-4 py-3 dark:border-gray-700">
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                    Menampilkan {{ $this->sales->firstItem() ?? 0 }} - {{ $this->sales->lastItem() ?? 0 }} dari {{ $this->sales->total() }} transaksi
-                </p>
-                <div class="flex items-center gap-1">
-                    {{ $this->sales->links() }}
-                </div>
-            </div>
-        @endif
+    </div>
 
 </x-filament-panels::page>

@@ -65,6 +65,46 @@ class PaywuzService
     }
 
     /**
+     * Get QRIS minimum amount from Paywuz API
+     * Cached for 1 hour to reduce API calls
+     */
+    protected function getQrisMinAmount(): ?int
+    {
+        $cacheKey = 'paywuz_qris_min_amount';
+
+        try {
+            $cached = cache()->get($cacheKey);
+
+            if ($cached !== null) {
+                return $cached;
+            }
+
+            $response = Http::withToken($this->apiKey)
+                ->timeout(10)
+                ->connectTimeout(5)
+                ->get("{$this->baseUrl}/payment-methods");
+
+            if ($response->successful()) {
+                $data = $response->json();
+                $qris = collect($data['data'] ?? [])->firstWhere('code', 'QRIS');
+                $minAmount = $qris['limits']['minIdr'] ?? 10000;
+
+                // Cache for 1 hour
+                cache()->put($cacheKey, $minAmount, 3600);
+
+                return $minAmount;
+            }
+        } catch (\Exception $e) {
+            Log::debug('Paywuz getQrisMinAmount failed, using default', [
+                'error' => $e->getMessage(),
+            ]);
+        }
+
+        // Default minimum if API fails
+        return 10000;
+    }
+
+    /**
      * Check if Paywuz is enabled for tenant
      */
     public function isEnabled(): bool
@@ -93,68 +133,112 @@ class PaywuzService
             ];
         }
 
+        // Validate minimum amount for QRIS
+        $minAmount = $this->getQrisMinAmount();
+        if ($minAmount && $amount < $minAmount) {
+            return [
+                'success' => false,
+                'message' => 'Minimal pembayaran QRIS adalah Rp '.number_format($minAmount, 0, ',', '.'),
+            ];
+        }
+
         try {
-            // Try different payload formats
-            $payloads = [
-                [
-                    'orderId' => $orderId,
-                    'amount' => (int) $amount,
-                    'paymentMethod' => 'QRIS',
-                    'callbackUrl' => $this->callbackUrl,
-                ],
-                [
-                    'order_id' => $orderId,
-                    'amount' => (int) $amount,
-                    'payment_method' => 'QRIS',
-                    'callback_url' => $this->callbackUrl,
-                ],
-                [
-                    'orderId' => $orderId,
-                    'amount' => (int) $amount,
-                    'paymentMethod' => 'QRIS',
-                ],
+            // Single standardized payload format (API Paywuz v1)
+            $payload = [
+                'orderId' => $orderId,
+                'amount' => (int) $amount,
+                'paymentMethod' => 'QRIS',
             ];
 
             $response = null;
             $lastError = null;
+            $lastStatus = null;
 
-            foreach ($payloads as $payload) {
+            // Retry logic: up to 2 retries for server errors (502, 503, 504)
+            $maxAttempts = 3;
+
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
                     $response = Http::withToken($this->apiKey)
+                        ->withHeaders(['Content-Type' => 'application/json'])
                         ->timeout(15)
                         ->connectTimeout(5)
                         ->post("{$this->baseUrl}/transactions", $payload);
+
+                    $lastStatus = $response->status();
+                    $data = $response->json() ?? [];
+
+                    // Retry on server errors (502, 503, 504)
+                    if (in_array($lastStatus, [502, 503, 504]) && $attempt < $maxAttempts) {
+                        $waitSeconds = $attempt * 2; // 2s, 4s backoff
+                        Log::warning("Paywuz server error, retrying in {$waitSeconds}s", [
+                            'order_id' => $orderId,
+                            'attempt' => $attempt,
+                            'status' => $lastStatus,
+                        ]);
+                        sleep($waitSeconds);
+
+                        continue;
+                    }
 
                     if ($response->successful()) {
                         break;
                     }
 
-                    $lastError = $response->json();
+                    $lastError = $data;
                 } catch (\Exception $e) {
                     $lastError = ['error' => $e->getMessage()];
+                    $lastStatus = 0;
 
-                    continue;
+                    // Retry on connection errors
+                    if ($attempt < $maxAttempts) {
+                        $waitSeconds = $attempt * 2;
+                        Log::warning("Paywuz connection error, retrying in {$waitSeconds}s", [
+                            'order_id' => $orderId,
+                            'attempt' => $attempt,
+                            'error' => $e->getMessage(),
+                        ]);
+                        sleep($waitSeconds);
+
+                        continue;
+                    }
                 }
             }
 
             $data = $response?->json() ?? [];
 
             if (! $response?->successful()) {
+                $status = $response?->status() ?? $lastStatus;
                 Log::warning('Paywuz API Error', [
                     'order_id' => $orderId,
-                    'status' => $response?->status(),
+                    'status' => $status,
                     'body' => $data,
+                    'error' => $data['error'] ?? null,
+                    'message' => $data['message'] ?? null,
                 ]);
+
+                // User-friendly error messages based on Paywuz error codes
+                $errorMessage = match ($data['error'] ?? null) {
+                    'invalid_request' => $data['message'] ?? 'Request tidak valid',
+                    'invalid_payment_method' => 'Metode pembayaran QRIS tidak tersedia',
+                    'unauthorized' => 'API key Paywuz tidak valid',
+                    'forbidden' => 'Akun Paywuz tidak aktif',
+                    'order_id_environment_conflict' => 'Order ID sudah digunakan',
+                    'gateway_error' => 'Layanan pembayaran Paywuz sedang gangguan. Silakan coba lagi.',
+                    default => $data['message'] ?? "Gagal membuat QR: HTTP {$status}",
+                };
 
                 return [
                     'success' => false,
-                    'message' => $data['message'] ?? $data['error'] ?? 'Gagal membuat QR: HTTP '.$response?->status(),
+                    'message' => $errorMessage,
                 ];
             }
 
-            Log::info('Paywuz createDynamicQr', [
+            Log::info('Paywuz createDynamicQr success', [
                 'order_id' => $orderId,
-                'response' => $data,
+                'amount' => $amount,
+                'transaction_id' => $data['data']['id'] ?? null,
+                'status' => $data['data']['status'] ?? null,
             ]);
 
             return [
@@ -448,7 +532,7 @@ class PaywuzService
 
     /**
      * Create Virtual Account payment
-     * Uses POST /v1/va/create
+     * Uses POST /v1/transactions with VA payment method
      */
     public function createVirtualAccount(string $orderId, float $amount, string $bankCode, ?string $customerName = null, ?string $customerEmail = null, ?string $customerPhone = null): array
     {
@@ -459,89 +543,122 @@ class PaywuzService
             ];
         }
 
+        // Map lowercase codes to Paywuz VA codes
+        $bankCodeMap = [
+            'bca' => 'BCAVA',
+            'bni' => 'BNIVA',
+            'bri' => 'BRIVA',
+            'mandiri' => 'MANDIRIVA',
+            'permata' => 'PERMATAVA',
+            'bsi' => 'BSIVA',
+            'cimb' => 'CIMBVA',
+            'danamon' => 'DANAMONVA',
+            'maybank' => 'MAYBANKVA',
+            'ocbc' => 'OCBCVA',
+        ];
+
+        $paywuzBankCode = $bankCodeMap[strtolower($bankCode)] ?? strtoupper($bankCode).'VA';
+
         try {
-            // Try different payload formats and endpoints
-            $payloads = [
-                // snake_case format
-                [
-                    'order_id' => $orderId,
-                    'amount' => $amount,
-                    'bank_code' => strtoupper($bankCode),
-                    'callback_url' => $this->callbackUrl,
-                ],
-                // camelCase format
-                [
-                    'orderId' => $orderId,
-                    'amount' => (int) $amount,
-                    'bankCode' => strtoupper($bankCode),
-                    'callbackUrl' => $this->callbackUrl,
-                ],
+            // Use specific bank code to get VA number directly
+            $payload = [
+                'orderId' => $orderId,
+                'amount' => (int) $amount,
+                'paymentMethod' => $paywuzBankCode,
             ];
 
-            $endpoints = [
-                '/va/create',
-                '/virtual-account',
-                '/transfer/va',
-            ];
+            // Add customer info if provided
+            if ($customerName) {
+                $payload['metadata'] = array_merge($payload['metadata'] ?? [], [
+                    'customerName' => $customerName,
+                ]);
+            }
+            if ($customerEmail) {
+                $payload['metadata'] = array_merge($payload['metadata'] ?? [], [
+                    'email' => $customerEmail,
+                ]);
+            }
+            if ($customerPhone) {
+                $payload['metadata'] = array_merge($payload['metadata'] ?? [], [
+                    'phone' => $customerPhone,
+                ]);
+            }
 
+            $response = null;
             $lastError = null;
+            $lastStatus = null;
 
-            foreach ($payloads as $payloadIndex => $basePayload) {
-                // Add optional fields
-                $payload = $basePayload;
-                if ($customerName) {
-                    $payload[$payloadIndex === 0 ? 'customer_name' : 'customerName'] = $customerName;
-                }
-                if ($customerEmail) {
-                    $payload[$payloadIndex === 0 ? 'customer_email' : 'customerEmail'] = $customerEmail;
-                }
-                if ($customerPhone) {
-                    $payload[$payloadIndex === 0 ? 'customer_phone' : 'customerPhone'] = $customerPhone;
-                }
+            // Retry logic: up to 2 retries for server errors (502, 503, 504)
+            $maxAttempts = 3;
 
-                foreach ($endpoints as $endpoint) {
-                    try {
-                        $response = Http::withToken($this->apiKey)
-                            ->timeout(15)
-                            ->connectTimeout(5)
-                            ->post("{$this->baseUrl}{$endpoint}", $payload);
+            for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
+                try {
+                    $response = Http::withToken($this->apiKey)
+                        ->withHeaders(['Content-Type' => 'application/json'])
+                        ->timeout(15)
+                        ->connectTimeout(5)
+                        ->post("{$this->baseUrl}/transactions", $payload);
 
-                        if ($response->successful()) {
-                            $data = $response->json() ?? [];
+                    $lastStatus = $response->status();
+                    $data = $response->json() ?? [];
 
-                            Log::info('Paywuz createVirtualAccount', [
-                                'order_id' => $orderId,
-                                'bank_code' => $bankCode,
-                                'endpoint' => $endpoint,
-                                'payload_format' => $payloadIndex === 0 ? 'snake_case' : 'camelCase',
-                                'response' => $data,
-                            ]);
+                    // Retry on server errors (502, 503, 504)
+                    if (in_array($lastStatus, [502, 503, 504]) && $attempt < $maxAttempts) {
+                        $waitSeconds = $attempt * 2;
+                        Log::warning("Paywuz VA server error, retrying in {$waitSeconds}s", [
+                            'order_id' => $orderId,
+                            'attempt' => $attempt,
+                            'status' => $lastStatus,
+                        ]);
+                        sleep($waitSeconds);
 
-                            return [
-                                'success' => true,
-                                'data' => $data['data'] ?? $data,
-                            ];
-                        }
+                        continue;
+                    }
 
-                        $lastError = $response->json() ?? ['error' => 'HTTP '.$response->status()];
-                    } catch (\Exception $e) {
-                        $lastError = ['error' => $e->getMessage()];
+                    if ($response->successful()) {
+                        break;
+                    }
+
+                    $lastError = $data;
+                } catch (\Exception $e) {
+                    $lastError = ['error' => $e->getMessage()];
+                    $lastStatus = 0;
+
+                    if ($attempt < $maxAttempts) {
+                        $waitSeconds = $attempt * 2;
+                        sleep($waitSeconds);
 
                         continue;
                     }
                 }
             }
 
-            Log::warning('Paywuz VA API Error - All endpoints failed', [
+            $data = $response?->json() ?? [];
+
+            if (! $response?->successful()) {
+                Log::warning('Paywuz VA API Error', [
+                    'order_id' => $orderId,
+                    'bank_code' => $bankCode,
+                    'status' => $response?->status() ?? $lastStatus,
+                    'body' => $data,
+                ]);
+
+                return [
+                    'success' => false,
+                    'message' => $data['message'] ?? $data['error'] ?? 'Gagal membuat Virtual Account: HTTP '.$response?->status(),
+                ];
+            }
+
+            Log::info('Paywuz createVirtualAccount success', [
                 'order_id' => $orderId,
                 'bank_code' => $bankCode,
-                'endpoints_tried' => $endpoints,
-                'last_error' => $lastError,
+                'amount' => $amount,
+                'transaction_id' => $data['data']['id'] ?? null,
             ]);
 
             return [
-                'success' => false,
-                'message' => $lastError['error'] ?? $lastError['message'] ?? 'Endpoint Virtual Account tidak tersedia',
+                'success' => true,
+                'data' => $data['data'] ?? $data,
             ];
         } catch (ConnectionException $e) {
             Log::error('Paywuz VA Connection Error', [

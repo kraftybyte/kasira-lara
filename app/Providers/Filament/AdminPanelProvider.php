@@ -33,22 +33,27 @@ class AdminPanelProvider extends PanelProvider
 
     public function panel(Panel $panel): Panel
     {
-        // Get app settings for branding
-        $appSetting = AppSetting::first();
+        // Lazy-load app settings to avoid DB query during app boot (breaks tests)
         $brandLogo = null;
-        if ($appSetting?->app_logo) {
-            $logo = $appSetting->app_logo;
-            // Handle FileUpload JSON format
-            if (is_string($logo)) {
-                $decoded = json_decode($logo, true);
-                if (is_array($decoded) && ! empty($decoded)) {
-                    $logo = array_keys($decoded)[0];
+        $brandName = null;
+        try {
+            $appSetting = AppSetting::first();
+            $brandName = $appSetting?->app_name ?? 'Kasira';
+            if ($appSetting?->app_logo) {
+                $logo = $appSetting->app_logo;
+                if (is_string($logo)) {
+                    $decoded = json_decode($logo, true);
+                    if (is_array($decoded) && ! empty($decoded)) {
+                        $logo = array_keys($decoded)[0];
+                    }
+                }
+                if ($logo) {
+                    $brandLogo = url('storage/'.$logo);
                 }
             }
-            if ($logo) {
-                // Path already includes directory, just add storage prefix
-                $brandLogo = url('storage/'.$logo);
-            }
+        } catch (\Throwable) {
+            // AppSetting table may not exist during migrations or tests
+            $brandName = 'Kasira';
         }
 
         return $panel
@@ -60,7 +65,7 @@ class AdminPanelProvider extends PanelProvider
             ->login(BaseLogin::class)
 
             // Branding - use app logo if available
-            ->brandName($appSetting?->app_name ?? 'Kasira')
+            ->brandName($brandName ?? 'Kasira')
             ->brandLogo($brandLogo)
             ->brandLogoHeight('2.5rem')
 

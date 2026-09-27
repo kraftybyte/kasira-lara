@@ -2,8 +2,6 @@
 
 namespace App\Filament\Resources\Sales\Schemas;
 
-use Filament\Facades\Filament;
-use Filament\Infolists\Components\Actions\Action;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -223,24 +221,6 @@ class SaleInfolist
 
                 Section::make('Pembayaran')
                     ->icon('heroicon-o-credit-card')
-                    ->headerActions([
-                        Action::make('printReceipt')
-                            ->label('Cetak Struk')
-                            ->icon('heroicon-o-printer')
-                            ->color('gray')
-                            ->url(function ($record) {
-                                $tenant = Filament::getTenant();
-                                if (! $tenant) {
-                                    return '#';
-                                }
-
-                                return route('receipt.show', [
-                                    'tenant' => $tenant->getRouteKey(),
-                                    'sale' => $record->getRouteKey(),
-                                ]).'?size=80mm';
-                            })
-                            ->openUrlInNewTab(),
-                    ])
                     ->schema([
 
                         TextEntry::make('payment_method_display')

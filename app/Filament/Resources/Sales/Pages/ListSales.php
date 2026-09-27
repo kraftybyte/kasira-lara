@@ -19,7 +19,10 @@ class ListSales extends ListRecords
                 ->label('Laporan')
                 ->icon('heroicon-o-chart-bar')
                 ->color('gray')
-                ->url(SalesReport::getUrl()),
+                ->url(SalesReport::getUrl())
+                ->visible(function () {
+                    return auth()->user()->can('DeleteAny:Sale');
+                }),
         ];
     }
 

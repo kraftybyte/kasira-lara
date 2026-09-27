@@ -7,6 +7,7 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedUpload;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -24,6 +25,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        $this->configureLivewire();
     }
 
     /**
@@ -46,5 +48,17 @@ class AppServiceProvider extends ServiceProvider
                 ->uncompromised()
             : null,
         );
+    }
+
+    /**
+     * Configure Livewire file uploads.
+     */
+    protected function configureLivewire(): void
+    {
+        // Configure Livewire to use 'local' disk for temporary uploads
+        // This is important for Filament forms with file uploads
+        if (class_exists(TemporaryUploadedUpload::class)) {
+            TemporaryUploadedUpload::configureDisk('local');
+        }
     }
 }

@@ -30,6 +30,14 @@ class Dashboard extends Page
 
     public int $days = 30;
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // All roles can access Dashboard
+        return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko', 'cashier']);
+    }
+
     /*
     |--------------------------------------------------------------------------
     | COMPUTED - Date Range

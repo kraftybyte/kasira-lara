@@ -85,8 +85,6 @@ class TenantSetting extends Model
         'loyalty_points_value' => 'decimal:2',
         'loyalty_minimum_redeem' => 'integer',
 
-        'bank_qr_image' => 'array',
-
         // Payment Methods
         'payment_qris_auto' => 'boolean',
         'payment_va' => 'boolean',

@@ -101,7 +101,12 @@ class UserResource extends Resource
                     return $query;
                 }
 
-                // Other users only see users assigned to their tenants
+                // Owner with multiple tenants can see all users (except super_admin)
+                if ($user && $user->tenants()->count() > 1) {
+                    return $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'));
+                }
+
+                // Single-tenant users only see users from their tenant
                 return $query
                     ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
                     ->whereHas('tenants', function ($q) use ($user) {

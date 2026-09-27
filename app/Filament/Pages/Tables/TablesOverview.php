@@ -23,6 +23,14 @@ class TablesOverview extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-table-cells';
 
+    public static function canAccess(): bool
+    {
+        $user = auth()->user();
+
+        // Only: super_admin, owner, kepala_toko can access Tables
+        return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko']);
+    }
+
     #[Computed]
     public function tables(): Collection
     {

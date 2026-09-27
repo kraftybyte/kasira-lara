@@ -170,6 +170,24 @@ a.fi-ac-btn-action.fi-color-primary {
 .dark .btn-qty { background-color: #1F2937; border-color: #374151; color: #F9FAFB; }
 .dark .btn-qty:hover { background-color: #374151; }
 
+/* ==================== PAGINATION BUTTONS ==================== */
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    border: 1px solid #E5E7EB;
+    background-color: white;
+    color: #4B5563;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.pagination-btn:hover { background-color: #F3F4F6; color: #111827; }
+.dark .pagination-btn { background-color: #1F2937; border-color: #374151; color: #9CA3AF; }
+.dark .pagination-btn:hover { background-color: #374151; color: #F9FAFB; }
+
 .btn-amount {
     padding: 0.5rem 1rem;
     font-size: 0.875rem;
@@ -228,6 +246,15 @@ a.fi-ac-btn-action.fi-color-primary {
 
 .badge-transfer { background-color: #EDE9FE; color: #7C3AED; }
 .dark .badge-transfer { background-color: rgba(139, 92, 246, 0.2); color: #C4B5FD; }
+
+.badge-indigo { background-color: #E0E7FF; color: #4F46E5; }
+.dark .badge-indigo { background-color: rgba(99, 102, 241, 0.2); color: #A5B4FC; }
+
+.badge-violet { background-color: #EDE9FE; color: #8B5CF6; }
+.dark .badge-violet { background-color: rgba(139, 92, 246, 0.2); color: #C4B5FD; }
+
+.badge-pink { background-color: #FCE7F3; color: #DB2777; }
+.dark .badge-pink { background-color: rgba(219, 39, 119, 0.2); color: #F9A8D4; }
 
 /* ==================== ALERTS ==================== */
 .alert-danger {
