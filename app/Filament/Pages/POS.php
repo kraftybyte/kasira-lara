@@ -67,22 +67,6 @@ class POS extends Page
 
     /*
     |--------------------------------------------------------------------------
-    | MOUNT
-    |--------------------------------------------------------------------------
-    */
-
-    public function mount(): void
-    {
-        // Handle table parameter from URL
-        $tableId = Request::query('table');
-
-        if ($tableId) {
-            $this->selectTable((int) $tableId);
-        }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | POS STATE
     |--------------------------------------------------------------------------
     */
@@ -163,11 +147,101 @@ class POS extends Page
 
     public bool $vaPaymentConfirmed = false;
 
+    // Bulk Counter Mode
+    public bool $isBulkCounterMode = false;
+
+    public array $bulkCounterSaleIds = [];
+
     /*
     |--------------------------------------------------------------------------
-    | STORE BANK INFO
+    | MOUNT
     |--------------------------------------------------------------------------
     */
+
+    public function mount(): void
+    {
+        // Handle table parameter from URL
+        $tableId = Request::query('table');
+
+        if ($tableId) {
+            $this->selectTable((int) $tableId);
+        }
+
+        // Check for bulk counter payment
+        $bulk = Request::query('bulk');
+        if ($bulk === 'counter') {
+            $this->loadBulkCounterOrders();
+        }
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | LOAD BULK COUNTER ORDERS
+    |--------------------------------------------------------------------------
+    */
+
+    public function loadBulkCounterOrders(): void
+    {
+        $saleIds = session()->get('bulk_counter_sales', []);
+        $tableId = session()->get('bulk_counter_table_id');
+
+        if (empty($saleIds) || empty($tableId)) {
+            return;
+        }
+
+        $this->isBulkCounterMode = true;
+        $this->bulkCounterSaleIds = $saleIds;
+        $this->tableId = (string) $tableId;
+        $this->activeTableId = (string) $tableId;
+
+        // Clear session
+        session()->forget('bulk_counter_sales');
+        session()->forget('bulk_counter_table_id');
+
+        // Load counter orders into cart
+        $this->cart = [];
+
+        $sales = Sale::whereIn('id', $saleIds)
+            ->where('payment_method', 'counter')
+            ->with(['items.product'])
+            ->get();
+
+        foreach ($sales as $sale) {
+            foreach ($sale->items as $item) {
+                $productId = (int) $item->product_id;
+                $isDuration = $item->product && $item->product->rate_type === 'duration';
+
+                if (isset($this->cart[$productId])) {
+                    // Add to existing quantity
+                    $this->cart[$productId]['quantity'] += (float) $item->quantity;
+                    $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
+                    $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
+                } else {
+                    $this->cart[$productId] = [
+                        'product_id' => $productId,
+                        'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
+                        'sku' => $item->sku,
+                        'unit_price' => (float) $item->unit_price,
+                        'quantity' => (float) $item->quantity,
+                        'subtotal' => (float) $item->subtotal,
+                        'total' => (float) $item->total,
+                        'sale_item_id' => $item->id,
+                        'sale_id' => $sale->id,
+                        'is_duration' => $isDuration,
+                        'rate_type' => $item->product?->rate_type ?? 'fixed',
+                        'rate' => (float) ($item->product?->rate ?? 1),
+                    ];
+                }
+            }
+        }
+
+        // Set to cash payment method
+        $this->paymentMethod = 'cash';
+        $this->paidAmount = $this->total;
+
+        // Open checkout
+        $this->showCheckout = true;
+    }
 
     public function getStoreBankNameProperty(): ?string
     {
@@ -1597,6 +1671,25 @@ class POS extends Page
 
                 pointsEarned: $pointsEarned
             );
+
+            /*
+            |--------------------------------------------------------------------------
+            | CLEANUP BULK COUNTER ORDERS
+            |--------------------------------------------------------------------------
+            */
+
+            if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
+                // Delete the counter orders that were merged into this payment
+                $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)->get();
+                foreach ($counterSales as $counterSale) {
+                    $counterSale->items()->delete();
+                    $counterSale->delete();
+                }
+
+                // Reset bulk mode
+                $this->isBulkCounterMode = false;
+                $this->bulkCounterSaleIds = [];
+            }
 
         } catch (Throwable $e) {
 

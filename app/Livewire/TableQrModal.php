@@ -50,7 +50,7 @@ class TableQrModal extends Component
             return null;
         }
 
-        return url('/order/'.($tenant->slug ?? $tenant->id).'/'.$table->id);
+        return url('/order/'.$tenant->getRouteKey().'/'.$table->id);
     }
 
     public function render()

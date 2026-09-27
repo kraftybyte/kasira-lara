@@ -15,11 +15,11 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('reports.sales.pdf', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
+            <a href="{{ route('reports.sales.pdf', ['tenant' => $this->tenant?->getRouteKey(), 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
                 <x-heroicon-o-document-arrow-down class="h-4 w-4" />
                 PDF
             </a>
-            <a href="{{ route('reports.sales.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
+            <a href="{{ route('reports.sales.csv', ['tenant' => $this->tenant?->getRouteKey(), 'startDate' => $startDate, 'endDate' => $endDate, 'statusFilter' => $statusFilter]) }}" target="_blank" class="btn btn-secondary btn-md">
                 <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
                 CSV
             </a>

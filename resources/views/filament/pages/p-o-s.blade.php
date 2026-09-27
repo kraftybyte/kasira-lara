@@ -54,6 +54,21 @@
         </div>
     @endif
 
+    {{-- Bulk Counter Mode Banner --}}
+    @if($this->isBulkCounterMode)
+        <div class="mb-3 rounded-xl border-2 border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+            <div class="flex items-center gap-3">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white">
+                    <x-heroicon-s-banknotes class="h-5 w-5" />
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-gray-900 dark:text-white">Mode Bayar Counter</p>
+                    <p class="text-xs text-amber-600 dark:text-amber-400">Item dari pesanan counter telah dimuat. Selesaikan pembayaran untuk menghapus pesanan counter.</p>
+                </div>
+            </div>
+        </div>
+    @endif
+
     {{-- Active Tables Quick View --}}
     @if($this->activeTables->count() > 0 && !$this->activeTableId)
         <div class="mb-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
@@ -65,7 +80,7 @@
                     <span class="text-xs font-semibold text-gray-900 dark:text-white">Meja Terpakai</span>
                     <span class="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-500/20 dark:text-red-400">{{ $this->activeTables->count() }}</span>
                 </div>
-                <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/tables') }}" class="text-[10px] font-medium text-red-500 hover:text-red-600">Lihat Semua</a>
+                <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables') }}" class="text-[10px] font-medium text-red-500 hover:text-red-600">Lihat Semua</a>
             </div>
             <div class="flex flex-wrap gap-2">
                 @foreach($this->activeTables as $table)
@@ -75,7 +90,7 @@
                         $paidOrders = $tableSales->where('status', 'completed')->sum('grand_total');
                         $hasUnpaidCash = $unpaidCash > 0;
                     @endphp
-                    <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/tables-overview?table=' . $table->id) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-center transition-all hover:border-red-300 hover:bg-red-50/50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-red-500/30">
+                    <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview?table=' . $table->id) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-center transition-all hover:border-red-300 hover:bg-red-50/50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-red-500/30">
                         <div class="flex h-5 w-5 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
                             <x-heroicon-o-archive-box class="h-3 w-3" />
                         </div>

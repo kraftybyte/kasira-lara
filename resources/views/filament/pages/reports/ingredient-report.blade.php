@@ -14,11 +14,11 @@
             </div>
         </div>
         <div class="flex items-center gap-2">
-            <a href="{{ route('reports.ingredients.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id]) }}" target="_blank" class="btn btn-secondary btn-md">
+            <a href="{{ route('reports.ingredients.csv', ['tenant' => $this->tenant?->getRouteKey()]) }}" target="_blank" class="btn btn-secondary btn-md">
                 <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
                 Export Stok
             </a>
-            <a href="{{ route('reports.ingredients.usage.csv', ['tenant' => $this->tenant?->slug ?? $this->tenant?->id, 'startDate' => $startDate, 'endDate' => $endDate]) }}" target="_blank" class="btn btn-secondary btn-md">
+            <a href="{{ route('reports.ingredients.usage.csv', ['tenant' => $this->tenant?->getRouteKey(), 'startDate' => $startDate, 'endDate' => $endDate]) }}" target="_blank" class="btn btn-secondary btn-md">
                 <x-heroicon-o-arrow-down-tray class="h-4 w-4" />
                 Export Penggunaan
             </a>

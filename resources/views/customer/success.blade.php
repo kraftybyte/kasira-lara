@@ -102,7 +102,7 @@
                 </svg>
                 Cetak Struk
             </button>
-            <a href="{{ url('/order/' . ($tenant->slug ?? $tenant->id) . '/' . $table->id) }}" class="block w-full py-4 bg-linear-to-r from-primary to-secondary text-white font-bold rounded-xl text-center hover:opacity-90 transition-opacity">
+            <a href="{{ url('/order/' . $tenant->getRouteKey() . '/' . $table->id) }}" class="block w-full py-4 bg-linear-to-r from-primary to-secondary text-white font-bold rounded-xl text-center hover:opacity-90 transition-opacity">
                 Pesan Lagi
             </a>
         </div>
@@ -197,7 +197,7 @@
     {{-- Auto redirect after 5 seconds --}}
     <script>
         setTimeout(() => {
-            window.location.href = "{{ url('/order/' . ($tenant->slug ?? $tenant->id) . '/' . $table->id) }}";
+            window.location.href = "{{ url('/order/' . $tenant->getRouteKey() . '/' . $table->id) }}";
         }, 10000);
     </script>
 </body>

@@ -16,12 +16,12 @@
             <p class="mt-1 text-sm text-gray-500">Kelola meja dan pantau pesanan customer</p>
         </div>
         <div class="flex gap-2">
-            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/tables') }}"
+            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables') }}"
                 class="btn btn-secondary btn-md">
                 <x-heroicon-o-cog-6-tooth class="h-4 w-4" />
                 Manage Meja
             </a>
-            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos') }}"
+            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos') }}"
                 class="btn btn-primary btn-md">
                 <x-heroicon-o-shopping-cart class="h-4 w-4" />
                 Buka POS
@@ -196,7 +196,7 @@
                             <x-heroicon-o-eye class="h-4 w-4" />
                             Lihat
                         </button>
-                        <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos?table=' . $table->id) }}"
+                        <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos?table=' . $table->id) }}"
                             class="btn btn-primary btn-md"
                             aria-label="Tambah pesanan meja {{ $table->name }}">
                             <x-heroicon-o-plus class="h-4 w-4" />
@@ -236,7 +236,7 @@
                 <div class="p-3">
                     <p class="py-8 text-center text-sm text-gray-500">Siap digunakan</p>
                     <div class="flex gap-2">
-                        <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos?table=' . $table->id) }}"
+                        <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos?table=' . $table->id) }}"
                             class="btn btn-secondary btn-md flex-1">
                             <x-heroicon-o-plus class="h-4 w-4" />
                             Mulai

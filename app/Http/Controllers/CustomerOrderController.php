@@ -9,6 +9,7 @@ use App\Models\SaleItem;
 use App\Models\SaleItemModifier;
 use App\Models\Table;
 use App\Models\Tenant;
+use App\Models\TenantSetting;
 use App\Services\PaywuzService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -31,12 +32,29 @@ class CustomerOrderController extends Controller
             ->get()
             ->groupBy('category_id');
 
+        // Check individual payment method settings from TenantSetting
+        $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
+
+        // QR Meja settings (for customer scan)
+        // QRIS active if Paywuz is configured AND QRIS auto is enabled for table QR
+        $paywuzService = new PaywuzService($tenant->id);
+        $isQrisActive = $paywuzService->isConfigured() && $paywuzService->isEnabled() && ($tenantSetting?->table_qr_qris_auto ?? false);
+
+        // VA active if Paywuz is configured AND VA is enabled for table QR
+        $isVaActive = $paywuzService->isConfigured() && ($tenantSetting?->table_qr_va ?? false);
+
+        // Counter payment available if enabled in table QR settings
+        $isCounterActive = $tenantSetting?->table_qr_pay_at_counter ?? false;
+
         return view('customer.order', [
             'tenant' => $tenant,
             'table' => $table,
             'products' => $products,
             'completedSale' => null,
             'pendingSale' => null,
+            'isQrisActive' => $isQrisActive,
+            'isVaActive' => $isVaActive,
+            'isCounterActive' => $isCounterActive,
         ]);
     }
 
@@ -60,7 +78,7 @@ class CustomerOrderController extends Controller
         }
 
         $validatedPayment = $request->validate([
-            'payment_method' => 'required|in:qris,transfer',
+            'payment_method' => 'required|in:qris,transfer,counter',
         ]);
 
         // Get tenant settings for tax and Paywuz fee calculation
@@ -162,6 +180,11 @@ class CustomerOrderController extends Controller
             return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $customerPays, $subtotal, $taxAmount, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems);
         }
 
+        // For counter payment (bayar di kasir) - create order with pending payment
+        if ($validatedPayment['payment_method'] === 'counter') {
+            return $this->processCounterPayment($request, $tenant, $table, $invoiceNumber, $subtotal, $taxAmount, $saleItems);
+        }
+
         // For other payment methods (transfer), customer bears the fee
         $sale = Sale::create([
             'tenant_id' => $tenant->id,
@@ -208,7 +231,7 @@ class CustomerOrderController extends Controller
         }
 
         return redirect()->route('customer.order.payment', [
-            'tenant' => $tenant->slug ?? $tenant->id,
+            'tenant' => $tenant->getRouteKey(),
             'table' => $table->id,
             'sale' => $sale->id,
         ]);
@@ -356,6 +379,62 @@ class CustomerOrderController extends Controller
             ->with('error', 'Gagal membuat QR payment: '.($response['message'] ?? 'Unknown error'));
     }
 
+    /**
+     * Process Counter payment (Bayar di Kasir)
+     */
+    protected function processCounterPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $subtotal, float $taxAmount, array $saleItems)
+    {
+        // For counter payment, no Paywuz fee - customer pays at cashier
+        $grandTotal = $subtotal + $taxAmount;
+
+        $sale = Sale::create([
+            'tenant_id' => $tenant->id,
+            'table_id' => $table->id,
+            'user_id' => Auth::id(),
+            'invoice_number' => $invoiceNumber,
+            'customer_name' => $request->input('customer_name', 'Customer'),
+            'status' => 'pending',
+            'source' => 'customer',
+            'payment_method' => 'counter',
+            'notes' => $request->input('notes'),
+            'subtotal' => $subtotal,
+            'tax' => $taxAmount,
+            'discount' => 0,
+            'grand_total' => $grandTotal,
+            'paywuz_fee' => 0,
+            'paywuz_fee_by_merchant' => false,
+            'paid_amount' => 0,
+            'change_amount' => 0,
+            'payment_status' => 'pending',
+        ]);
+
+        foreach ($saleItems as $item) {
+            $modifiers = $item['modifiers'] ?? [];
+            unset($item['modifiers']);
+
+            $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+
+            foreach ($modifiers as $modifier) {
+                SaleItemModifier::create([
+                    'sale_item_id' => $saleItem->id,
+                    'product_modifier_id' => $modifier->id,
+                    'modifier_name' => $modifier->name,
+                    'price' => $modifier->price_adjustment,
+                ]);
+            }
+        }
+
+        if ($table->status === 'available') {
+            $table->update(['status' => 'active']);
+        }
+
+        return redirect()->route('customer.order.payment', [
+            'tenant' => $tenant->slug ?? $tenant->id,
+            'table' => $table->id,
+            'sale' => $sale->id,
+        ])->with('info', 'Pesanan berhasil! Silakan bayar di kasir.');
+    }
+
     public function payment(string $tenantSlug, Table $table, Sale $sale)
     {
         $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
@@ -499,6 +578,27 @@ class CustomerOrderController extends Controller
             }
 
             return redirect()->back()->with('error', 'Pembayaran transfer memerlukan verifikasi dari staff. Silakan tunjukkan bukti transfer ke kasir.');
+        }
+
+        // ============================================================
+        // Counter payment (Bayar di Kasir) - cannot be confirmed by customer
+        // Staff will mark as paid from POS system
+        // ============================================================
+        if ($sale->payment_method === 'counter') {
+            Log::warning('CustomerOrderController: Counter payment confirmation attempted - requires staff verification', [
+                'sale_id' => $sale->id,
+                'invoice' => $sale->invoice_number,
+                'table_id' => $table->id,
+            ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Pembayaran counter harus diverifikasi oleh staff kasir.',
+                ], 403);
+            }
+
+            return redirect()->back()->with('error', 'Pembayaran counter harus diverifikasi oleh staff kasir. Silakan bayar di kasir terlebih dahulu.');
         }
 
         // For QRIS without Paywuz transaction (demo/fallback mode only)

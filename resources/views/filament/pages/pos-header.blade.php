@@ -35,11 +35,11 @@
 
         {{-- Quick Actions --}}
         <div class="flex items-center gap-2">
-            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/tables-overview') }}" class="gradient-bg text-white btn btn-md">
+            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview') }}" class="gradient-bg text-white btn btn-md">
                 <x-heroicon-o-archive-box class="h-4 w-4" />
                 <span class="hidden sm:inline">Cek Meja</span>
             </a>
-            <a href="{{ url('/admin/' . filament()->getTenant()?->id . '/pos') }}" class="btn btn-ghost btn-md">
+            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos') }}" class="btn btn-ghost btn-md">
                 <x-heroicon-o-arrow-uturn-left class="h-4 w-4" />
             </a>
         </div>

@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pesan - {{ $tenant->name }} - Meja {{ $table->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/heroicons@24.0.0/clipboard.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -120,10 +121,10 @@
                         <p class="text-xs text-amber-600 mt-1">Invoice: {{ $pendingSale->invoice_number }}</p>
                     </div>
                     <div class="flex gap-2 w-full">
-                        <a href="{{ route('customer.order.payment', ['tenant' => $tenant->slug ?? $tenant->id, 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="flex-1 py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
+                        <a href="{{ route('customer.order.payment', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="flex-1 py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
                             Bayar Sekarang
                         </a>
-                        <form action="{{ route('customer.order.check-status', ['tenant' => $tenant->slug ?? $tenant->id, 'table' => $table->id, 'sale' => $pendingSale->id]) }}" method="POST" class="flex-1">
+                        <form action="{{ route('customer.order.check-status', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" method="POST" class="flex-1">
                             @csrf
                             <button type="submit" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
                                 Cek Status
@@ -216,43 +217,56 @@
             <div id="payment-section" class="hidden px-4 pb-4">
                 <h3 class="text-sm font-semibold text-gray-700 mb-3">Pilih Metode Pembayaran</h3>
                 <div class="space-y-3">
-                    {{-- QRIS --}}
+                    {{-- QRIS - hanya tampil jika aktif --}}
+                    @if($isQrisActive)
                     <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-primary transition-colors">
                         <input type="radio" name="payment_method" value="qris" class="hidden peer">
                         <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
-                            </svg>
+                            <x-heroicon-m-qr-code class="w-6 h-6 text-white"/>
                         </div>
                         <div class="flex-1">
                             <p class="font-semibold text-gray-900">QRIS</p>
                             <p class="text-xs text-gray-500">Scan QR code untuk bayar</p>
                         </div>
                         <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-primary peer-checked:border-primary flex items-center justify-center">
-                            <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
+                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
                         </div>
                     </label>
+                    @endif
 
-                    {{-- Transfer --}}
+                    {{-- Virtual Account - tampil jika VA aktif --}}
+                    @if($isVaActive)
                     <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-primary transition-colors">
                         <input type="radio" name="payment_method" value="transfer" class="hidden peer">
                         <div class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
-                            <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"/>
-                            </svg>
+                            <x-heroicon-s-building-office class="w-6 h-6 text-white"/>
                         </div>
                         <div class="flex-1">
-                            <p class="font-semibold text-gray-900">Transfer Bank</p>
-                            <p class="text-xs text-gray-500">Transfer ke rekening tujuan</p>
+                            <p class="font-semibold text-gray-900">Virtual Account</p>
+                            <p class="text-xs text-gray-500">Transfer ke rekening bank</p>
                         </div>
                         <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-primary peer-checked:border-primary flex items-center justify-center">
-                            <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                            </svg>
+                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
                         </div>
                     </label>
+                    @endif
+
+                    {{-- Bayar di Kasir (Counter) - tampil jika aktif di setting QR Meja --}}
+                    @if($isCounterActive)
+                    <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-amber-200 rounded-2xl cursor-pointer hover:border-amber-500 transition-colors">
+                        <input type="radio" name="payment_method" value="counter" class="hidden peer">
+                        <div class="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
+                            <x-heroicon-s-credit-card class="w-6 h-6 text-white"/>
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold text-gray-900">Bayar di Kasir</p>
+                            <p class="text-xs text-gray-500">Cash / QR ke kasir</p>
+                        </div>
+                        <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-amber-500 peer-checked:border-amber-500 shrink-0 flex items-center justify-center">
+                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
+                        </div>
+                    </label>
+                    @endif
                 </div>
             </div>
         </div>
@@ -722,9 +736,27 @@
                 });
             });
 
-            // Set default payment
-            document.querySelector('input[name="payment_method"][value="qris"]').checked = true;
-            document.querySelector('input[name="payment_method"][value="qris"]').closest('.payment-option').classList.add('border-primary');
+            // Set default payment based on availability
+            // Priority: QRIS > VA > Counter
+            @if($isQrisActive)
+                const qrisOption = document.querySelector('input[name="payment_method"][value="qris"]');
+                if (qrisOption) {
+                    qrisOption.checked = true;
+                    qrisOption.closest('.payment-option').classList.add('border-primary');
+                }
+            @elseif($isVaActive)
+                const vaOption = document.querySelector('input[name="payment_method"][value="transfer"]');
+                if (vaOption) {
+                    vaOption.checked = true;
+                    vaOption.closest('.payment-option').classList.add('border-primary');
+                }
+            @elseif($isCounterActive)
+                const counterOption = document.querySelector('input[name="payment_method"][value="counter"]');
+                if (counterOption) {
+                    counterOption.checked = true;
+                    counterOption.closest('.payment-option').classList.add('border-primary');
+                }
+            @endif
         });
     </script>
 </body>

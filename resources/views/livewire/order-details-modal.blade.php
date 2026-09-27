@@ -34,9 +34,7 @@
                 <div class="flex items-center justify-between px-4 py-3 border-b border-gray-100">
                     <div class="flex items-center gap-3">
                         <div class="flex items-center justify-center w-8 h-8 rounded-lg bg-red-500 text-white">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
-                            </svg>
+                            <x-heroicon-o-document-text class="w-4 h-4"/>
                         </div>
                         <div>
                             <h3 class="text-sm font-bold text-gray-900">Meja {{ $selectedTableName }}</h3>
@@ -48,11 +46,29 @@
                         wire:click="closeModal"
                         class="p-1.5 rounded-lg text-gray-400 hover:bg-gray-100 hover:text-gray-600 transition-colors"
                     >
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                        </svg>
+                        <x-heroicon-o-x-mark class="w-4 h-4"/>
                     </button>
                 </div>
+
+                {{-- Bulk Pay Button (for counter orders) --}}
+                @php
+                    $pendingCounterOrders = collect($orders)->where('payment_method', 'counter')->where('status', 'pending');
+                    $totalCounterAmount = $pendingCounterOrders->sum('grand_total');
+                @endphp
+                @if($pendingCounterOrders->count() > 0)
+                    <div class="px-4 py-3 bg-amber-50 border-b border-amber-200">
+                        <button
+                            wire:click="$toggle('showBulkPayConfirm')"
+                            class="w-full py-2.5 px-4 bg-amber-500 hover:bg-amber-600 text-white text-sm font-semibold rounded-xl flex items-center justify-center gap-2 transition-colors"
+                        >
+                            <x-heroicon-s-banknotes class="w-5 h-5"/>
+                            Bayar Semua Counter ({{ $pendingCounterOrders->count() }})
+                            <span class="ml-1 px-2 py-0.5 bg-amber-600 rounded-lg text-xs">
+                                Rp {{ number_format($totalCounterAmount, 0, ',', '.') }}
+                            </span>
+                        </button>
+                    </div>
+                @endif
 
                 {{-- Content --}}
                 <div class="overflow-y-auto" style="max-height: 50vh;">
@@ -89,12 +105,17 @@
                                             $badgeClass = match($order['payment_method']) {
                                                 'qris' => 'bg-sky-200 text-sky-800',
                                                 'transfer' => 'bg-purple-200 text-purple-800',
+                                                'counter' => 'bg-amber-200 text-amber-800',
                                                 'cash' => 'bg-green-200 text-green-800',
                                                 default => 'bg-gray-200 text-gray-800',
                                             };
+                                            $badgeLabel = match($order['payment_method']) {
+                                                'counter' => 'COUNTER',
+                                                default => strtoupper($order['payment_method']),
+                                            };
                                         @endphp
                                         <span class="px-1.5 py-0.5 text-[9px] font-bold rounded-full {{ $badgeClass }}">
-                                            {{ strtoupper($order['payment_method']) }}
+                                            {{ $badgeLabel }}
                                         </span>
                                     </div>
                                 </div>
@@ -103,9 +124,7 @@
                                 @if(!empty($order['notes']))
                                     <div class="px-3 py-2 bg-amber-50 border-t border-amber-200">
                                         <div class="flex items-start gap-2 text-xs text-amber-700">
-                                            <svg class="w-3.5 h-3.5 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                                            </svg>
+                                            <x-heroicon-o-chat-bubble-left class="w-3.5 h-3.5 shrink-0 mt-0.5"/>
                                             <span class="font-medium">Catatan:</span>
                                             <span>{{ $order['notes'] }}</span>
                                         </div>
@@ -125,9 +144,7 @@
                                             </div>
                                             @if(!empty($item['notes']))
                                                 <div class="ml-6 mt-0.5 flex items-center gap-1 text-[10px] text-amber-600">
-                                                    <svg class="w-3 h-3 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"/>
-                                                    </svg>
+                                                    <x-heroicon-o-chat-bubble-left class="w-3 h-3 shrink-0"/>
                                                     <span>{{ $item['notes'] }}</span>
                                                 </div>
                                             @endif
@@ -157,7 +174,7 @@
                                                 @else
                                                     <button wire:click="markAsServed({{ $order['id'] }})" class="flex-1 py-1.5 text-xs font-medium rounded-lg bg-emerald-500 text-white hover:bg-emerald-600 transition-colors">Disajikan</button>
                                                 @endif
-                                                <a href="/admin/{{ $selectedTenantId }}/pos?table={{ $selectedTableId }}" class="flex-1 py-1.5 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-center">Bayar</a>
+                                                <a href="/admin/{{ $selectedTenantSlug }}/pos?table={{ $selectedTableId }}" class="flex-1 py-1.5 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-center">Bayar</a>
                                             </div>
                                         @endif
                                     @else
@@ -165,13 +182,14 @@
                                         @if($order['status'] === 'completed')
                                             <span class="block py-1.5 text-xs font-medium text-center text-emerald-600">Selesai</span>
                                         @else
-                                            <a href="/admin/{{ $selectedTenantId }}/pos?table={{ $selectedTableId }}" class="block py-1.5 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-center">Bayar</a>
+                                            <a href="/admin/{{ $selectedTenantSlug }}/pos?table={{ $selectedTableId }}" class="block py-1.5 text-xs font-medium rounded-lg bg-amber-500 text-white hover:bg-amber-600 transition-colors text-center">Bayar</a>
                                         @endif
                                     @endif
                                 </div>
                             </div>
                         @empty
                             <div class="py-8 text-center">
+                                <x-heroicon-o-inbox class="w-12 h-12 mx-auto text-gray-300 mb-2"/>
                                 <p class="text-xs text-gray-500">Belum ada pesanan</p>
                             </div>
                         @endforelse
@@ -182,6 +200,40 @@
                 <div class="px-4 py-2.5 border-t border-gray-100">
                     <button type="button" wire:click="closeModal" class="w-full py-2 text-xs font-medium rounded-lg bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">Tutup</button>
                 </div>
+
+                {{-- Bulk Pay Confirmation Modal --}}
+                @if($showBulkPayConfirm)
+                    <div class="absolute inset-0 z-10 flex items-center justify-center bg-black/50 backdrop-blur-sm rounded-2xl">
+                        <div class="w-full max-w-xs mx-4 bg-white rounded-2xl p-5 shadow-xl">
+                            <div class="text-center">
+                                <div class="mx-auto mb-3 flex h-12 w-12 items-center justify-center rounded-full bg-amber-100 text-amber-600">
+                                    <x-heroicon-o-question-mark-circle class="h-6 w-6"/>
+                                </div>
+                                <h4 class="text-base font-bold text-gray-900 mb-1">Bayar Semua Counter?</h4>
+                                <p class="text-xs text-gray-500 mb-4">
+                                    {{ $pendingCounterOrders->count() }} pesanan counter totaling
+                                    <span class="font-semibold text-amber-600">Rp {{ number_format($totalCounterAmount, 0, ',', '.') }}</span>
+                                </p>
+                                <div class="flex gap-2">
+                                    <button
+                                        type="button"
+                                        wire:click="$toggle('showBulkPayConfirm')"
+                                        class="flex-1 rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 transition hover:bg-gray-50"
+                                    >
+                                        Batal
+                                    </button>
+                                    <button
+                                        type="button"
+                                        wire:click="bulkPayCounter"
+                                        class="flex-1 rounded-xl bg-amber-500 px-3 py-2 text-sm font-medium text-white transition hover:bg-amber-600"
+                                    >
+                                        Ya, Bayar
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                @endif
             </div>
         </div>
     @endif

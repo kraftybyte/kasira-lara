@@ -109,7 +109,7 @@ class Kitchen extends Page
                 ->success()
                 ->send();
 
-            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -133,7 +133,7 @@ class Kitchen extends Page
                 ->success()
                 ->send();
 
-            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -158,7 +158,7 @@ class Kitchen extends Page
                     ->success()
                     ->send();
 
-                redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->id]));
+                redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
             } else {
                 Notification::make()
                     ->title('Gagal')

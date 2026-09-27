@@ -17,6 +17,10 @@ class OrderDetailsModal extends Component
 
     public ?int $selectedTenantId = null;
 
+    public ?string $selectedTenantSlug = null;
+
+    public bool $showBulkPayConfirm = false;
+
     public $orders = [];
 
     protected $listeners = [
@@ -28,9 +32,11 @@ class OrderDetailsModal extends Component
         $this->selectedTableId = $tableId;
         $this->selectedTableName = $tableName;
 
-        // Get tenant_id from table
+        // Get tenant info from table
         $table = Table::find($tableId);
-        $this->selectedTenantId = $table?->tenant_id;
+        $tenant = $table?->tenant;
+        $this->selectedTenantId = $tenant?->id;
+        $this->selectedTenantSlug = $tenant?->slug;
 
         $this->loadOrders();
         $this->isOpen = true;
@@ -42,7 +48,9 @@ class OrderDetailsModal extends Component
         $this->selectedTableId = null;
         $this->selectedTableName = null;
         $this->selectedTenantId = null;
+        $this->selectedTenantSlug = null;
         $this->orders = [];
+        $this->showBulkPayConfirm = false;
     }
 
     public function loadOrders()
@@ -129,6 +137,38 @@ class OrderDetailsModal extends Component
             $this->loadOrders();
             $this->dispatch('refreshTableOrders')->to(TablesOverview::class);
         }
+    }
+
+    /**
+     * Bulk pay all pending counter orders for this table
+     * Redirects to POS with counter orders loaded
+     */
+    public function bulkPayCounter()
+    {
+        if (! $this->selectedTableId || ! $this->selectedTenantSlug) {
+            return;
+        }
+
+        // Store the counter orders info in session for POS to load
+        $pendingOrders = Sale::where('table_id', $this->selectedTableId)
+            ->where('status', 'pending')
+            ->where('payment_method', 'counter')
+            ->pluck('id')
+            ->toArray();
+
+        if (empty($pendingOrders)) {
+            return;
+        }
+
+        // Store sale IDs in session for POS to load
+        session()->put('bulk_counter_sales', $pendingOrders);
+        session()->put('bulk_counter_table_id', $this->selectedTableId);
+
+        // Close modal and redirect to POS
+        $this->closeModal();
+
+        // Redirect to POS
+        return redirect()->to("/admin/{$this->selectedTenantSlug}/pos?table={$this->selectedTableId}&bulk=counter");
     }
 
     public function render()

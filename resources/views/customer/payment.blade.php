@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Pembayaran - {{ $tenant->name }} - Meja {{ $table->name }}</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/heroicons@24.0.0/clipboard.js"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <script>
         tailwind.config = {
@@ -302,13 +303,50 @@
                     </div>
                 </div>
             @endif
+
+            {{-- Counter Payment (Bayar di Kasir) --}}
+            @if($sale->payment_method === 'counter')
+                <div class="text-center">
+                    <div class="bg-white border-2 border-amber-200 rounded-2xl p-6 mb-6">
+                        <div class="w-16 h-16 mx-auto rounded-full bg-amber-100 flex items-center justify-center mb-4">
+                            <x-heroicon-s-credit-card class="w-8 h-8 text-amber-500"/>
+                        </div>
+                        <h3 class="text-lg font-bold text-gray-900 mb-2">Bayar di Kasir</h3>
+                        <p class="text-sm text-gray-500 mb-4">Tunjukkan invoice ini ke kasir untuk pembayaran</p>
+
+                        {{-- Invoice Number --}}
+                        <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4">
+                            <p class="text-xs text-amber-600 mb-1">Invoice Number</p>
+                            <p class="font-mono text-xl font-bold text-amber-700">{{ $sale->invoice_number }}</p>
+                        </div>
+
+                        {{-- Amount --}}
+                        <div class="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-4">
+                            <p class="text-xs text-gray-500 mb-1">Total Pembayaran</p>
+                            <p class="font-bold text-3xl text-gray-900">Rp {{ number_format($sale->grand_total, 0, ',', '.') }}</p>
+                        </div>
+
+                        {{-- Info Box --}}
+                        <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-left">
+                            <div class="flex items-start gap-3">
+                                <x-heroicon-s-information-circle class="w-5 h-5 text-blue-500 mt-0.5 shrink-0"/>
+                                <div>
+                                    <p class="font-medium text-blue-800 text-sm">Informasi</p>
+                                    <p class="text-xs text-blue-700 mt-1">Silakan menuju ke kasir dengan membawa invoice ini. Anda dapat membayar dengan cash atau QR.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
         </div>
 
         {{-- Confirm Button (Fixed Bottom) --}}
-        @if($sale->payment_status !== 'paid' && $sale->status !== 'completed')
+        {{-- Hide for counter payment - staff will mark as paid from POS --}}
+        @if($sale->payment_status !== 'paid' && $sale->status !== 'completed' && $sale->payment_method !== 'counter')
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
             <div class="max-w-md mx-auto p-4">
-                <form action="{{ route('customer.order.payment.confirm', [$tenant->slug ?? $tenant->id, $table->id, $sale->id]) }}" method="POST">
+                <form action="{{ route('customer.order.payment.confirm', [$tenant->getRouteKey(), $table->id, $sale->id]) }}" method="POST">
                     @csrf
                     <button type="submit" class="w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl hover:opacity-90 transition-opacity text-lg">
                         <span class="flex items-center justify-center gap-2">
@@ -327,7 +365,7 @@
         @if($sale->payment_status === 'paid' || $sale->status === 'completed')
         <div class="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 shadow-lg z-50">
             <div class="max-w-md mx-auto p-4">
-                <a href="{{ route('customer.order.success', [$tenant->slug ?? $tenant->id, $table->id, $sale->id]) }}" class="block w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl hover:opacity-90 transition-opacity text-lg text-center">
+                <a href="{{ route('customer.order.success', [$tenant->getRouteKey(), $table->id, $sale->id]) }}" class="block w-full py-4 bg-gradient-to-r from-green-500 to-green-600 text-white font-bold rounded-xl hover:opacity-90 transition-opacity text-lg text-center">
                     <span class="flex items-center justify-center gap-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
