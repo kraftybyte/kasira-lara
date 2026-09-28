@@ -380,7 +380,7 @@ class TablesOverview extends Page
         $table->update(['status' => 'available']);
 
         // Refresh table data
-        $this->reset(['activeTables', 'availableTables']);
+        $this->reset(['tableOrders']);
 
         Notification::make()
             ->title('Bill ditutup')
