@@ -149,22 +149,30 @@
                 $unpaidOrders = $allOrders->whereIn('status', ['open', 'pending']);
                 $totalUnpaid = $unpaidOrders->where('payment_method', 'cash')->sum('grand_total');
                 $totalPaid = $paidOrders->sum('grand_total');
-            @endphp
                 $allPaid = $paidOrders->count() > 0 && $unpaidOrders->count() === 0;
+            @endphp
             <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                 {{-- Header --}}
-                <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 text-white">
+                <div class="bg-gradient-to-br {{ $allPaid ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' }} p-4 text-white">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20">
                                 <x-heroicon-o-archive-box class="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 class="text-base font-bold">{{ $table->name }}</h3>
-                                <p class="text-xs text-red-100">{{ $allOrders->count() }} pesanan</p>
+                                <h3 class="text-base font-bold text-white">{{ $table->name }}</h3>
+                                <p class="text-xs {{ $allPaid ? 'text-emerald-100' : 'text-red-100' }}">
+                                    @if($allPaid)
+                                        ✓ Semua lunas
+                                    @else
+                                        {{ $allOrders->count() }} pesanan
+                                    @endif
+                                </p>
                             </div>
                         </div>
-                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-semibold">Terpakai</span>
+                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-semibold">
+                            {{ $allPaid ? 'Menunggu Ditutup' : 'Terpakai' }}
+                        </span>
                     </div>
                 </div>
 
