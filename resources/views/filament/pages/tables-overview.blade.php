@@ -170,42 +170,79 @@
                                 </p>
                             </div>
                         </div>
-                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-semibold">
-                            {{ $allPaid ? 'Menunggu Ditutup' : 'Terpakai' }}
+                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-[10px] font-semibold flex items-center gap-1">
+                            @if($allPaid)
+                                <x-heroicon-o-check-circle class="h-3 w-3" />
+                                Menunggu Ditutup
+                            @else
+                                <x-heroicon-o-clock class="h-3 w-3" />
+                                Terpakai
+                            @endif
                         </span>
                     </div>
                 </div>
 
                 {{-- Content --}}
                 <div class="p-4 space-y-3">
-                    {{-- Quick Stats --}}
-                    <div class="grid grid-cols-3 gap-2">
-                        @if($servedOrders->count() > 0)
-                            <div class="rounded-lg bg-green-50 p-2 text-center dark:bg-green-500/10">
-                                <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ $servedOrders->count() }}</p>
-                                <p class="text-[10px] text-green-600 dark:text-green-400">Disajikan</p>
+                    {{-- Quick Stats - Different display for allPaid vs active --}}
+                    @if($allPaid)
+                        {{-- All Paid State - Show Summary --}}
+                        <div class="rounded-xl bg-emerald-50 p-3 dark:bg-emerald-500/10">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-medium text-emerald-700 dark:text-emerald-400">Ringkasan</span>
+                                <span class="text-xs text-emerald-600 dark:text-emerald-500">{{ $paidOrders->count() }} pesanan</span>
                             </div>
-                        @endif
-                        @if($unservedOrders->count() > 0)
-                            <div class="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-500/10">
-                                <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ $unservedOrders->count() }}</p>
-                                <p class="text-[10px] text-blue-600 dark:text-blue-400">Siap</p>
+                            <div class="flex items-center gap-2">
+                                @if($servedOrders->count() > 0)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700 dark:bg-green-500/20 dark:text-green-400">
+                                        <x-heroicon-o-check class="h-3 w-3" />
+                                        {{ $servedOrders->count() }} Disajikan
+                                    </span>
+                                @endif
+                                @if($unservedOrders->count() > 0)
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                        <x-heroicon-o-bell class="h-3 w-3" />
+                                        {{ $unservedOrders->count() }} Siap
+                                    </span>
+                                @endif
                             </div>
-                        @endif
-                        @if($unpaidOrders->count() > 0)
-                            <div class="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-500/10">
-                                <p class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ $unpaidOrders->count() }}</p>
-                                <p class="text-[10px] text-amber-600 dark:text-amber-400">Tunda</p>
-                            </div>
-                        @endif
-                    </div>
-
-                    {{-- Total --}}
-                    @if($totalPaid > 0)
-                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-700">
-                            <span class="text-xs text-gray-600 dark:text-gray-400">Total</span>
-                            <span class="text-sm font-bold text-green-600 dark:text-green-400">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
                         </div>
+
+                        {{-- Total Bayar --}}
+                        <div class="flex items-center justify-between rounded-lg bg-gray-100 p-3 dark:bg-gray-700">
+                            <span class="text-sm font-medium text-gray-600 dark:text-gray-400">Total Bayar</span>
+                            <span class="text-lg font-bold text-emerald-600 dark:text-emerald-400">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
+                        </div>
+                    @else
+                        {{-- Active State - Show Quick Stats --}}
+                        <div class="grid grid-cols-3 gap-2">
+                            @if($servedOrders->count() > 0)
+                                <div class="rounded-lg bg-green-50 p-2 text-center dark:bg-green-500/10">
+                                    <p class="text-lg font-bold text-green-600 dark:text-green-400">{{ $servedOrders->count() }}</p>
+                                    <p class="text-[10px] text-green-600 dark:text-green-400">Disajikan</p>
+                                </div>
+                            @endif
+                            @if($unservedOrders->count() > 0)
+                                <div class="rounded-lg bg-blue-50 p-2 text-center dark:bg-blue-500/10">
+                                    <p class="text-lg font-bold text-blue-600 dark:text-blue-400">{{ $unservedOrders->count() }}</p>
+                                    <p class="text-[10px] text-blue-600 dark:text-blue-400">Siap</p>
+                                </div>
+                            @endif
+                            @if($unpaidOrders->count() > 0)
+                                <div class="rounded-lg bg-amber-50 p-2 text-center dark:bg-amber-500/10">
+                                    <p class="text-lg font-bold text-amber-600 dark:text-amber-400">{{ $unpaidOrders->count() }}</p>
+                                    <p class="text-[10px] text-amber-600 dark:text-amber-400">Tunda</p>
+                                </div>
+                            @endif
+                        </div>
+
+                        {{-- Total --}}
+                        @if($totalPaid > 0)
+                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-700">
+                                <span class="text-xs text-gray-600 dark:text-gray-400">Total</span>
+                                <span class="text-sm font-bold text-green-600 dark:text-green-400">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
+                            </div>
+                        @endif
                     @endif
 
                     {{-- Actions --}}
