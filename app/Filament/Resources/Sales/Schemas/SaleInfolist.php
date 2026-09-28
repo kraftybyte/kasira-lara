@@ -142,7 +142,7 @@ class SaleInfolist
 
                                 return "
                                     <div class=\"rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden\">
-                                        <div class=\"overflow-y-auto scrollbar-thin\" style=\"max-height: 240px; min-height: 100px;\">
+                                        <div class=\"overflow-y-auto scrollbar-thin\" style=\"max-height: 56px;\">
                                             <table class=\"w-full text-sm\">
                                                 <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0 shadow-sm\">
                                                     <tr>
