@@ -115,7 +115,7 @@ class SaleInfolist
     private static function renderItemsTable($record): string
     {
         if (! $record->items || $record->items->isEmpty()) {
-            return '<div class="rounded-lg border border-dashed border-gray-300 p-4 text-center text-sm text-gray-500">Tidak ada item.</div>';
+            return '<div class="text-center text-sm text-gray-500 py-4">Tidak ada item.</div>';
         }
 
         $rows = '';
@@ -125,7 +125,7 @@ class SaleInfolist
             $total = number_format((float) $item->total, 0, ',', '.');
 
             $rows .= "
-                <tr class=\"border-b border-gray-100 dark:border-gray-800 last:border-0\">
+                <tr>
                     <td class=\"px-3 py-2\">
                         <div class=\"font-medium text-sm text-gray-900 dark:text-white\">{$item->product_name}</div>
                         <div class=\"text-xs text-gray-500\">".e($item->sku ?? '-')."</div>
@@ -138,20 +138,18 @@ class SaleInfolist
         }
 
         return "
-            <div class=\"rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden\">
-                <div class=\"overflow-y-auto scrollbar-thin\" style=\"max-height: 56px;\">
-                    <table class=\"w-full text-sm\">
-                        <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0 shadow-sm\">
-                            <tr>
-                                <th class=\"px-3 py-2 text-left text-xs font-semibold text-gray-500\">Produk</th>
-                                <th class=\"px-3 py-2 text-center text-xs font-semibold text-gray-500 w-16\">Qty</th>
-                                <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-24\">Harga</th>
-                                <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-28\">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>{$rows}</tbody>
-                    </table>
-                </div>
+            <div class=\"overflow-y-auto\" style=\"max-height: 56px;\">
+                <table class=\"w-full text-sm\">
+                    <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0\">
+                        <tr>
+                            <th class=\"px-3 py-2 text-left text-xs font-semibold text-gray-500\">Produk</th>
+                            <th class=\"px-3 py-2 text-center text-xs font-semibold text-gray-500 w-16\">Qty</th>
+                            <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-24\">Harga</th>
+                            <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-28\">Total</th>
+                        </tr>
+                    </thead>
+                    <tbody>{$rows}</tbody>
+                </table>
             </div>
         ";
     }
