@@ -379,6 +379,9 @@ class TablesOverview extends Page
         // Reset the table to available
         $table->update(['status' => 'available']);
 
+        // Refresh table data
+        $this->reset(['activeTables', 'availableTables']);
+
         Notification::make()
             ->title('Bill ditutup')
             ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
