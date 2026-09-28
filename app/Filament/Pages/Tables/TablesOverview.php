@@ -50,29 +50,31 @@ class TablesOverview extends Page
     #[Computed]
     public function availableTables(): Collection
     {
-        // Tables are available only if they have NO active orders (pending/open) and are available status
+        // Available = completely free, NO orders at all (pending/open/completed)
+        // AND status is available AND not reserved
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        $tableIdsWithActiveOrders = Sale::where('tenant_id', $tenant->id)
+        $tableIdsWithAnyOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
-            ->whereIn('status', ['pending', 'open'])
+            ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithActiveOrders) {
-            // Available if: no active orders AND status is available
-            return ! in_array($table->id, $tableIdsWithActiveOrders) && $table->status === 'available';
+        return $this->tables->filter(function ($table) use ($tableIdsWithAnyOrders) {
+            // Available if: NO orders at all AND status is available AND not reserved
+            return ! in_array($table->id, $tableIdsWithAnyOrders)
+                && $table->status === 'available';
         });
     }
 
     #[Computed]
     public function activeTables(): Collection
     {
-        // Tables are active if: have pending/open orders OR have completed orders (paid but table not closed yet)
+        // Active = has orders (pending/open/completed) AND not reserved
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
@@ -86,7 +88,9 @@ class TablesOverview extends Page
             ->toArray();
 
         return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
-            return in_array($table->id, $tableIdsWithOrders);
+            // Active only if: has orders AND not reserved
+            return in_array($table->id, $tableIdsWithOrders)
+                && $table->status !== 'reserved';
         });
     }
 
