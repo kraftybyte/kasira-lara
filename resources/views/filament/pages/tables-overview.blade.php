@@ -156,8 +156,8 @@
                 $allPaid = $paidOrders->count() > 0 && $unpaidOrders->count() === 0;
             @endphp
             <div class="card-hover overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800">
-                {{-- Header --}}
-                <div class="bg-gradient-to-br {{ $allPaid ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' }} px-4 py-3 text-white">
+                {{-- Header - GREEN when occupied --}}
+                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-3 text-white">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
@@ -165,7 +165,7 @@
                             </div>
                             <div>
                                 <h3 class="text-base font-bold">{{ $table->name }}</h3>
-                                <p class="text-xs text-red-100">
+                                <p class="text-xs text-emerald-100">
                                     {{ $allOrders->count() }} pesanan aktif
                                 </p>
                             </div>
@@ -280,10 +280,10 @@
             </div>
         @endforeach
 
-        {{-- Available Tables --}}
+        {{-- Available Tables - RED when available --}}
         @foreach($this->availableTables as $table)
             <div class="card-hover overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800">
-                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-3 text-white">
+                <div class="bg-gradient-to-br from-red-500 to-red-600 px-4 py-3 text-white">
                     <div class="flex items-center justify-between">
                         <div class="flex items-center gap-3">
                             <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
@@ -291,7 +291,7 @@
                             </div>
                             <div>
                                 <h3 class="text-base font-bold">{{ $table->name }}</h3>
-                                <p class="text-xs text-emerald-100">Siap digunakan</p>
+                                <p class="text-xs text-red-100">Siap digunakan</p>
                             </div>
                         </div>
                         <span class="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
@@ -301,8 +301,8 @@
                     </div>
                 </div>
                 <div class="p-4 space-y-3">
-                    <div class="flex flex-wrap items-center gap-2">
-                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                    <div class="flex flex-wrap justify-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-700 dark:bg-red-500/20 dark:text-red-300">
                             <x-heroicon-o-check-circle class="h-3.5 w-3.5" />
                             Tersedia
                         </span>
