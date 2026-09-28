@@ -169,8 +169,14 @@ class CustomerOrderController extends Controller
         }
 
         // Calculate tax (PPN) if enabled
-        $taxAmount = $showTax ? round($subtotal * ($taxRate / 100), 2) : 0;
-        $beforeTax = $subtotal;
+        // Using same logic as POS: harga sudah termasuk PPN (subtotal includes tax)
+        $taxAmount = 0;
+        if ($showTax && $taxRate > 0) {
+            // Reverse calculation: tax is already included in subtotal
+            // tax = subtotal * rate / (100 + rate)
+            $taxAmount = round($subtotal * ($taxRate / (100 + $taxRate)), 2);
+        }
+        $beforeTax = $subtotal - $taxAmount;
 
         // Calculate Paywuz fee for QRIS
         $paywuzFeeAmount = 0;

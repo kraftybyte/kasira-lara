@@ -38,18 +38,17 @@ class SalesTable
                 |--------------------------------------------------------------------------
                 */
 
-                TextColumn::make('table.name')
+                TextColumn::make('table_display')
                     ->label('Meja')
-                    ->placeholder('Takeaway')
-                    ->formatStateUsing(function ($state, $record) {
-                        if ($record->table_id) {
-                            return 'Meja '.$state;
+                    ->getStateUsing(function ($record) {
+                        if ($record->table_id && $record->table) {
+                            return $record->table->name;
                         }
 
                         return 'Takeaway';
                     })
                     ->badge()
-                    ->color('info'),
+                    ->color(fn ($state) => $state === 'Takeaway' ? 'gray' : 'info'),
 
                 /*
                 |--------------------------------------------------------------------------
@@ -254,6 +253,24 @@ class SalesTable
                         'qris' => 'QRIS',
                         'va' => 'Virtual Account',
                     ]),
+
+                SelectFilter::make('order_type')
+                    ->label('Tipe Order')
+                    ->options([
+                        'table' => 'Meja',
+                        'takeaway' => 'Takeaway',
+                    ])
+                    ->query(function ($query, array $data) {
+                        if (filled($data['value'])) {
+                            if ($data['value'] === 'table') {
+                                return $query->whereNotNull('table_id');
+                            } else {
+                                return $query->whereNull('table_id');
+                            }
+                        }
+
+                        return $query;
+                    }),
 
             ])
 

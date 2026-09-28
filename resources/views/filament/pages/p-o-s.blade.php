@@ -606,7 +606,7 @@
                                 @if(!$this->cartHasDurationProducts)
                                     <option value="takeaway">Take Away / Bawa Pulang</option>
                                 @endif
-                                    @foreach($this->tables as $table)
+                                    @foreach($this->availableTables as $table)
                                         <option value="{{ $table->id }}">{{ $table->name }}</option>
                                     @endforeach
                                 </select>
@@ -884,6 +884,11 @@
                                         <div class="rounded-xl bg-blue-50 px-4 py-3 dark:bg-blue-900/30">
                                             <p class="text-center text-xs font-medium text-blue-600 dark:text-blue-400">ID Transaksi: {{ $currentQrisSale->paywuz_transaction_id }}</p>
                                         </div>
+                                        @if (str_starts_with($currentQrisSale->paywuz_transaction_id, 'DEMO-'))
+                                            <div class="rounded-xl bg-amber-50 px-4 py-3 dark:bg-amber-900/30">
+                                                <p class="text-center text-xs font-medium text-amber-600 dark:text-amber-400">⚠️ Mode Demo - Konfirmasi manual diperlukan</p>
+                                            </div>
+                                        @endif
                                     @endif
                                     <div class="flex gap-3">
                                         <button type="button" wire:click="checkQrisPaymentStatus" wire:loading.attr="disabled" class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-green-500 py-4 text-base font-bold text-white shadow-lg shadow-green-200 transition hover:bg-green-600 disabled:opacity-50">
@@ -895,6 +900,11 @@
                                                 <span>Mengecek...</span>
                                             </span>
                                         </button>
+                                        @if (str_starts_with($currentQrisSale?->paywuz_transaction_id ?? '', 'DEMO-'))
+                                            <button type="button" wire:click="confirmDemoQrisPayment" wire:loading.attr="disabled" class="flex items-center justify-center rounded-xl bg-amber-500 px-5 py-4 text-white transition hover:bg-amber-600 disabled:opacity-50" title="Konfirmasi manual untuk mode demo">
+                                                <x-heroicon-o-hand-thumb-up class="h-5 w-5" />
+                                            </button>
+                                        @endif
                                         <button type="button" wire:click="cancelQrisPayment" class="flex items-center justify-center rounded-xl bg-gray-100 px-5 py-4 text-gray-600 transition hover:bg-gray-200 dark:bg-gray-700 dark:text-gray-400 dark:hover:bg-gray-600" aria-label="Batalkan QRIS">
                                             <x-heroicon-o-x-mark class="h-5 w-5" />
                                         </button>

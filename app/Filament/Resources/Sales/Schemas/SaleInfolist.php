@@ -38,15 +38,15 @@ class SaleInfolist
 
                         TextEntry::make('customer.name')
                             ->label('Customer')
-                            ->placeholder('Walk-in Customer'),
+                            ->placeholder('Walk-in'),
 
                         TextEntry::make('user.name')
                             ->label('Kasir')
                             ->placeholder('-'),
 
                         TextEntry::make('created_at')
-                            ->label('Tanggal Transaksi')
-                            ->dateTime('d F Y H:i'),
+                            ->label('Tanggal')
+                            ->dateTime('d M Y, H:i'),
                     ])
                     ->columns(2),
 
@@ -67,18 +67,19 @@ class SaleInfolist
                             ->label('Subtotal')
                             ->money('IDR'),
 
-                        TextEntry::make('discount')
-                            ->label('Diskon')
-                            ->money('IDR'),
-
                         TextEntry::make('tax')
                             ->label('PPN')
+                            ->money('IDR'),
+
+                        TextEntry::make('discount')
+                            ->label('Diskon')
                             ->money('IDR'),
 
                         TextEntry::make('grand_total')
                             ->label('Total')
                             ->money('IDR')
-                            ->weight('bold'),
+                            ->weight('bold')
+                            ->color('danger'),
 
                         TextEntry::make('paid_amount')
                             ->label('Dibayar')
@@ -93,7 +94,7 @@ class SaleInfolist
                             ->color('warning'),
 
                         TextEntry::make('payment_method_display')
-                            ->label('Metode Bayar')
+                            ->label('Metode')
                             ->html()
                             ->columnSpanFull()
                             ->formatStateUsing(fn ($state, $record) => self::renderPaymentMethods($record)),
@@ -115,41 +116,45 @@ class SaleInfolist
     private static function renderItemsTable($record): string
     {
         if (! $record->items || $record->items->isEmpty()) {
-            return '<div class="text-center text-sm text-gray-500 py-4">Tidak ada item.</div>';
+            return '<div class="text-center text-sm text-gray-400 py-4">Tidak ada item</div>';
         }
 
         $rows = '';
+        $itemCount = $record->items->count();
+        $maxHeight = $itemCount > 4 ? '140px' : 'auto';
+
         foreach ($record->items as $item) {
             $qty = number_format((int) $item->quantity, 0, ',', '.');
             $price = number_format((float) $item->unit_price, 0, ',', '.');
             $total = number_format((float) $item->total, 0, ',', '.');
 
             $rows .= "
-                <tr>
+                <tr class=\"group hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors\">
                     <td class=\"px-3 py-2\">
                         <div class=\"font-medium text-sm text-gray-900 dark:text-white\">{$item->product_name}</div>
-                        <div class=\"text-xs text-gray-500\">".e($item->sku ?? '-')."</div>
                     </td>
-                    <td class=\"px-3 py-2 text-center text-sm\">{$qty}</td>
-                    <td class=\"px-3 py-2 text-right text-sm\">Rp {$price}</td>
-                    <td class=\"px-3 py-2 text-right text-sm font-semibold\">Rp {$total}</td>
+                    <td class=\"px-3 py-2 text-center text-sm text-gray-600 dark:text-gray-400\">{$qty}</td>
+                    <td class=\"px-3 py-2 text-right text-sm text-gray-600 dark:text-gray-400\">Rp {$price}</td>
+                    <td class=\"px-3 py-2 text-right text-sm font-semibold text-gray-900 dark:text-white\">Rp {$total}</td>
                 </tr>
             ";
         }
 
         return "
-            <div class=\"overflow-y-auto\" style=\"max-height: 56px;\">
-                <table class=\"w-full text-sm\">
-                    <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0\">
-                        <tr>
-                            <th class=\"px-3 py-2 text-left text-xs font-semibold text-gray-500\">Produk</th>
-                            <th class=\"px-3 py-2 text-center text-xs font-semibold text-gray-500 w-16\">Qty</th>
-                            <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-24\">Harga</th>
-                            <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 w-28\">Total</th>
-                        </tr>
-                    </thead>
-                    <tbody>{$rows}</tbody>
-                </table>
+            <div class=\"rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden\">
+                <div class=\"overflow-y-auto\" style=\"max-height: {$maxHeight};\">
+                    <table class=\"w-full text-sm\">
+                        <thead>
+                            <tr class=\"bg-gray-100 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700\">
+                                <th class=\"px-3 py-2 text-left text-xs font-semibold text-gray-500 dark:text-gray-400\">Produk</th>
+                                <th class=\"px-3 py-2 text-center text-xs font-semibold text-gray-500 dark:text-gray-400 w-14\">Qty</th>
+                                <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 w-24\">Harga</th>
+                                <th class=\"px-3 py-2 text-right text-xs font-semibold text-gray-500 dark:text-gray-400 w-28\">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class=\"divide-y divide-gray-100 dark:divide-gray-800\">{$rows}</tbody>
+                    </table>
+                </div>
             </div>
         ";
     }
@@ -158,47 +163,38 @@ class SaleInfolist
     {
         $payments = $record->payments ?? collect();
         if ($payments->isEmpty()) {
-            return '<span class="text-gray-400 italic">Belum ada pembayaran</span>';
+            return '<span class="text-sm text-gray-400 italic">Belum ada pembayaran</span>';
         }
 
-        $rows = '';
+        $items = [];
         foreach ($payments as $payment) {
             $method = strtolower((string) $payment->method);
             $label = match ($method) {
-                'cash' => ['icon' => '💵', 'label' => 'Tunai', 'color' => 'success'],
-                'qris' => ['icon' => '📱', 'label' => 'QRIS', 'color' => 'info'],
-                'qris_manual' => ['icon' => '📷', 'label' => 'QR Manual', 'color' => 'warning'],
-                'va', 'virtual_account' => ['icon' => '🏧', 'label' => 'Virtual Account', 'color' => 'primary'],
-                'transfer', 'bank_transfer' => ['icon' => '🏦', 'label' => 'Transfer Bank', 'color' => 'gray'],
-                'debit', 'credit', 'credit_card' => ['icon' => '💳', 'label' => ucfirst(str_replace('_', ' ', $method)), 'color' => 'gray'],
-                default => ['icon' => '💰', 'label' => ucfirst(str_replace('_', ' ', $method)), 'color' => 'gray'],
+                'cash' => ['icon' => '💵', 'label' => 'Tunai'],
+                'qris' => ['icon' => '📱', 'label' => 'QRIS'],
+                'qris_manual' => ['icon' => '📷', 'label' => 'QR Manual'],
+                'va', 'virtual_account' => ['icon' => '🏧', 'label' => 'VA'],
+                'transfer', 'bank_transfer' => ['icon' => '🏦', 'label' => 'Transfer'],
+                'debit' => ['icon' => '💳', 'label' => 'Debit'],
+                'credit', 'credit_card' => ['icon' => '💳', 'label' => 'Credit'],
+                'counter' => ['icon' => '🏪', 'label' => 'Counter'],
+                default => ['icon' => '💰', 'label' => ucfirst($method)],
             };
 
             $amount = number_format((float) $payment->amount, 0, ',', '.');
             $reference = e($payment->reference ?: '-');
 
-            $color = match ($label['color']) {
-                'success' => 'bg-green-100 text-green-700 border-green-200 dark:bg-green-900/30 dark:text-green-400',
-                'info' => 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-900/30 dark:text-blue-400',
-                'primary' => 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-900/30 dark:text-purple-400',
-                'warning' => 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400',
-                default => 'bg-gray-100 text-gray-700 border-gray-200 dark:bg-gray-800 dark:text-gray-300',
-            };
-
-            $rows .= "
-                <div class=\"flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0\">
-                    <span class=\"inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold {$color}\">
+            $items[] = "
+                <div class=\"flex items-center justify-between py-2\">
+                    <span class=\"inline-flex items-center gap-1.5 text-sm font-medium text-gray-700 dark:text-gray-300\">
                         <span>{$label['icon']}</span>
                         <span>{$label['label']}</span>
                     </span>
-                    <div class=\"text-right\">
-                        <div class=\"font-bold text-gray-900 dark:text-white\">Rp {$amount}</div>
-                        <div class=\"text-xs text-gray-500\">{$reference}</div>
-                    </div>
+                    <span class=\"font-semibold text-gray-900 dark:text-white\">Rp {$amount}</span>
                 </div>
             ";
         }
 
-        return "<div class=\"space-y-0\">{$rows}</div>";
+        return '<div class="space-y-0">'.implode('', $items).'</div>';
     }
 }

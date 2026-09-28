@@ -50,42 +50,42 @@ class TablesOverview extends Page
     #[Computed]
     public function availableTables(): Collection
     {
-        // Tables are available only if they have NO orders
+        // Tables are available only if they have NO pending/open sales
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        // Get table IDs that have orders (exclude NULL)
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
+        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
-            return ! in_array($table->id, $tableIdsWithOrders);
+        return $this->tables->filter(function ($table) use ($tableIdsWithPendingOrders) {
+            return ! in_array($table->id, $tableIdsWithPendingOrders);
         });
     }
 
     #[Computed]
     public function activeTables(): Collection
     {
-        // Tables are active if they have ANY orders
+        // Tables are active if they have pending/open orders
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        // Get table IDs that have orders (exclude NULL)
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
+        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
-            return in_array($table->id, $tableIdsWithOrders);
+        return $this->tables->filter(function ($table) use ($tableIdsWithPendingOrders) {
+            return in_array($table->id, $tableIdsWithPendingOrders);
         });
     }
 

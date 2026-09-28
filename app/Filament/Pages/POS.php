@@ -10,6 +10,7 @@ use App\Models\ProductModifier;
 use App\Models\Reservation;
 use App\Models\Sale;
 use App\Models\SaleItem;
+use App\Models\SaleItemModifier;
 use App\Models\Table;
 use App\Models\TenantSetting;
 use App\Services\PaywuzService;
@@ -1443,7 +1444,7 @@ class POS extends Page
                         |--------------------------------------------------------------------------
                         */
 
-                        SaleItem::create([
+                        $saleItem = SaleItem::create([
 
                             'sale_id' => $sale->id,
 
@@ -1468,6 +1469,22 @@ class POS extends Page
                             'notes' => $item['notes'] ?? null,
 
                         ]);
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | SAVE MODIFIERS
+                        |--------------------------------------------------------------------------
+                        */
+
+                        $modifiers = $item['modifiers'] ?? [];
+                        foreach ($modifiers as $mod) {
+                            SaleItemModifier::create([
+                                'sale_item_id' => $saleItem->id,
+                                'product_modifier_id' => $mod['id'],
+                                'modifier_name' => $mod['name'],
+                                'price' => $mod['price'] ?? 0,
+                            ]);
+                        }
 
                         /*
                         |--------------------------------------------------------------------------
@@ -2361,9 +2378,10 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are available only if they have NO orders
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are available if they have NO pending/open sales
+        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
@@ -2372,7 +2390,7 @@ class POS extends Page
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
             ->where('status', 'available')
-            ->whereNotIn('id', $tableIdsWithOrders)
+            ->whereNotIn('id', $tableIdsWithPendingOrders)
             ->orderBy('name')
             ->get();
     }
@@ -2387,9 +2405,10 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are active if they have ANY orders
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are occupied if they have pending/open orders
+        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
@@ -2397,7 +2416,7 @@ class POS extends Page
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->whereIn('id', $tableIdsWithOrders)
+            ->whereIn('id', $tableIdsWithPendingOrders)
             ->orderBy('name')
             ->get();
     }
@@ -2412,9 +2431,10 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are active if they have ANY orders (matches Tables Overview logic)
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are active if they have pending/open orders
+        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
+            ->whereNotIn('status', ['completed', 'cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
@@ -2422,9 +2442,9 @@ class POS extends Page
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->whereIn('id', $tableIdsWithOrders)
+            ->whereIn('id', $tableIdsWithPendingOrders)
             ->with(['sales' => function ($query) {
-                $query->where('status', '!=', 'completed')
+                $query->whereNotIn('status', ['completed', 'cancelled'])
                     ->orderByDesc('created_at');
             }])
             ->orderBy('name')
@@ -3172,16 +3192,17 @@ class POS extends Page
                     ->send();
 
                 $this->resetQrisState();
-            } elseif ($this->currentQrisSale->paywuz_status === 'cancelled' || $this->currentQrisSale->paywuz_status === 'pending') {
-                // For sandbox/demo mode - allow direct confirmation
+            } elseif (str_starts_with($this->currentQrisSale->paywuz_transaction_id ?? '', 'DEMO-')) {
+                // DEMO MODE: Show warning but DO NOT auto-confirm
+                // Staff must manually click "Konfirmasi Manual" button
                 Notification::make()
-                    ->title('Demo Mode')
-                    ->body('Confirmed without Paywuz verification.')
-                    ->info()
+                    ->title('Demo Mode - Perlu Konfirmasi Manual')
+                    ->body('Di mode demo, silakan konfirmasi pembayaran secara manual setelah menerima uang dari customer.')
+                    ->warning()
                     ->send();
-
-                $this->confirmQrisPayment();
+                // Do NOT auto-confirm - this is a security fix
             }
+            // For pending status without DEMO prefix, wait for actual payment
         } catch (Throwable $e) {
             // Silent fail for status check
         }
@@ -3306,6 +3327,16 @@ class POS extends Page
 
         // Generate new QR
         $this->generateQrisPayment();
+    }
+
+    public function confirmDemoQrisPayment(): void
+    {
+        // Manual confirmation for DEMO mode only
+        if (! $this->currentQrisSale || ! str_starts_with($this->currentQrisSale->paywuz_transaction_id ?? '', 'DEMO-')) {
+            return;
+        }
+
+        $this->confirmQrisPayment();
     }
 
     /*

@@ -20,7 +20,7 @@ class ViewSale extends ViewRecord
 
     public function infolist(Schema $schema): Schema
     {
-        return SaleInfolist::configure($schema);
+        return SaleInfolist::configure(parent::infolist($schema));
     }
 
     protected function getHeaderActions(): array
