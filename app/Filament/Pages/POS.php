@@ -2431,10 +2431,10 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are active if they have pending/open orders
-        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are active if they have ANY orders (pending, open, or completed)
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
@@ -2442,9 +2442,9 @@ class POS extends Page
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->whereIn('id', $tableIdsWithPendingOrders)
+            ->whereIn('id', $tableIdsWithOrders)
             ->with(['sales' => function ($query) {
-                $query->whereNotIn('status', ['completed', 'cancelled'])
+                $query->whereNotIn('status', ['cancelled'])
                     ->orderByDesc('created_at');
             }])
             ->orderBy('name')

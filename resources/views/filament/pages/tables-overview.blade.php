@@ -150,6 +150,7 @@
                 $totalUnpaid = $unpaidOrders->where('payment_method', 'cash')->sum('grand_total');
                 $totalPaid = $paidOrders->sum('grand_total');
             @endphp
+                $allPaid = $paidOrders->count() > 0 && $unpaidOrders->count() === 0;
             <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                 {{-- Header --}}
                 <div class="bg-gradient-to-br from-red-500 to-red-600 p-4 text-white">

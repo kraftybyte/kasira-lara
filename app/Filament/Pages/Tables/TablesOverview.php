@@ -50,42 +50,43 @@ class TablesOverview extends Page
     #[Computed]
     public function availableTables(): Collection
     {
-        // Tables are available only if they have NO pending/open sales
+        // Tables are available only if they have NO active orders (pending/open) and are available status
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenant->id)
+        $tableIdsWithActiveOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->whereIn('status', ['pending', 'open'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithPendingOrders) {
-            return ! in_array($table->id, $tableIdsWithPendingOrders);
+        return $this->tables->filter(function ($table) use ($tableIdsWithActiveOrders) {
+            // Available if: no active orders AND status is available
+            return ! in_array($table->id, $tableIdsWithActiveOrders) && $table->status === 'available';
         });
     }
 
     #[Computed]
     public function activeTables(): Collection
     {
-        // Tables are active if they have pending/open orders
+        // Tables are active if: have pending/open orders OR have completed orders (paid but table not closed yet)
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenant->id)
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithPendingOrders) {
-            return in_array($table->id, $tableIdsWithPendingOrders);
+        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+            return in_array($table->id, $tableIdsWithOrders);
         });
     }
 
