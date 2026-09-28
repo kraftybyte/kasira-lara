@@ -193,12 +193,5 @@
             <p class="text-sm text-gray-600">Terima kasih atas kunjungan Anda!</p>
         </div>
     </div>
-
-    {{-- Auto redirect after 5 seconds --}}
-    <script>
-        setTimeout(() => {
-            window.location.href = "{{ url('/order/' . $tenant->getRouteKey() . '/' . $table->id) }}";
-        }, 10000);
-    </script>
 </body>
 </html>

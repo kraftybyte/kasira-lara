@@ -37,6 +37,14 @@
         {{-- Header --}}
         <div class="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-gray-100 shadow-sm">
             <div class="px-4 py-4">
+                <div class="flex items-center justify-between mb-3">
+                    <a href="{{ url('/order/' . $tenant->getRouteKey() . '/' . $table->id) }}" class="w-10 h-10 rounded-xl bg-gray-100 hover:bg-gray-200 flex items-center justify-center transition-colors">
+                        <svg class="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+                        </svg>
+                    </a>
+                    <div class="w-10"></div>
+                </div>
                 <div class="text-center">
                     <div class="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center mb-3 shadow-lg shadow-red-500/25">
                         <svg class="w-7 h-7 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -382,11 +390,9 @@
 
     </div>
 
-    {{-- Auto-check payment status --}}
-    @if($sale->payment_method === 'qris' && $sale->paywuz_transaction_id && $sale->payment_status !== 'paid')
+    {{-- Auto-check payment status (always active) --}}
     <script>
-        // Auto-refresh payment status every 3 seconds
-        setInterval(function() {
+        function checkPaymentStatus() {
             fetch('{{ route('customer.order.payment.confirm', [$tenant->slug ?? $tenant->id, $table->id, $sale->id]) }}', {
                 method: 'POST',
                 headers: {
@@ -396,13 +402,22 @@
             })
             .then(response => response.json())
             .then(data => {
-                // If payment confirmed, reload page
                 if (data.success || data.redirect) {
-                    window.location.reload();
+                    if (data.redirect) {
+                        window.location.href = data.redirect;
+                    } else {
+                        window.location.reload();
+                    }
                 }
             })
-            .catch(error => console.log('Checking payment status...'));
-        }, 3000);
+            .catch(error => console.log('Checking...'));
+        }
+
+        // Check immediately on page load
+        checkPaymentStatus();
+
+        // Auto-refresh payment status every 3 seconds
+        setInterval(checkPaymentStatus, 3000);
 
         // Update status text
         let seconds = 0;
@@ -410,30 +425,16 @@
             seconds++;
             const statusText = document.getElementById('statusText');
             if (statusText) {
-                statusText.textContent = 'Menunggu pembayaran... (' + seconds + 's)';
+                statusText.textContent = 'Memeriksa status... (' + seconds + 's)';
             }
         }, 1000);
 
-        // Reload on visibility change (when customer comes back to tab)
+        // Also check when tab becomes visible
         document.addEventListener('visibilitychange', function() {
             if (document.visibilityState === 'visible') {
-                fetch('{{ route('customer.order.payment.confirm', [$tenant->slug ?? $tenant->id, $table->id, $sale->id]) }}', {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': '{{ csrf_token() }}',
-                        'Accept': 'application/json',
-                    },
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success || data.redirect) {
-                        window.location.reload();
-                    }
-                })
-                .catch(error => {});
+                checkPaymentStatus();
             }
         });
     </script>
-    @endif
 </body>
 </html>

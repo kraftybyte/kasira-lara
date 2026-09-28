@@ -50,13 +50,43 @@ class TablesOverview extends Page
     #[Computed]
     public function availableTables(): Collection
     {
-        return $this->tables->where('status', 'available');
+        // Tables are available only if they have NO orders
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return collect();
+        }
+
+        // Get table IDs that have orders (exclude NULL)
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
+            ->whereNotNull('table_id')
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
+        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+            return ! in_array($table->id, $tableIdsWithOrders);
+        });
     }
 
     #[Computed]
     public function activeTables(): Collection
     {
-        return $this->tables->where('status', 'active');
+        // Tables are active if they have ANY orders
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return collect();
+        }
+
+        // Get table IDs that have orders (exclude NULL)
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
+            ->whereNotNull('table_id')
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
+        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+            return in_array($table->id, $tableIdsWithOrders);
+        });
     }
 
     #[Computed]
@@ -112,17 +142,39 @@ class TablesOverview extends Page
             return collect();
         }
 
-        // Get all orders (open = active, pending = unpaid cash, completed = paid)
+        // Get ALL orders for this tenant with valid table_id
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->whereIn('status', ['open', 'pending', 'completed'])
-            ->whereHas('table', function ($query) {
-                $query->where('status', '!=', 'available');
-            })
+            ->whereNotNull('table_id')
             ->with(['table', 'items'])
             ->orderByDesc('created_at')
             ->get()
             ->groupBy('table_id');
+    }
+
+    #[Computed]
+    public function ordersWithoutTable(): Collection
+    {
+        // Get orders without table_id (QR Meja customer orders)
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return collect();
+        }
+
+        return Sale::query()
+            ->where('tenant_id', $tenant->id)
+            ->whereNull('table_id')
+            ->whereIn('status', ['open', 'pending', 'completed'])
+            ->with(['items'])
+            ->orderByDesc('created_at')
+            ->get();
+    }
+
+    #[Computed]
+    public function completedTableOrders(): Collection
+    {
+        // Empty - we now include all orders in tableOrders
+        return collect();
     }
 
     public function getTableOrders(int $tableId): Collection

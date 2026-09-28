@@ -193,7 +193,7 @@
         </div>
 
         {{-- Cart Page --}}
-        <div id="cart-page" class="hidden flex-1 overflow-y-auto pb-32">
+        <div id="cart-page" class="hidden flex-1 overflow-y-auto pb-36">
             <div class="p-4">
                 <h2 class="text-lg font-bold text-gray-900 mb-4">Keranjang Belanja</h2>
 
@@ -211,62 +211,63 @@
                     </div>
                     <p class="text-gray-500">Keranjang masih kosong</p>
                 </div>
-            </div>
 
-            {{-- Payment Methods --}}
-            <div id="payment-section" class="hidden px-4 pb-4">
-                <h3 class="text-sm font-semibold text-gray-700 mb-3">Pilih Metode Pembayaran</h3>
-                <div class="space-y-3">
-                    {{-- QRIS - hanya tampil jika aktif --}}
-                    @if($isQrisActive)
-                    <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-primary transition-colors">
-                        <input type="radio" name="payment_method" value="qris" class="hidden peer">
-                        <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center">
-                            <x-heroicon-m-qr-code class="w-6 h-6 text-white"/>
-                        </div>
-                        <div class="flex-1">
-                            <p class="font-semibold text-gray-900">QRIS</p>
-                            <p class="text-xs text-gray-500">Scan QR code untuk bayar</p>
-                        </div>
-                        <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-primary peer-checked:border-primary flex items-center justify-center">
-                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
-                        </div>
-                    </label>
-                    @endif
-
-                    {{-- Virtual Account - tampil jika VA aktif --}}
-                    @if($isVaActive)
-                    <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-primary transition-colors">
-                        <input type="radio" name="payment_method" value="transfer" class="hidden peer">
-                        <div class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
-                            <x-heroicon-s-building-office class="w-6 h-6 text-white"/>
-                        </div>
-                        <div class="flex-1">
-                            <p class="font-semibold text-gray-900">Virtual Account</p>
-                            <p class="text-xs text-gray-500">Transfer ke rekening bank</p>
-                        </div>
-                        <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-primary peer-checked:border-primary flex items-center justify-center">
-                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
-                        </div>
-                    </label>
-                    @endif
-
-                    {{-- Bayar di Kasir (Counter) - tampil jika aktif di setting QR Meja --}}
-                    @if($isCounterActive)
-                    <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-amber-200 rounded-2xl cursor-pointer hover:border-amber-500 transition-colors">
-                        <input type="radio" name="payment_method" value="counter" class="hidden peer">
-                        <div class="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center shrink-0">
-                            <x-heroicon-s-credit-card class="w-6 h-6 text-white"/>
-                        </div>
-                        <div class="flex-1">
-                            <p class="font-semibold text-gray-900">Bayar di Kasir</p>
-                            <p class="text-xs text-gray-500">Cash / QR ke kasir</p>
-                        </div>
-                        <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-amber-500 peer-checked:border-amber-500 shrink-0 flex items-center justify-center">
-                            <x-heroicon-s-check class="w-3 h-3 text-white hidden peer-checked:block"/>
-                        </div>
-                    </label>
-                    @endif
+                {{-- Payment Methods (inside cart container) --}}
+                <div id="payment-section" class="hidden mt-6">
+                    <h3 class="text-sm font-semibold text-gray-700 mb-3">Pilih Metode Pembayaran</h3>
+                    <div class="space-y-3">
+                        @if($isQrisActive)
+                        <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-blue-400 transition-all peer-checked:border-blue-500">
+                            <input type="radio" name="payment_method" value="qris" class="sr-only peer">
+                            <div class="w-12 h-12 rounded-xl bg-blue-500 flex items-center justify-center">
+                                <x-heroicon-m-qr-code class="w-6 h-6 text-white"/>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">QRIS</p>
+                                <p class="text-xs text-gray-500">Scan QR code untuk bayar</p>
+                            </div>
+                            <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-blue-500 peer-checked:border-blue-500 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                        </label>
+                        @endif
+                        @if($isVaActive)
+                        <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-gray-100 rounded-2xl cursor-pointer hover:border-purple-400 transition-all peer-checked:border-purple-500">
+                            <input type="radio" name="payment_method" value="transfer" class="sr-only peer">
+                            <div class="w-12 h-12 rounded-xl bg-purple-500 flex items-center justify-center">
+                                <x-heroicon-s-building-office class="w-6 h-6 text-white"/>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Transfer</p>
+                                <p class="text-xs text-gray-500">Virtual Account bank</p>
+                            </div>
+                            <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-purple-500 peer-checked:border-purple-500 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                        </label>
+                        @endif
+                        @if($isCounterActive)
+                        <label class="payment-option flex items-center gap-4 p-4 bg-white border-2 border-amber-200 rounded-2xl cursor-pointer hover:border-amber-400 transition-all peer-checked:border-amber-500">
+                            <input type="radio" name="payment_method" value="counter" class="sr-only peer">
+                            <div class="w-12 h-12 rounded-xl bg-amber-500 flex items-center justify-center">
+                                <x-heroicon-s-credit-card class="w-6 h-6 text-white"/>
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-semibold text-gray-900">Bayar di Kasir</p>
+                                <p class="text-xs text-gray-500">Cash / QR ke kasir</p>
+                            </div>
+                            <div class="w-6 h-6 rounded-full border-2 border-gray-300 peer-checked:bg-amber-500 peer-checked:border-amber-500 flex items-center justify-center">
+                                <svg class="w-3 h-3 text-white hidden peer-checked:block" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"/>
+                                </svg>
+                            </div>
+                        </label>
+                        @endif
+                    </div>
                 </div>
             </div>
         </div>
@@ -277,26 +278,26 @@
                 @csrf
                 <input type="hidden" name="items" id="cart-items">
                 <input type="hidden" name="payment_method" id="payment-method">
-                <div class="max-w-md mx-auto p-4">
-                    <div class="flex items-center justify-between mb-3">
-                        <div class="flex items-center gap-3">
-                            <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-red-500/10 to-orange-500/10 flex items-center justify-center">
-                                <svg class="w-5 h-5 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <p class="font-semibold text-gray-900"><span id="cart-count">0</span> item</p>
-                                <p class="text-xs text-gray-500">Meja {{ $table->name }}</p>
-                            </div>
-                        </div>
-                        <div class="text-right">
-                            <p class="text-lg font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">Rp <span id="cart-total">0</span></p>
-                        </div>
+                <div class="max-w-md mx-auto p-4 space-y-3">
+                    {{-- Customer Info --}}
+                    <div class="flex gap-2">
+                        <input type="text" name="customer_name" id="customer-name" placeholder="Nama pemesan" required class="flex-1 px-4 py-3 border-2 border-gray-100 rounded-xl text-sm focus:border-red-400 focus:ring-0 transition-colors">
+                        <input type="tel" name="customer_phone" placeholder="No. HP" class="w-28 px-4 py-3 border-2 border-gray-100 rounded-xl text-sm focus:border-red-400 focus:ring-0 transition-colors">
                     </div>
-                    <button type="submit" id="checkout-btn" class="w-full py-3.5 bg-gradient-to-r from-red-500 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-red-500/30 transition-all active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed">
-                        Checkout Sekarang
-                    </button>
+
+                    {{-- Total & Button --}}
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <p class="text-sm text-gray-500"><span id="cart-count">0</span> item</p>
+                            <p class="text-2xl font-bold bg-gradient-to-r from-red-500 to-orange-500 bg-clip-text text-transparent">Rp <span id="cart-total">0</span></p>
+                        </div>
+                        <button type="submit" id="checkout-btn" class="px-8 py-4 bg-gradient-to-r from-red-500 to-orange-500 text-white font-bold rounded-xl hover:shadow-lg hover:shadow-red-500/30 hover:from-red-600 hover:to-orange-600 transition-all active:scale-[0.98] flex items-center gap-2">
+                            <span>Checkout</span>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 8l4 4m0 0l-4 4m4-4H3"/>
+                            </svg>
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
@@ -557,6 +558,7 @@
 
             summary.classList.remove('hidden');
             badge.classList.remove('hidden');
+            if (paymentSection) paymentSection.classList.remove('hidden');
 
             const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -569,8 +571,6 @@
                 quantity: item.quantity,
                 modifiers: item.modifiers || []
             })));
-
-            if (paymentSection) paymentSection.classList.remove('hidden');
         }
 
         function toggleCart() {
@@ -646,7 +646,7 @@
 
         function submitOrder() {
             if (cart.length === 0) {
-                alert('Pilih至少 satu produk untuk dipesan.');
+                alert('Pilih setidaknya satu produk untuk dipesan.');
                 return false;
             }
 
@@ -726,36 +726,17 @@
                 scrollContainer.style.cursor = 'grab';
             }
 
-            // Style payment options
-            document.querySelectorAll('.payment-option input').forEach(input => {
-                input.addEventListener('change', () => {
-                    document.querySelectorAll('.payment-option').forEach(opt => {
-                        opt.classList.remove('border-primary');
-                    });
-                    input.closest('.payment-option').classList.add('border-primary');
-                });
-            });
-
             // Set default payment based on availability
             // Priority: QRIS > VA > Counter
             @if($isQrisActive)
                 const qrisOption = document.querySelector('input[name="payment_method"][value="qris"]');
-                if (qrisOption) {
-                    qrisOption.checked = true;
-                    qrisOption.closest('.payment-option').classList.add('border-primary');
-                }
+                if (qrisOption) qrisOption.checked = true;
             @elseif($isVaActive)
                 const vaOption = document.querySelector('input[name="payment_method"][value="transfer"]');
-                if (vaOption) {
-                    vaOption.checked = true;
-                    vaOption.closest('.payment-option').classList.add('border-primary');
-                }
+                if (vaOption) vaOption.checked = true;
             @elseif($isCounterActive)
                 const counterOption = document.querySelector('input[name="payment_method"][value="counter"]');
-                if (counterOption) {
-                    counterOption.checked = true;
-                    counterOption.closest('.payment-option').classList.add('border-primary');
-                }
+                if (counterOption) counterOption.checked = true;
             @endif
         });
     </script>

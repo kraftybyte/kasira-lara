@@ -11,6 +11,7 @@ use App\Models\Table;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Services\PaywuzService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
@@ -32,26 +33,29 @@ class CustomerOrderController extends Controller
             ->get()
             ->groupBy('category_id');
 
+        // Check for pending/unpaid counter order for this table
+        $pendingSale = Sale::where('table_id', $table->id)
+            ->where('source', 'customer')
+            ->where('status', 'pending')
+            ->where('payment_method', 'counter')
+            ->orderByDesc('created_at')
+            ->first();
+
         // Check individual payment method settings from TenantSetting
         $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
 
         // QR Meja settings (for customer scan)
-        // QRIS active if Paywuz is configured AND QRIS auto is enabled for table QR
         $paywuzService = new PaywuzService($tenant->id);
         $isQrisActive = $paywuzService->isConfigured() && $paywuzService->isEnabled() && ($tenantSetting?->table_qr_qris_auto ?? false);
-
-        // VA active if Paywuz is configured AND VA is enabled for table QR
         $isVaActive = $paywuzService->isConfigured() && ($tenantSetting?->table_qr_va ?? false);
-
-        // Counter payment available if enabled in table QR settings
         $isCounterActive = $tenantSetting?->table_qr_pay_at_counter ?? false;
 
         return view('customer.order', [
             'tenant' => $tenant,
             'table' => $table,
             'products' => $products,
-            'completedSale' => null,
-            'pendingSale' => null,
+            'completedSale' => null, // Don't show completed sale banner on order page
+            'pendingSale' => $pendingSale,
             'isQrisActive' => $isQrisActive,
             'isVaActive' => $isVaActive,
             'isCounterActive' => $isCounterActive,
@@ -80,6 +84,17 @@ class CustomerOrderController extends Controller
         $validatedPayment = $request->validate([
             'payment_method' => 'required|in:qris,transfer,counter',
         ]);
+
+        // Validate customer name is required
+        $validatedCustomer = $request->validate([
+            'customer_name' => 'required|string|max:255',
+            'customer_phone' => 'nullable|string|max:20',
+            'customer_email' => 'nullable|email|max:255',
+        ]);
+
+        $customerName = $validatedCustomer['customer_name'] ?? 'Customer';
+        $customerPhone = $validatedCustomer['customer_phone'] ?? null;
+        $customerEmail = $validatedCustomer['customer_email'] ?? null;
 
         // Get tenant settings for tax and Paywuz fee calculation
         $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
@@ -172,17 +187,32 @@ class CustomerOrderController extends Controller
         $grandTotal = $beforeTax + $taxAmount;
         $customerPays = $paywuzFeeByMerchant ? $grandTotal : $grandTotal + $paywuzFeeAmount;
 
+        // For counter payment, check if there's an existing pending counter order
+        if ($validatedPayment['payment_method'] === 'counter') {
+            $existingCounterOrder = Sale::where('table_id', $table->id)
+                ->where('source', 'customer')
+                ->where('payment_method', 'counter')
+                ->where('status', 'pending')
+                ->orderByDesc('created_at')
+                ->first();
+
+            if ($existingCounterOrder) {
+                // Add items to existing counter order
+                return $this->addToExistingCounterOrder($existingCounterOrder, $tenant, $saleItems);
+            }
+        }
+
         // Generate unique invoice number
         $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(md5(uniqid()), 0, 6));
 
         // For QRIS payment, create Paywuz transaction first
         if ($validatedPayment['payment_method'] === 'qris') {
-            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $customerPays, $subtotal, $taxAmount, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems);
+            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $customerPays, $subtotal, $taxAmount, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems, $customerName);
         }
 
         // For counter payment (bayar di kasir) - create order with pending payment
         if ($validatedPayment['payment_method'] === 'counter') {
-            return $this->processCounterPayment($request, $tenant, $table, $invoiceNumber, $subtotal, $taxAmount, $saleItems);
+            return $this->processCounterPayment($request, $tenant, $table, $invoiceNumber, $subtotal, $taxAmount, $saleItems, $customerName);
         }
 
         // For other payment methods (transfer), customer bears the fee
@@ -191,7 +221,7 @@ class CustomerOrderController extends Controller
             'table_id' => $table->id,
             'user_id' => Auth::id(),
             'invoice_number' => $invoiceNumber,
-            'customer_name' => $request->input('customer_name', 'Customer'),
+            'customer_name' => $customerName,
             'status' => 'pending',
             'source' => 'customer',
             'payment_method' => $validatedPayment['payment_method'],
@@ -240,7 +270,7 @@ class CustomerOrderController extends Controller
     /**
      * Process QRIS payment via Paywuz
      */
-    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $customerPays, float $subtotal, float $taxAmount, float $paywuzFee, bool $feeByMerchant, array $saleItems)
+    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $customerPays, float $subtotal, float $taxAmount, float $paywuzFee, bool $feeByMerchant, array $saleItems, string $customerName)
     {
         // Pass tenant ID to PaywuzService so it can load tenant-specific API key
         $paywuz = new PaywuzService($tenant->id);
@@ -270,7 +300,7 @@ class CustomerOrderController extends Controller
                 'table_id' => $table->id,
                 'user_id' => Auth::id(),
                 'invoice_number' => $invoiceNumber,
-                'customer_name' => $request->input('customer_name', 'Customer'),
+                'customer_name' => $customerName,
                 'status' => 'pending',
                 'source' => 'customer',
                 'payment_method' => 'qris',
@@ -322,7 +352,7 @@ class CustomerOrderController extends Controller
                 'table_id' => $table->id,
                 'user_id' => Auth::id(),
                 'invoice_number' => $invoiceNumber,
-                'customer_name' => $request->input('customer_name', 'Customer'),
+                'customer_name' => $customerName,
                 'status' => 'pending',
                 'source' => 'customer',
                 'payment_method' => 'qris',
@@ -382,7 +412,7 @@ class CustomerOrderController extends Controller
     /**
      * Process Counter payment (Bayar di Kasir)
      */
-    protected function processCounterPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $subtotal, float $taxAmount, array $saleItems)
+    protected function processCounterPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $subtotal, float $taxAmount, array $saleItems, string $customerName)
     {
         // For counter payment, no Paywuz fee - customer pays at cashier
         $grandTotal = $subtotal + $taxAmount;
@@ -392,7 +422,7 @@ class CustomerOrderController extends Controller
             'table_id' => $table->id,
             'user_id' => Auth::id(),
             'invoice_number' => $invoiceNumber,
-            'customer_name' => $request->input('customer_name', 'Customer'),
+            'customer_name' => $customerName,
             'status' => 'pending',
             'source' => 'customer',
             'payment_method' => 'counter',
@@ -433,6 +463,50 @@ class CustomerOrderController extends Controller
             'table' => $table->id,
             'sale' => $sale->id,
         ])->with('info', 'Pesanan berhasil! Silakan bayar di kasir.');
+    }
+
+    /**
+     * Add items to existing counter order
+     */
+    protected function addToExistingCounterOrder(Sale $existingOrder, Tenant $tenant, array $saleItems): RedirectResponse
+    {
+        $additionalSubtotal = 0;
+
+        foreach ($saleItems as $item) {
+            $modifiers = $item['modifiers'] ?? [];
+            unset($item['modifiers']);
+
+            $saleItem = SaleItem::create(array_merge(['sale_id' => $existingOrder->id], $item));
+            $additionalSubtotal += $item['subtotal'];
+
+            foreach ($modifiers as $modifier) {
+                SaleItemModifier::create([
+                    'sale_item_id' => $saleItem->id,
+                    'product_modifier_id' => $modifier->id,
+                    'modifier_name' => $modifier->name,
+                    'price' => $modifier->price_adjustment,
+                ]);
+            }
+        }
+
+        // Update existing order totals
+        $newSubtotal = $existingOrder->subtotal + $additionalSubtotal;
+        $existingOrder->update([
+            'subtotal' => $newSubtotal,
+            'grand_total' => $newSubtotal,
+        ]);
+
+        // Update table status if needed
+        $existingTable = $existingOrder->table;
+        if ($existingTable && is_object($existingTable) && $existingTable->status === 'available') {
+            $existingTable->update(['status' => 'active']);
+        }
+
+        return redirect()->route('customer.order.payment', [
+            'tenant' => $tenant->getRouteKey(),
+            'table' => $existingOrder->table_id,
+            'sale' => $existingOrder->id,
+        ])->with('success', 'Item ditambahkan ke pesanan yang sudah ada!');
     }
 
     public function payment(string $tenantSlug, Table $table, Sale $sale)
@@ -484,7 +558,7 @@ class CustomerOrderController extends Controller
             abort(404);
         }
 
-        // Check if already paid
+        // Check if already paid or completed (staff marked it as completed)
         if ($sale->payment_status === 'paid' || $sale->status === 'completed') {
             if ($request->expectsJson()) {
                 return response()->json([

@@ -48,7 +48,9 @@ class Kitchen extends Page
 
         // Orders that are not yet served
         // POS orders: show all (already paid when created)
-        // QR scan orders: only show if payment is confirmed (paid or completed)
+        // Customer orders:
+        // - Paid/completed orders appear immediately
+        // - Counter orders appear immediately (will be paid via POS)
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->whereNull('served_at')
@@ -57,8 +59,14 @@ class Kitchen extends Page
                     ->orWhere(function ($q) {
                         $q->where('source', 'customer')
                             ->where(function ($inner) {
+                                // Show paid/completed orders
                                 $inner->where('payment_status', 'paid')
-                                    ->orWhere('status', 'completed');
+                                    ->orWhere('status', 'completed')
+                                    // OR show counter orders that need to be paid via POS
+                                    ->orWhere(function ($counterQuery) {
+                                        $counterQuery->where('payment_method', 'counter')
+                                            ->where('status', 'pending');
+                                    });
                             });
                     });
             })

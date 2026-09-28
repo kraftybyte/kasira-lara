@@ -13,7 +13,9 @@
       "mcp__laravel-boost__database-query",
       "Bash(vendor/bin/pint --dirty --format agent app/Filament/Pages/Settings/TenantSettings.php)",
       "mcp__laravel-boost__last-error",
-      "mcp__laravel-boost__read-log-entries"
+      "mcp__laravel-boost__read-log-entries",
+      "Read(//app/Models/**)",
+      "WebFetch(domain:127.0.0.1)"
     ],
     "additionalDirectories": [
       "/Users/macbook/Kasira-Laravel",
