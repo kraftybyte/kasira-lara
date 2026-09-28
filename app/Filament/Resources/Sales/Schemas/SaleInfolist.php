@@ -114,25 +114,25 @@ class SaleInfolist
 
                                     $rows .= "
                                         <tr class=\"border-b border-gray-100 dark:border-gray-800\">
-                                            <td class=\"px-4 py-3\">
-                                                <div class=\"font-medium text-gray-950 dark:text-white\">
+                                            <td class=\"px-3 py-2\">
+                                                <div class=\"font-medium text-gray-950 dark:text-white text-sm\">
                                                     {$item->product_name}
                                                 </div>
 
-                                                <div class=\"mt-0.5 text-xs text-gray-500\">
+                                                <div class=\"text-xs text-gray-500\">
                                                     ".e($item->sku ?? '-')."
                                                 </div>
                                             </td>
 
-                                            <td class=\"px-4 py-3 text-center\">
+                                            <td class=\"px-3 py-2 text-center text-sm\">
                                                 {$quantity}
                                             </td>
 
-                                            <td class=\"px-4 py-3 text-right\">
+                                            <td class=\"px-3 py-2 text-right text-sm\">
                                                 Rp {$unitPrice}
                                             </td>
 
-                                            <td class=\"px-4 py-3 text-right font-semibold\">
+                                            <td class=\"px-3 py-2 text-right text-sm font-semibold\">
                                                 Rp {$total}
                                             </td>
                                         </tr>
@@ -141,34 +141,32 @@ class SaleInfolist
 
                                 return "
                                     <div class=\"rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden\">
-                                        <div class=\"overflow-hidden rounded-xl\" style=\"max-height: 320px;\">
-                                            <div class=\"overflow-y-auto\" style=\"max-height: 280px;\">
-                                                <table class=\"w-full text-sm\">
-                                                    <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0 shadow-sm z-10\">
-                                                        <tr>
-                                                            <th class=\"px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-400\">
-                                                                Produk
-                                                            </th>
+                                        <div class=\"overflow-y-auto\" style=\"max-height: 200px;\">
+                                            <table class=\"w-full text-sm\">
+                                                <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0 shadow-sm\">
+                                                    <tr>
+                                                        <th class=\"px-3 py-2 text-left font-semibold text-gray-600 dark:text-gray-400\">
+                                                            Produk
+                                                        </th>
 
-                                                            <th class=\"px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 w-20\">
-                                                                Qty
-                                                            </th>
+                                                        <th class=\"px-3 py-2 text-center font-semibold text-gray-600 dark:text-gray-400 w-16\">
+                                                            Qty
+                                                        </th>
 
-                                                            <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 w-28\">
-                                                                Harga
-                                                            </th>
+                                                        <th class=\"px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 w-24\">
+                                                            Harga
+                                                        </th>
 
-                                                            <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 w-32\">
-                                                                Total
-                                                            </th>
-                                                        </tr>
-                                                    </thead>
+                                                        <th class=\"px-3 py-2 text-right font-semibold text-gray-600 dark:text-gray-400 w-28\">
+                                                            Total
+                                                        </th>
+                                                    </tr>
+                                                </thead>
 
-                                                    <tbody>
-                                                        {$rows}
-                                                    </tbody>
-                                                </table>
-                                            </div>
+                                                <tbody>
+                                                    {$rows}
+                                                </tbody>
+                                            </table>
                                         </div>
                                     </div>
                                 ";
@@ -178,57 +176,51 @@ class SaleInfolist
 
                 /*
                 |--------------------------------------------------------------------------
-                | RINGKASAN PEMBAYARAN
+                | RINGKASAN & PEMBAYARAN (Combined)
                 |--------------------------------------------------------------------------
                 */
 
-                Section::make('Ringkasan Pembayaran')
+                Section::make('Pembayaran')
                     ->icon('heroicon-o-banknotes')
                     ->schema([
 
                         TextEntry::make('subtotal')
                             ->label('Subtotal')
-                            ->money('IDR'),
+                            ->money('IDR')
+                            ->columnSpan(1),
 
                         TextEntry::make('discount')
                             ->label('Diskon')
-                            ->money('IDR'),
+                            ->money('IDR')
+                            ->columnSpan(1),
 
                         TextEntry::make('tax')
                             ->label('PPN')
-                            ->money('IDR'),
+                            ->money('IDR')
+                            ->columnSpan(1),
 
                         TextEntry::make('grand_total')
                             ->label('Total')
                             ->money('IDR')
                             ->weight('bold')
-                            ->size('lg'),
+                            ->columnSpan(1),
 
                         TextEntry::make('paid_amount')
                             ->label('Dibayar')
-                            ->money('IDR'),
+                            ->money('IDR')
+                            ->weight('bold')
+                            ->color('success')
+                            ->columnSpan(1),
 
                         TextEntry::make('change_amount')
                             ->label('Kembalian')
                             ->money('IDR')
                             ->weight('bold')
-                            ->color('success'),
-
-                    ])
-                    ->columns(2),
-
-                /*
-                |--------------------------------------------------------------------------
-                | METODE PEMBAYARAN
-                |--------------------------------------------------------------------------
-                */
-
-                Section::make('Pembayaran')
-                    ->icon('heroicon-o-credit-card')
-                    ->schema([
+                            ->color('warning')
+                            ->columnSpan(1),
 
                         TextEntry::make('payment_method_display')
-                            ->label('Metode')
+                            ->label('Metode Bayar')
                             ->html()
                             ->columnSpanFull()
                             ->formatStateUsing(function ($state, $record) {
@@ -264,59 +256,24 @@ class SaleInfolist
                                     };
 
                                     $rows .= "
-                                        <tr class=\"border-b border-gray-100 dark:border-gray-800\">
-                                            <td class=\"px-4 py-3\">
-                                                <span class=\"inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-semibold {$colorClass}\">
-                                                    <span class=\"text-lg\">{$methodLabel['icon']}</span>
-                                                    <span>{$methodLabel['label']}</span>
-                                                </span>
-                                            </td>
-                                            <td class=\"px-4 py-3 text-right font-bold text-gray-900 dark:text-white\">
-                                                Rp {$amount}
-                                            </td>
-                                            <td class=\"px-4 py-3 text-right text-gray-500\">
-                                                {$reference}
-                                            </td>
-                                            <td class=\"px-4 py-3 text-right text-gray-500\">
-                                                {$paidAt}
-                                            </td>
-                                        </tr>
+                                        <div class=\"flex items-center justify-between py-2 border-b border-gray-100 dark:border-gray-800 last:border-0\">
+                                            <span class=\"inline-flex items-center gap-2 rounded-full border px-3 py-1 text-sm font-semibold {$colorClass}\">
+                                                <span>{$methodLabel['icon']}</span>
+                                                <span>{$methodLabel['label']}</span>
+                                            </span>
+                                            <div class=\"text-right\">
+                                                <div class=\"font-bold text-gray-900 dark:text-white\">Rp {$amount}</div>
+                                                <div class=\"text-xs text-gray-500\">{$reference}</div>
+                                            </div>
+                                        </div>
                                     ";
                                 }
 
-                                return "
-                                    <div class=\"overflow-hidden rounded-xl border border-gray-200 dark:border-gray-700\">
-                                        <table class=\"w-full text-sm\">
-                                            <thead class=\"bg-gray-50 dark:bg-gray-800\">
-                                                <tr>
-                                                    <th class=\"px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-400\">Metode Pembayaran</th>
-                                                    <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400\">Jumlah</th>
-                                                    <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400\">Referensi</th>
-                                                    <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400\">Waktu</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody>
-                                                {$rows}
-                                            </tbody>
-                                        </table>
-                                    </div>
-                                ";
+                                return "<div class=\"space-y-0\">{$rows}</div>";
                             }),
 
-                        TextEntry::make('paid_amount')
-                            ->label('Total Dibayar')
-                            ->money('IDR')
-                            ->weight('bold')
-                            ->color('success'),
-
-                        TextEntry::make('change_amount')
-                            ->label('Kembalian')
-                            ->money('IDR')
-                            ->weight('bold')
-                            ->color('warning'),
-
                     ])
-                    ->columns(2),
+                    ->columns(3),
 
                 /*
                 |--------------------------------------------------------------------------
