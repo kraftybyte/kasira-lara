@@ -516,8 +516,9 @@
                                 $hasModifiers = !empty($modifiers);
                                 $hasNotes = !empty($item['notes']);
                                 $isVariant = $item['is_variant'] ?? false;
+                                $isCompleted = $item['is_completed'] ?? false;
                             @endphp
-                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }}">
+                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }} {{ $isCompleted ? 'border-emerald-200 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-500/10' : '' }}">
                                 <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg {{ $isDuration ? 'bg-amber-100 dark:bg-amber-500/20' : 'bg-gray-200 dark:bg-gray-700' }}">
                                     @if($cartProduct?->image)
                                         <img src="{{ Storage::disk('public')->url($cartProduct->image) }}" alt="{{ $item['product_name'] }}" class="h-full w-full object-cover">
@@ -528,12 +529,17 @@
                                 <div class="min-w-0 flex-1">
                                     <div class="flex items-start justify-between gap-2">
                                         <div class="flex-1 min-w-0">
-                                            <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
-                                                {{ $item['product_name'] }}
+                                            <div class="flex items-center gap-1">
+                                                <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+                                                    {{ $item['product_name'] }}
+                                                </p>
                                                 @if($isVariant)
-                                                    <span class="ml-1 text-[10px] text-blue-500">(custom)</span>
+                                                    <span class="text-[10px] text-blue-500">(custom)</span>
                                                 @endif
-                                            </p>
+                                                @if($isCompleted)
+                                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-400">LUNAS</span>
+                                                @endif
+                                            </div>
                                             <p class="text-[11px] text-gray-500">
                                                 @if($isDuration)
                                                     <span class="text-amber-600 dark:text-amber-400">⏱ {{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
@@ -557,11 +563,14 @@
                                                 </div>
                                             @endif
                                         </div>
-                                        <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
-                                            <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
-                                        </button>
+                                        @if(!$isCompleted)
+                                            <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                                                <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
+                                            </button>
+                                        @endif
                                     </div>
                                 </div>
+                                @if(!$isCompleted)
                                 <div class="flex items-center gap-1">
                                     <button type="button" wire:click="decrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
                                         <x-heroicon-o-minus class="h-3 w-3" />
@@ -571,6 +580,7 @@
                                         <x-heroicon-o-plus class="h-3 w-3" />
                                     </button>
                                 </div>
+                                @endif
                             </div>
                         @empty
                             <div class="py-8 text-center">

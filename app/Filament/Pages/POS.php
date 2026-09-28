@@ -21,9 +21,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Request;
 use Throwable;
 
 class POS extends Page
@@ -160,43 +158,70 @@ class POS extends Page
 
     public function mount(): void
     {
+        // Debug: log all query parameters
+        \Log::info('POS mount', [
+            'bulk' => request()->query('bulk'),
+            'table' => request()->query('table'),
+            'sale_ids' => request()->query('sale_ids'),
+            'all' => request()->query(),
+        ]);
+
+        // Check for bulk counter payment FIRST (before selectTable)
+        $bulk = request()->query('bulk');
+        if ($bulk === 'counter') {
+            $this->loadBulkCounterOrdersFromUrl();
+
+            // If bulk load succeeded, skip selectTable
+            if ($this->isBulkCounterMode) {
+                return;
+            }
+        }
+
         // Handle table parameter from URL
-        $tableId = Request::query('table');
+        $tableId = request()->query('table');
 
         if ($tableId) {
             $this->selectTable((int) $tableId);
-        }
-
-        // Check for bulk counter payment
-        $bulk = Request::query('bulk');
-        if ($bulk === 'counter') {
-            $this->loadBulkCounterOrders();
         }
     }
 
     /*
     |--------------------------------------------------------------------------
-    | LOAD BULK COUNTER ORDERS
+    | LOAD BULK COUNTER ORDERS FROM URL
     |--------------------------------------------------------------------------
     */
 
-    public function loadBulkCounterOrders(): void
+    public function loadBulkCounterOrdersFromUrl(): void
     {
-        $saleIds = session()->get('bulk_counter_sales', []);
-        $tableId = session()->get('bulk_counter_table_id');
+        $saleIdsString = request()->query('sale_ids');
+        $tableId = request()->query('table');
 
-        if (empty($saleIds) || empty($tableId)) {
+        // Need sale_ids to load
+        if (empty($saleIdsString)) {
+            return;
+        }
+
+        // Parse sale IDs from comma-separated string
+        $saleIds = array_map('intval', explode(',', $saleIdsString));
+        $saleIds = array_filter($saleIds);
+
+        if (empty($saleIds)) {
             return;
         }
 
         $this->isBulkCounterMode = true;
         $this->bulkCounterSaleIds = $saleIds;
-        $this->tableId = (string) $tableId;
-        $this->activeTableId = (string) $tableId;
 
-        // Clear session
-        session()->forget('bulk_counter_sales');
-        session()->forget('bulk_counter_table_id');
+        // CRITICAL: Reset currentBillId to prevent stale bill reference
+        // from previous POS session (e.g., user previously selected a table)
+        // from causing wrong branch in processPayment()
+        $this->currentBillId = null;
+
+        // Set table ID if provided
+        if (! empty($tableId)) {
+            $this->tableId = (string) $tableId;
+            $this->activeTableId = (string) $tableId;
+        }
 
         // Load counter orders into cart
         $this->cart = [];
@@ -212,7 +237,6 @@ class POS extends Page
                 $isDuration = $item->product && $item->product->rate_type === 'duration';
 
                 if (isset($this->cart[$productId])) {
-                    // Add to existing quantity
                     $this->cart[$productId]['quantity'] += (float) $item->quantity;
                     $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
                     $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
@@ -1314,12 +1338,21 @@ class POS extends Page
 
                         $sale = $existingBill;
                     } else {
+                        $table_id = $this->tableId === 'takeaway' ? null : $this->tableId;
+
+                        // In bulk counter mode, always use activeTableId for table_id
+                        // This ensures orders paid at counter retain their table association
+                        // (e.g., QR meja orders should show as "Meja 1", not "Takeaway")
+                        if ($this->isBulkCounterMode && ! empty($this->activeTableId)) {
+                            $table_id = $this->activeTableId;
+                        }
+
                         $sale =
                             Sale::create([
 
                                 'tenant_id' => $tenantId,
 
-                                'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
+                                'table_id' => $table_id,
 
                                 'customer_id' => $this->customerId
                                         ?: null,
@@ -1724,63 +1757,31 @@ class POS extends Page
             now()->format('Ymd').
             '-';
 
-        // Use database lock to prevent race condition
-        $lock = Cache::lock("invoice:{$tenantId}", 10);
+        // Use SELECT FOR UPDATE to lock rows for invoice number generation
+        // MUST be called inside the same DB transaction as Sale::create()
+        $allInvoices = Sale::query()
+            ->where('tenant_id', $tenantId)
+            ->where('invoice_number', 'like', $prefix.'%')
+            ->lockForUpdate()
+            ->orderByDesc('id')
+            ->pluck('invoice_number');
 
-        try {
-            $lock->block(5);
+        $number = 0;
 
-            $lastInvoice =
-                Sale::query()
-                    ->where(
-                        'tenant_id',
-                        $tenantId
-                    )
-                    ->where(
-                        'invoice_number',
-                        'like',
-                        $prefix.'%'
-                    )
-                    ->orderByDesc('id')
-                    ->value(
-                        'invoice_number'
-                    );
+        foreach ($allInvoices as $invoiceNumber) {
+            // Extract suffix after the prefix (e.g., "0001" from "INV-20260927-0001")
+            // Handle both numeric (0001) and alphanumeric (E7D382) formats
+            $suffix = substr($invoiceNumber, strlen($prefix));
 
-            if (! $lastInvoice) {
-
-                $number = 1;
-
-            } else {
-
-                $lastNumber =
-                    (int)
-                    str_replace(
-                        $prefix,
-                        '',
-                        $lastInvoice
-                    );
-
-                $number =
-                    $lastNumber + 1;
+            if (is_numeric($suffix)) {
+                $num = (int) $suffix;
+                if ($num > $number) {
+                    $number = $num;
+                }
             }
-
-            $result = $prefix.
-                str_pad(
-                    (string) $number,
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                );
-
-            $lock->release();
-
-            return $result;
-        } catch (\Exception $e) {
-            $lock->release();
-
-            // Fallback: append random suffix to ensure uniqueness
-            return $prefix.now()->format('His').'-'.substr(md5(uniqid()), 0, 4);
         }
+
+        return $prefix.str_pad((string) ($number + 1), 4, '0', STR_PAD_LEFT);
     }
 
     /*
@@ -2360,10 +2361,18 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
+        // Tables are available only if they have NO orders
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+            ->whereNotNull('table_id')
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
             ->where('status', 'available')
+            ->whereNotIn('id', $tableIdsWithOrders)
             ->orderBy('name')
             ->get();
     }
@@ -2378,10 +2387,17 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
+        // Tables are active if they have ANY orders
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+            ->whereNotNull('table_id')
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->where('status', 'available')
+            ->whereIn('id', $tableIdsWithOrders)
             ->orderBy('name')
             ->get();
     }
@@ -2396,10 +2412,17 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
+        // Tables are active if they have ANY orders (matches Tables Overview logic)
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+            ->whereNotNull('table_id')
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->where('status', 'active')
+            ->whereIn('id', $tableIdsWithOrders)
             ->with(['sales' => function ($query) {
                 $query->where('status', '!=', 'completed')
                     ->orderByDesc('created_at');
@@ -2478,7 +2501,7 @@ class POS extends Page
 
         $this->reservationId = $reservation?->id;
 
-        // Always check for unpaid orders (any status except completed)
+        // Check for ALL non-completed orders (unpaid cash bills)
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
             ->where('status', '!=', 'completed')
@@ -2520,17 +2543,61 @@ class POS extends Page
                     }
                 }
             }
-        } elseif ($table->status === 'active') {
-            // Table has orders but no unpaid cash bill (all QRIS/Transfer paid)
-            // Can add new items - start fresh cart
-            $this->currentBillId = null;
-            $this->activeTableId = $tableId;
-            $this->cart = [];
-        } elseif ($pendingOrders->count() === 0) {
-            // No pending orders at all - start fresh cart
-            $this->currentBillId = null;
-            $this->activeTableId = null;
-            $this->cart = [];
+        } else {
+            // Check for completed orders (QR paid orders) - show in cart but disabled
+            $completedOrders = Sale::query()
+                ->where('table_id', $tableId)
+                ->where('status', 'completed')
+                ->with(['items.product'])
+                ->get();
+
+            if ($completedOrders->count() > 0) {
+                // Table has paid orders - show them in cart (read-only display)
+                $this->activeTableId = $tableId;
+                $this->currentBillId = null;
+                $this->cart = [];
+
+                foreach ($completedOrders as $order) {
+                    foreach ($order->items as $item) {
+                        $productId = (int) $item->product_id;
+                        $isDuration = $item->product && $item->product->rate_type === 'duration';
+
+                        if (isset($this->cart[$productId])) {
+                            $this->cart[$productId]['quantity'] += (float) $item->quantity;
+                            $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
+                            $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
+                        } else {
+                            $this->cart[$productId] = [
+                                'product_id' => $productId,
+                                'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
+                                'sku' => $item->sku,
+                                'unit_price' => (float) $item->unit_price,
+                                'quantity' => (float) $item->quantity,
+                                'subtotal' => (float) $item->subtotal,
+                                'total' => (float) $item->total,
+                                'sale_item_id' => $item->id,
+                                'sale_id' => $order->id,
+                                'is_duration' => $isDuration,
+                                'rate_type' => $item->product?->rate_type ?? 'fixed',
+                                'rate' => (float) ($item->product?->rate ?? 1),
+                                'is_completed' => true, // Mark as completed so UI can disable editing
+                            ];
+                        }
+                    }
+                }
+
+                // Show notification that orders are already paid
+                Notification::make()
+                    ->title('Pesanan sudah dibayar')
+                    ->body('Pesanan di meja ini sudah lunas.')
+                    ->info()
+                    ->send();
+            } else {
+                // No orders at all - start fresh cart
+                $this->currentBillId = null;
+                $this->activeTableId = null;
+                $this->cart = [];
+            }
         }
     }
 
@@ -2661,8 +2728,8 @@ class POS extends Page
                 $subtotal += (float) $item['subtotal'];
             }
 
-            // Generate invoice number
-            $invoiceNumber = 'INV-'.date('Ymd').'-'.str_pad(Sale::where('tenant_id', $tenantId)->count() + 1, 4, '0', STR_PAD_LEFT);
+            // Generate invoice number using locked method
+            $invoiceNumber = $this->generateInvoiceNumber($tenantId);
 
             // Create sale
             $sale = Sale::create([
@@ -2854,6 +2921,10 @@ class POS extends Page
         $this->paidAmount = 0;
         $this->paymentNotes = '';
         $this->showCheckout = false;
+
+        // Reset bulk counter mode state
+        $this->isBulkCounterMode = false;
+        $this->bulkCounterSaleIds = [];
 
         // Reset QRIS state
         $this->resetQrisState();
@@ -3145,17 +3216,9 @@ class POS extends Page
                 'notes' => $this->paymentNotes ?: null,
             ]);
 
-            // Update table status - only if no more pending orders exist
-            if ($sale->table_id) {
-                $hasPendingOrders = Sale::where('table_id', $sale->table_id)
-                    ->where('id', '!=', $sale->id)
-                    ->where('status', '!=', 'completed')
-                    ->exists();
-
-                if (! $hasPendingOrders) {
-                    Table::where('id', $sale->table_id)->update(['status' => 'available']);
-                }
-            }
+            // DO NOT auto-set table to available after payment
+            // Table stays occupied until explicitly closed via Tables Overview
+            // This allows new customer orders to be added to the same table
 
             // Reduce stock
             foreach ($sale->items as $item) {
@@ -3625,17 +3688,9 @@ class POS extends Page
                 'notes' => $this->paymentNotes ?: null,
             ]);
 
-            // Update table status - only if no more pending orders exist
-            if ($sale->table_id) {
-                $hasPendingOrders = Sale::where('table_id', $sale->table_id)
-                    ->where('id', '!=', $sale->id)
-                    ->where('status', '!=', 'completed')
-                    ->exists();
-
-                if (! $hasPendingOrders) {
-                    Table::where('id', $sale->table_id)->update(['status' => 'available']);
-                }
-            }
+            // DO NOT auto-set table to available after payment
+            // Table stays occupied until explicitly closed via Tables Overview
+            // This allows new customer orders to be added to the same table
 
             // Reduce stock
             foreach ($sale->items as $item) {
