@@ -186,20 +186,20 @@
                 <div class="p-4 space-y-3">
                     @if($allPaid)
                         {{-- ALL PAID: Clean layout --}}
-                        <div class="flex flex-wrap items-center gap-2">
+                        <div class="flex flex-wrap justify-center gap-2">
                             <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
                                 <x-heroicon-o-check-circle class="h-3.5 w-3.5" />
                                 Semua Lunas
                             </span>
                             @if($paidOrders->count() > 0)
-                                <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                <span class="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
                                     {{ $paidOrders->count() }} pesanan
                                 </span>
                             @endif
                         </div>
 
                         @if($servedOrders->count() > 0 || $unservedOrders->count() > 0)
-                            <div class="flex flex-wrap items-center gap-2">
+                            <div class="flex flex-wrap justify-center gap-2">
                                 @if($servedOrders->count() > 0)
                                     <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 dark:bg-green-500/20 dark:text-green-300">
                                         <x-heroicon-o-check class="h-3 w-3" />
