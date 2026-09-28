@@ -122,6 +122,19 @@
                                                     <span class="text-xs font-bold text-gray-900">Rp {{ number_format($order['grand_total'], 0, ',', '.') }}</span>
                                                 </div>
                                             </div>
+                                            {{-- Quick Items Summary --}}
+                                            <div class="px-3 pb-2">
+                                                @php
+                                                    $itemSummary = collect($order['items'])->take(3)->map(fn($i) => (int)$i['quantity'] . 'x ' . $i['product_name'])->implode(', ');
+                                                    $moreItems = count($order['items']) - 3;
+                                                @endphp
+                                                <p class="text-xs text-gray-600 truncate">
+                                                    {{ $itemSummary }}
+                                                    @if($moreItems > 0)
+                                                        <span class="text-gray-400">+{{ $moreItems }} item</span>
+                                                    @endif
+                                                </p>
+                                            </div>
                                         </div>
                                     @endforeach
                                 </div>
@@ -188,8 +201,20 @@
                                     </div>
                                 @endif
 
-                                {{-- Items --}}
+                                {{-- Items with full details --}}
                                 <div class="px-3 py-2.5 space-y-2">
+                                    @php
+                                        $itemSummary = collect($order['items'])->take(4)->map(fn($i) => (int)$i['quantity'] . 'x ' . $i['product_name'])->implode(', ');
+                                        $moreItems = count($order['items']) - 4;
+                                    @endphp
+                                    {{-- Quick Summary for Preview --}}
+                                    <div class="rounded-lg bg-gray-50 p-2 text-xs text-gray-600">
+                                        <span class="font-medium">{{ $itemSummary }}</span>
+                                        @if($moreItems > 0)
+                                            <span class="text-gray-400">+{{ $moreItems }} item</span>
+                                        @endif
+                                    </div>
+                                    {{-- Full Items List --}}
                                     @foreach($order['items'] as $item)
                                         <div>
                                             <div class="flex items-center justify-between text-xs">
