@@ -376,24 +376,12 @@ class TablesOverview extends Page
             return;
         }
 
-        // Get all sales for this table
-        $sales = Sale::where('table_id', $tableId)->get();
-
-        // Delete sale items and payments (cleanup temp data)
-        foreach ($sales as $sale) {
-            $sale->items()->delete();
-            $sale->payments()->delete();
-        }
-
-        // Keep sales records for reports (table_id stays, not takeaway)
-        // Sales will appear in reports with table name
-
         // Reset the table to available
         $table->update(['status' => 'available']);
 
         Notification::make()
             ->title('Bill ditutup')
-            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru. Penjualan tetap tercatat di laporan.")
+            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
             ->success()
             ->send();
     }
