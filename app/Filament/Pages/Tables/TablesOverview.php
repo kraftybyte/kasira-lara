@@ -23,6 +23,16 @@ class TablesOverview extends Page
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-table-cells';
 
+    public ?int $focusedTableId = null;
+
+    public function mount(): void
+    {
+        $tableId = request()->query('table');
+        if ($tableId) {
+            $this->focusedTableId = (int) $tableId;
+        }
+    }
+
     public static function canAccess(): bool
     {
         $user = auth()->user();
