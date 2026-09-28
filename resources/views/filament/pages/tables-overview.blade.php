@@ -141,8 +141,8 @@
         </div>
     </div>
 
-    {{-- Tables Grid - Larger Cards --}}
-    <div class="grid grid-cols-1 gap-5 lg:grid-cols-2">
+    {{-- Tables Grid --}}
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
 
         {{-- Active Tables (with orders) --}}
         @foreach($this->activeTables as $table)
@@ -155,17 +155,17 @@
                 $totalPaid = $paidOrders->sum('grand_total');
                 $allPaid = $paidOrders->count() > 0 && $unpaidOrders->count() === 0;
             @endphp
-            <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-md dark:bg-gray-800">
+            <div class="card-hover overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800">
                 {{-- Header --}}
-                <div class="bg-gradient-to-br {{ $allPaid ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' }} px-6 py-5 text-white">
+                <div class="bg-gradient-to-br {{ $allPaid ? 'from-emerald-500 to-emerald-600' : 'from-red-500 to-red-600' }} px-4 py-3 text-white">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-                                <x-heroicon-o-archive-box class="h-7 w-7" />
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                                <x-heroicon-o-archive-box class="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 class="text-xl font-bold">{{ $table->name }}</h3>
-                                <p class="text-sm {{ $allPaid ? 'text-emerald-100' : 'text-red-100' }}">
+                                <h3 class="text-base font-bold">{{ $table->name }}</h3>
+                                <p class="text-xs {{ $allPaid ? 'text-emerald-100' : 'text-red-100' }}">
                                     @if($allPaid)
                                         ✓ Semua lunas
                                     @else
@@ -174,12 +174,12 @@
                                 </p>
                             </div>
                         </div>
-                        <span class="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold flex items-center gap-2">
+                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
                             @if($allPaid)
-                                <x-heroicon-o-check-circle class="h-4 w-4" />
+                                <x-heroicon-o-check-circle class="h-3 w-3" />
                                 Menunggu Ditutup
                             @else
-                                <x-heroicon-o-clock class="h-4 w-4" />
+                                <x-heroicon-o-clock class="h-3 w-3" />
                                 Terpakai
                             @endif
                         </span>
@@ -187,95 +187,96 @@
                 </div>
 
                 {{-- Content --}}
-                <div class="p-6 space-y-4">
+                <div class="p-4 space-y-3">
                     @if($allPaid)
                         {{-- ALL PAID: Clean layout --}}
-                        <div class="flex flex-wrap items-center gap-3">
-                            <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                                <x-heroicon-o-check-circle class="h-5 w-5" />
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                                <x-heroicon-o-check-circle class="h-3.5 w-3.5" />
                                 Semua Lunas
                             </span>
-                            <span class="rounded-full bg-gray-100 px-3 py-2 text-sm font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
-                                {{ $paidOrders->count() }} pesanan
-                            </span>
+                            @if($paidOrders->count() > 0)
+                                <span class="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-medium text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                    {{ $paidOrders->count() }} pesanan
+                                </span>
+                            @endif
                         </div>
 
                         @if($servedOrders->count() > 0 || $unservedOrders->count() > 0)
-                            <div class="flex flex-wrap items-center gap-3">
+                            <div class="flex flex-wrap items-center gap-2">
                                 @if($servedOrders->count() > 0)
-                                    <span class="inline-flex items-center gap-2 rounded-full bg-green-100 px-4 py-2 text-sm font-semibold text-green-700 dark:bg-green-500/20 dark:text-green-300">
-                                        <x-heroicon-o-check class="h-4 w-4" />
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-700 dark:bg-green-500/20 dark:text-green-300">
+                                        <x-heroicon-o-check class="h-3 w-3" />
                                         {{ $servedOrders->count() }} Disajikan
                                     </span>
                                 @endif
                                 @if($unservedOrders->count() > 0)
-                                    <span class="inline-flex items-center gap-2 rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
-                                        <x-heroicon-o-bell class="h-4 w-4" />
+                                    <span class="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2.5 py-1 text-xs font-semibold text-blue-700 dark:bg-blue-500/20 dark:text-blue-300">
+                                        <x-heroicon-o-bell class="h-3 w-3" />
                                         {{ $unservedOrders->count() }} Siap
                                     </span>
                                 @endif
                             </div>
                         @endif
 
-                        <div class="rounded-2xl border-2 border-emerald-200 bg-emerald-50 p-6 dark:border-emerald-700 dark:bg-emerald-500/10">
+                        <div class="rounded-lg border border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-800 dark:bg-emerald-500/10">
                             <div class="flex items-center justify-between">
-                                <span class="text-lg font-bold text-emerald-700 dark:text-emerald-300">Total Bayar</span>
-                                <span class="text-3xl font-black text-emerald-600 dark:text-emerald-200">
+                                <span class="text-xs font-bold text-emerald-700 dark:text-emerald-300">Total Bayar</span>
+                                <span class="text-xl font-black text-emerald-600 dark:text-emerald-200">
                                     Rp {{ number_format($totalPaid, 0, ',', '.') }}
                                 </span>
                             </div>
                         </div>
                     @else
                         {{-- ACTIVE: Show pending --}}
-                        <div class="grid grid-cols-3 gap-3">
+                        <div class="grid grid-cols-3 gap-2">
                             @if($servedOrders->count() > 0)
-                                <div class="rounded-xl bg-green-50 p-4 text-center dark:bg-green-500/10">
-                                    <p class="text-2xl font-black text-green-600 dark:text-green-300">{{ $servedOrders->count() }}</p>
-                                    <p class="text-xs font-semibold text-green-600 dark:text-green-400">Disajikan</p>
+                                <div class="rounded-lg bg-green-50 p-2.5 text-center dark:bg-green-500/10">
+                                    <p class="text-lg font-bold text-green-600 dark:text-green-300">{{ $servedOrders->count() }}</p>
+                                    <p class="text-[10px] font-medium text-green-600 dark:text-green-400">Disajikan</p>
                                 </div>
                             @endif
                             @if($unservedOrders->count() > 0)
-                                <div class="rounded-xl bg-blue-50 p-4 text-center dark:bg-blue-500/10">
-                                    <p class="text-2xl font-black text-blue-600 dark:text-blue-300">{{ $unservedOrders->count() }}</p>
-                                    <p class="text-xs font-semibold text-blue-600 dark:text-blue-400">Siap</p>
+                                <div class="rounded-lg bg-blue-50 p-2.5 text-center dark:bg-blue-500/10">
+                                    <p class="text-lg font-bold text-blue-600 dark:text-blue-300">{{ $unservedOrders->count() }}</p>
+                                    <p class="text-[10px] font-medium text-blue-600 dark:text-blue-400">Siap</p>
                                 </div>
                             @endif
                             @if($unpaidOrders->count() > 0)
-                                <div class="rounded-xl bg-amber-50 p-4 text-center dark:bg-amber-500/10">
-                                    <p class="text-2xl font-black text-amber-600 dark:text-amber-300">{{ $unpaidOrders->count() }}</p>
-                                    <p class="text-xs font-semibold text-amber-600 dark:text-amber-400">Tunda</p>
+                                <div class="rounded-lg bg-amber-50 p-2.5 text-center dark:bg-amber-500/10">
+                                    <p class="text-lg font-bold text-amber-600 dark:text-amber-300">{{ $unpaidOrders->count() }}</p>
+                                    <p class="text-[10px] font-medium text-amber-600 dark:text-amber-400">Tunda</p>
                                 </div>
                             @endif
                         </div>
 
                         @if($totalPaid > 0)
-                            <div class="flex items-center justify-between rounded-xl bg-gray-100 p-4 dark:bg-gray-700">
-                                <span class="text-sm font-semibold text-gray-600 dark:text-gray-300">Lunas</span>
-                                <span class="text-xl font-bold text-green-600 dark:text-green-300">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
+                            <div class="flex items-center justify-between rounded-lg bg-gray-100 p-2 dark:bg-gray-700">
+                                <span class="text-xs font-medium text-gray-600 dark:text-gray-300">Lunas</span>
+                                <span class="text-base font-bold text-green-600 dark:text-green-300">Rp {{ number_format($totalPaid, 0, ',', '.') }}</span>
                             </div>
                         @endif
                     @endif
 
                     {{-- Actions --}}
-                    <div class="flex gap-2 pt-2">
+                    <div class="flex gap-2">
                         <button
                             wire:click="$dispatch('showOrderDetails', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                            class="btn btn-secondary btn-md flex-1">
+                            class="btn btn-secondary btn-sm flex-1">
                             <x-heroicon-o-eye class="h-4 w-4" />
-                            Lihat Pesanan
+                            <span class="hidden sm:inline">Lihat</span>
                         </button>
                         <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos?table=' . $table->id) }}"
-                            class="btn btn-primary btn-md">
+                            class="btn btn-primary btn-sm">
                             <x-heroicon-o-plus class="h-4 w-4" />
-                            Tambah
                         </a>
                         <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                            class="btn btn-secondary btn-md">
+                            class="btn btn-secondary btn-sm">
                             <x-heroicon-o-qr-code class="h-4 w-4" />
                         </button>
                         <button
                             wire:click="requestCloseTable({{ $table->id }}, '{{ $table->name }}')"
-                            class="btn btn-danger btn-md">
+                            class="btn btn-danger btn-sm">
                             <x-heroicon-o-x-circle class="h-4 w-4" />
                         </button>
                     </div>
@@ -285,42 +286,41 @@
 
         {{-- Available Tables --}}
         @foreach($this->availableTables as $table)
-            <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-md dark:bg-gray-800">
-                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 px-6 py-5 text-white">
+            <div class="card-hover overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800">
+                <div class="bg-gradient-to-br from-emerald-500 to-emerald-600 px-4 py-3 text-white">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-                                <x-heroicon-o-archive-box class="h-7 w-7" />
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                                <x-heroicon-o-archive-box class="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 class="text-xl font-bold">{{ $table->name }}</h3>
-                                <p class="text-sm text-emerald-100">Siap digunakan</p>
+                                <h3 class="text-base font-bold">{{ $table->name }}</h3>
+                                <p class="text-xs text-emerald-100">Siap digunakan</p>
                             </div>
                         </div>
-                        <span class="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold flex items-center gap-2">
-                            <x-heroicon-o-check-circle class="h-4 w-4" />
+                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
+                            <x-heroicon-o-check-circle class="h-3 w-3" />
                             Kosong
                         </span>
                     </div>
                 </div>
-                <div class="p-6 space-y-4">
-                    <div class="flex flex-wrap items-center gap-3">
-                        <span class="inline-flex items-center gap-2 rounded-full bg-emerald-100 px-4 py-2 text-sm font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
-                            <x-heroicon-o-check-circle class="h-5 w-5" />
+                <div class="p-4 space-y-3">
+                    <div class="flex flex-wrap items-center gap-2">
+                        <span class="inline-flex items-center gap-1.5 rounded-full bg-emerald-100 px-3 py-1 text-xs font-bold text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-300">
+                            <x-heroicon-o-check-circle class="h-3.5 w-3.5" />
                             Tersedia
                         </span>
                     </div>
 
                     <div class="flex gap-2">
                         <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos?table=' . $table->id) }}"
-                            class="btn btn-primary btn-md flex-1">
+                            class="btn btn-primary btn-sm flex-1">
                             <x-heroicon-o-plus class="h-4 w-4" />
-                            Mulai Pesanan
+                            <span class="hidden sm:inline">Mulai</span>
                         </a>
                         <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                            class="btn btn-secondary btn-md">
+                            class="btn btn-secondary btn-sm">
                             <x-heroicon-o-qr-code class="h-4 w-4" />
-                            QR
                         </button>
                     </div>
                 </div>
@@ -329,30 +329,30 @@
 
         {{-- Reserved Tables --}}
         @foreach($this->reservedTables as $table)
-            <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-md dark:bg-gray-800">
-                <div class="bg-gradient-to-br from-amber-500 to-amber-600 px-6 py-5 text-white">
+            <div class="card-hover overflow-hidden rounded-xl bg-white shadow-sm dark:bg-gray-800">
+                <div class="bg-gradient-to-br from-amber-500 to-amber-600 px-4 py-3 text-white">
                     <div class="flex items-center justify-between">
-                        <div class="flex items-center gap-4">
-                            <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
-                                <x-heroicon-o-calendar class="h-7 w-7" />
+                        <div class="flex items-center gap-3">
+                            <div class="flex h-10 w-10 items-center justify-center rounded-lg bg-white/20">
+                                <x-heroicon-o-calendar class="h-5 w-5" />
                             </div>
                             <div>
-                                <h3 class="text-xl font-bold">{{ $table->name }}</h3>
-                                <p class="text-sm text-amber-100">Dipesan</p>
+                                <h3 class="text-base font-bold">{{ $table->name }}</h3>
+                                <p class="text-xs text-amber-100">Dipesan</p>
                             </div>
                         </div>
-                        <span class="rounded-full bg-white/20 px-4 py-2 text-sm font-semibold flex items-center gap-2">
-                            <x-heroicon-o-calendar class="h-4 w-4" />
+                        <span class="rounded-full bg-white/20 px-2.5 py-1 text-xs font-semibold flex items-center gap-1">
+                            <x-heroicon-o-calendar class="h-3 w-3" />
                             Dipesan
                         </span>
                     </div>
                 </div>
-                <div class="p-6 space-y-4">
+                <div class="p-4 space-y-3">
                     @if($table->notes)
-                        <p class="text-sm text-gray-600 dark:text-gray-400">{{ $table->notes }}</p>
+                        <p class="text-xs text-gray-600 dark:text-gray-400">{{ $table->notes }}</p>
                     @endif
                     <button wire:click="$dispatch('showQrCode', { tableId: {{ $table->id }}, tableName: '{{ $table->name }}' })"
-                        class="btn btn-secondary btn-md w-full">
+                        class="btn btn-secondary btn-sm w-full">
                         <x-heroicon-o-qr-code class="h-4 w-4" />
                         Tampilkan QR Code
                     </button>
