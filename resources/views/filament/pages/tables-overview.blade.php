@@ -165,12 +165,8 @@
                             </div>
                             <div>
                                 <h3 class="text-base font-bold">{{ $table->name }}</h3>
-                                <p class="text-xs {{ $allPaid ? 'text-emerald-100' : 'text-red-100' }}">
-                                    @if($allPaid)
-                                        ✓ Semua lunas
-                                    @else
-                                        {{ $allOrders->count() }} pesanan aktif
-                                    @endif
+                                <p class="text-xs text-red-100">
+                                    {{ $allOrders->count() }} pesanan aktif
                                 </p>
                             </div>
                         </div>
