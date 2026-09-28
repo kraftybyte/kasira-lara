@@ -92,8 +92,8 @@ class SaleInfolist
                                 foreach ($record->items as $item) {
 
                                     $quantity = number_format(
-                                        (float) $item->quantity,
-                                        3,
+                                        (int) $item->quantity,
+                                        0,
                                         ',',
                                         '.'
                                     );
@@ -140,32 +140,34 @@ class SaleInfolist
                                 }
 
                                 return "
-                                    <div class=\"overflow-x-auto rounded-xl border border-gray-200 dark:border-gray-700\">
-                                        <table class=\"w-full text-sm\">
-                                            <thead class=\"bg-gray-50 dark:bg-gray-800\">
-                                                <tr>
-                                                    <th class=\"px-4 py-3 text-left font-semibold\">
-                                                        Produk
-                                                    </th>
+                                    <div class=\"rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden\">
+                                        <div class=\"overflow-y-auto\" style=\"max-height: 280px;\">
+                                            <table class=\"w-full text-sm\">
+                                                <thead class=\"bg-gray-50 dark:bg-gray-800 sticky top-0 shadow-sm\">
+                                                    <tr>
+                                                        <th class=\"px-4 py-3 text-left font-semibold text-gray-600 dark:text-gray-400\">
+                                                            Produk
+                                                        </th>
 
-                                                    <th class=\"px-4 py-3 text-center font-semibold\">
-                                                        Qty
-                                                    </th>
+                                                        <th class=\"px-4 py-3 text-center font-semibold text-gray-600 dark:text-gray-400 w-20\">
+                                                            Qty
+                                                        </th>
 
-                                                    <th class=\"px-4 py-3 text-right font-semibold\">
-                                                        Harga
-                                                    </th>
+                                                        <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 w-28\">
+                                                            Harga
+                                                        </th>
 
-                                                    <th class=\"px-4 py-3 text-right font-semibold\">
-                                                        Total
-                                                    </th>
-                                                </tr>
-                                            </thead>
+                                                        <th class=\"px-4 py-3 text-right font-semibold text-gray-600 dark:text-gray-400 w-32\">
+                                                            Total
+                                                        </th>
+                                                    </tr>
+                                                </thead>
 
-                                            <tbody>
-                                                {$rows}
-                                            </tbody>
-                                        </table>
+                                                <tbody>
+                                                    {$rows}
+                                                </tbody>
+                                            </table>
+                                        </div>
                                     </div>
                                 ";
                             }),
@@ -312,7 +314,7 @@ class SaleInfolist
                             ->color('warning'),
 
                     ])
-                    ->columns(3),
+                    ->columns(2),
 
                 /*
                 |--------------------------------------------------------------------------
