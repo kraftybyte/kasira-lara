@@ -42,6 +42,7 @@ class Sale extends Model
         'paywuz_fee_by_merchant',
         'payment_status',
         'paid_at',
+        'closed_at',
     ];
 
     protected function casts(): array
@@ -58,6 +59,7 @@ class Sale extends Model
             'started_at' => 'datetime',
             'served_at' => 'datetime',
             'paid_at' => 'datetime',
+            'closed_at' => 'datetime',
         ];
     }
 
