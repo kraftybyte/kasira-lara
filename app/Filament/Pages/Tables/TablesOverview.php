@@ -2,13 +2,16 @@
 
 namespace App\Filament\Pages\Tables;
 
+use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Sale;
+use App\Models\SaleItem;
 use App\Models\Table;
 use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
 
 class TablesOverview extends Page
@@ -60,54 +63,78 @@ class TablesOverview extends Page
     #[Computed]
     public function availableTables(): Collection
     {
-        // Available = completely free, NO orders at all (pending/open/completed)
-        // AND status is available AND not reserved
+        // Available = status is 'available' AND NO active orders
+        // MEJA HANYA MUNCUL DI SATU KATEGORI
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
-        $tableIdsWithAnyOrders = Sale::where('tenant_id', $tenant->id)
+        // Get table IDs that have active orders
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
+            ->whereNull('closed_at')
             ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
-        return $this->tables->filter(function ($table) use ($tableIdsWithAnyOrders) {
-            // Available if: NO orders at all AND status is available AND not reserved
-            return ! in_array($table->id, $tableIdsWithAnyOrders)
-                && $table->status === 'available';
+        // Available = status='available' AND NO active orders
+        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+            return $table->status === 'available'
+                && ! in_array($table->id, $tableIdsWithOrders);
         });
     }
 
     #[Computed]
     public function activeTables(): Collection
     {
-        // Active = has orders (pending/open/completed) AND not reserved
+        // Active = HAS active orders (pending/open/completed with closed_at=null)
+        // MEJA DIKUNCI sampai kasir close
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
         }
 
+        // Get table IDs that have active orders
         $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
+            ->whereNull('closed_at')
             ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
 
+        // Active if: has active orders (regardless of table.status)
         return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
-            // Active only if: has orders AND not reserved
-            return in_array($table->id, $tableIdsWithOrders)
-                && $table->status !== 'reserved';
+            return in_array($table->id, $tableIdsWithOrders);
         });
     }
 
     #[Computed]
     public function reservedTables(): Collection
     {
-        return $this->tables->where('status', 'reserved');
+        // Reserved = status='reserved' AND NO active orders
+        // Dipesan tapi belum ada yang duduk
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return collect();
+        }
+
+        // Get table IDs that have active orders
+        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
+            ->whereNotNull('table_id')
+            ->whereNull('closed_at')
+            ->whereNotIn('status', ['cancelled'])
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+
+        // Reserved = status='reserved' AND NO active orders
+        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+            return $table->status === 'reserved'
+                && ! in_array($table->id, $tableIdsWithOrders);
+        });
     }
 
     #[Computed]
@@ -331,12 +358,6 @@ class TablesOverview extends Page
         $this->showCloseTableConfirm = true;
         $this->pendingCloseTableId = $tableId;
         $this->pendingCloseTableName = $tableName;
-
-        // Dispatch event to show toast
-        $this->dispatch('show-close-table-toast', [
-            'tableId' => $tableId,
-            'tableName' => $tableName,
-        ]);
     }
 
     public function confirmCloseTable(): void
@@ -370,29 +391,42 @@ class TablesOverview extends Page
 
     public function closeTable(int $tableId): void
     {
-        $table = Table::find($tableId);
+        $tableName = null;
 
-        if (! $table) {
+        // Lock table and its sales in ONE atomic operation to prevent race conditions
+        // This prevents new orders from being created between table lock and sales cleanup
+        $lockedRows = DB::select("
+            SELECT t.id as table_id, s.id as sale_id
+            FROM tables t
+            LEFT JOIN sales s ON s.table_id = t.id AND s.closed_at IS NULL AND s.status != 'cancelled'
+            WHERE t.id = ?
+            FOR UPDATE
+        ", [$tableId]);
+
+        if (empty($lockedRows)) {
             return;
         }
 
-        // Keep sales for reports (with closed_at timestamp)
-        Sale::where('table_id', $tableId)
-            ->update(['closed_at' => now()]);
+        // Get table info from first row
+        $tableName = Table::find($tableId)?->name;
 
-        // Delete items and payments (temp data cleanup)
-        $sales = Sale::where('table_id', $tableId)->get();
-        foreach ($sales as $sale) {
-            $sale->items()->delete();
-            $sale->payments()->delete();
+        // Update all sales for this table
+        $saleIds = collect($lockedRows)->pluck('sale_id')->filter()->toArray();
+        if (! empty($saleIds)) {
+            // Mark sales as closed
+            Sale::whereIn('id', $saleIds)->update(['closed_at' => now()]);
+
+            // Delete items and payments
+            SaleItem::whereIn('sale_id', $saleIds)->delete();
+            Payment::whereIn('sale_id', $saleIds)->delete();
         }
 
         // Reset table status
-        $table->update(['status' => 'available']);
+        Table::where('id', $tableId)->update(['status' => 'available']);
 
         Notification::make()
             ->title('Bill ditutup')
-            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
+            ->body("Meja {$tableName} sudah bersih, siap untuk pelanggan baru.")
             ->success()
             ->send();
 

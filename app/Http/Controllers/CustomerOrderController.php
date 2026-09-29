@@ -604,15 +604,8 @@ class CustomerOrderController extends Controller
                         'paid_at' => now(),
                     ]);
 
-                    // Only set table to available if no more pending orders exist
-                    $hasPendingOrders = Sale::where('table_id', $table->id)
-                        ->where('id', '!=', $sale->id)
-                        ->where('status', '!=', 'completed')
-                        ->exists();
-
-                    if (! $hasPendingOrders && $table->status === 'active') {
-                        $table->update(['status' => 'available']);
-                    }
+                    // NOTE: Table stays occupied until kasir explicitly closes it
+                    // DO NOT auto-release table after payment
 
                     $redirectUrl = route('customer.order.success', [
                         'tenant' => $tenant->slug ?? $tenant->id,
@@ -716,15 +709,8 @@ class CustomerOrderController extends Controller
             'paid_at' => now(),
         ]);
 
-        // Only set table to available if no more pending orders exist
-        $hasPendingOrders = Sale::where('table_id', $table->id)
-            ->where('id', '!=', $sale->id)
-            ->where('status', '!=', 'completed')
-            ->exists();
-
-        if (! $hasPendingOrders && $table->status === 'active') {
-            $table->update(['status' => 'available']);
-        }
+        // NOTE: Table stays occupied until kasir explicitly closes it
+        // DO NOT auto-release table after payment
 
         $redirectUrl = route('customer.order.success', [
             'tenant' => $tenant->slug ?? $tenant->id,

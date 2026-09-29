@@ -19,7 +19,7 @@
                     <x-heroicon-o-check class="h-3 w-3" />
                 </span>
                 <span class="text-sm font-bold text-gray-900 dark:text-white">{{ $availableTables->count() }}</span>
-                <span class="text-xs text-gray-500 dark:text-gray-400">Kosong</span>
+                <span class="text-xs text-gray-500 dark:text-gray-400">Tersedia</span>
             </div>
 
             <div class="h-4 w-px bg-gray-200 dark:bg-gray-700"></div>

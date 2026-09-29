@@ -2378,10 +2378,12 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are available if they have NO pending/open sales
-        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are available if: status='available' AND NO active orders
+        // Active orders = pending/open/completed with closed_at=null
+        $tableIdsWithActiveOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
+            ->whereNull('closed_at')
+            ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
             ->toArray();
@@ -2390,35 +2392,15 @@ class POS extends Page
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
             ->where('status', 'available')
-            ->whereNotIn('id', $tableIdsWithPendingOrders)
+            ->whereNotIn('id', $tableIdsWithActiveOrders)
             ->orderBy('name')
             ->get();
     }
 
     public function getTablesProperty(): Collection
     {
-        $tenant = Filament::getTenant();
-
-        if (! $tenant) {
-            return collect();
-        }
-
-        $tenantId = (int) $tenant->getKey();
-
-        // Tables are occupied if they have pending/open orders
-        $tableIdsWithPendingOrders = Sale::where('tenant_id', $tenantId)
-            ->whereNotNull('table_id')
-            ->whereNotIn('status', ['completed', 'cancelled'])
-            ->pluck('table_id')
-            ->unique()
-            ->toArray();
-
-        return Table::query()
-            ->where('tenant_id', $tenantId)
-            ->where('is_active', true)
-            ->whereIn('id', $tableIdsWithPendingOrders)
-            ->orderBy('name')
-            ->get();
+        // Alias untuk activeTables - meja yang sedang digunakan
+        return $this->activeTables;
     }
 
     public function getActiveTablesProperty(): Collection
@@ -2431,9 +2413,10 @@ class POS extends Page
 
         $tenantId = (int) $tenant->getKey();
 
-        // Tables are active if they have ANY orders (pending, open, or completed)
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenantId)
+        // Tables are active if: HAS active orders (pending/open/completed with closed_at=null)
+        $tableIdsWithActiveOrders = Sale::where('tenant_id', $tenantId)
             ->whereNotNull('table_id')
+            ->whereNull('closed_at')
             ->whereNotIn('status', ['cancelled'])
             ->pluck('table_id')
             ->unique()
@@ -2442,9 +2425,10 @@ class POS extends Page
         return Table::query()
             ->where('tenant_id', $tenantId)
             ->where('is_active', true)
-            ->whereIn('id', $tableIdsWithOrders)
+            ->whereIn('id', $tableIdsWithActiveOrders)
             ->with(['sales' => function ($query) {
-                $query->whereNotIn('status', ['cancelled'])
+                $query->whereNull('closed_at')
+                    ->whereNotIn('status', ['cancelled'])
                     ->orderByDesc('created_at');
             }])
             ->orderBy('name')
@@ -2521,10 +2505,11 @@ class POS extends Page
 
         $this->reservationId = $reservation?->id;
 
-        // Check for ALL non-completed orders (unpaid cash bills)
+        // Check for ALL active orders (pending/open, not completed, not closed)
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
             ->where('status', '!=', 'completed')
+            ->whereNull('closed_at')
             ->with(['items.product'])
             ->get();
 
@@ -2564,10 +2549,11 @@ class POS extends Page
                 }
             }
         } else {
-            // Check for completed orders (QR paid orders) - show in cart but disabled
+            // Check for completed orders (QR paid orders, not closed) - show in cart but disabled
             $completedOrders = Sale::query()
                 ->where('table_id', $tableId)
                 ->where('status', 'completed')
+                ->whereNull('closed_at')
                 ->with(['items.product'])
                 ->get();
 

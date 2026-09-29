@@ -51,6 +51,28 @@ class Table extends Model
         return $this->hasMany(Sale::class);
     }
 
+    public function reservations(): HasMany
+    {
+        return $this->hasMany(Reservation::class);
+    }
+
+    /**
+     * Get active (non-completed, non-cancelled) sales for this table.
+     */
+    public function activeSales(): HasMany
+    {
+        return $this->hasMany(Sale::class)
+            ->whereNotIn('status', ['completed', 'cancelled']);
+    }
+
+    /**
+     * Check if table has any active (non-completed) orders.
+     */
+    public function hasActiveOrders(): bool
+    {
+        return $this->activeSales()->exists();
+    }
+
     public function getActiveBillAttribute(): ?Sale
     {
         return Sale::query()
@@ -82,5 +104,44 @@ class Table extends Model
     public function isReserved(): bool
     {
         return $this->status === 'reserved';
+    }
+
+    /**
+     * Check if table is truly available based on orders.
+     * A table is available only if:
+     * 1. Status is 'available'
+     * 2. Has NO active orders (pending/open/completed with closed_at=null)
+     */
+    public function isActuallyAvailable(): bool
+    {
+        if ($this->status !== 'available') {
+            return false;
+        }
+
+        return ! $this->hasActiveOrders();
+    }
+
+    /**
+     * Check if table is actually in use (has active orders).
+     */
+    public function isActuallyOccupied(): bool
+    {
+        return $this->hasActiveOrders();
+    }
+
+    /**
+     * Get display status label based on actual order state.
+     */
+    public function getDisplayStatus(): string
+    {
+        if ($this->status === 'reserved') {
+            return 'Dipesan';
+        }
+
+        if ($this->hasActiveOrders()) {
+            return 'Digunakan';
+        }
+
+        return 'Tersedia';
     }
 }

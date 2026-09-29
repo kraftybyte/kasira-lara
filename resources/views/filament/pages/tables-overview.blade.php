@@ -1,8 +1,5 @@
 <x-filament-panels::page
-    x-data="{
-        tableParam: {{ request('table') ? request('table') : 'null' }},
-    }"
-    x-init="if (tableParam) { setTimeout(() => { const tables = {{ Js::from($this->tables) }}; const table = tables.find(t => t.id == tableParam); window.dispatchEvent(new CustomEvent('showOrderDetails', { detail: { tableId: tableParam, tableName: table ? table.name : 'Meja' }}) }, 100) }"
+    x-on:reload-page.window="window.location.reload()"
 >
 
     @php

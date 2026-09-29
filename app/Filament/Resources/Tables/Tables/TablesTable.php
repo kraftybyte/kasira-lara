@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Tables\Tables;
 
+use App\Models\Table as TableModel;
 use Filament\Tables\Columns\BadgeColumn;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
@@ -22,24 +23,19 @@ class TablesTable
                     ->label('Nomor')
                     ->toggleable(),
 
-                BadgeColumn::make('status')
+                BadgeColumn::make('display_status')
                     ->label('Status')
                     ->colors([
-                        'success' => 'available',
-                        'danger' => 'active',
-                        'warning' => 'reserved',
+                        'success' => 'Tersedia',
+                        'danger' => 'Digunakan',
+                        'warning' => 'Dipesan',
                     ])
                     ->icons([
-                        'heroicon-o-check-circle' => 'available',
-                        'heroicon-o-user-group' => 'active',
-                        'heroicon-o-calendar' => 'reserved',
+                        'heroicon-o-check-circle' => 'Tersedia',
+                        'heroicon-o-user-group' => 'Digunakan',
+                        'heroicon-o-calendar' => 'Dipesan',
                     ])
-                    ->formatStateUsing(fn (string $state): string => match ($state) {
-                        'available' => 'Tersedia',
-                        'active' => 'Digunakan',
-                        'reserved' => 'Dipesan',
-                        default => $state,
-                    }),
+                    ->formatStateUsing(fn (TableModel $record): string => $record->getDisplayStatus()),
 
                 TextColumn::make('capacity')
                     ->label('Kapasitas')
