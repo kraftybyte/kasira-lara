@@ -379,8 +379,8 @@ class TablesOverview extends Page
         // Reset the table to available
         $table->update(['status' => 'available']);
 
-        // Refresh table data
-        $this->reset(['tableOrders']);
+        // Force Livewire to re-render by skipping current render
+        $this->skipRender();
 
         Notification::make()
             ->title('Bill ditutup')
