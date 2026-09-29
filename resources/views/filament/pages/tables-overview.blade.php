@@ -1,4 +1,11 @@
 <x-filament-panels::page
+    x-init="
+        // Listen for reload-page event to refresh the page
+        window.addEventListener('reload-page', () => {
+            location.reload();
+        });
+    }
+>
     x-data="{
         tableParam: {{ request('table') ? request('table') : 'null' },
     }"
