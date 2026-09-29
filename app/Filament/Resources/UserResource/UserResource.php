@@ -69,12 +69,15 @@ class UserResource extends Resource
                     ->multiple()
                     ->relationship('roles', 'name')
                     ->options(function () {
-                        // Filter out super_admin role for non-super_admin users
+                        // Filter roles based on user permissions
                         $user = auth()->user();
+
+                        // Super admin can assign all roles
                         if ($user && $user->hasRole('super_admin')) {
                             return Role::pluck('name', 'id')->toArray();
                         }
 
+                        // Owner can assign all roles except super_admin
                         return Role::where('name', '!=', 'super_admin')->pluck('name', 'id')->toArray();
                     }),
 
@@ -83,7 +86,23 @@ class UserResource extends Resource
                     ->label('Assign to Tenants')
                     ->relationship('tenants', 'name')
                     ->options(function () {
-                        return Tenant::where('is_active', true)->pluck('name', 'id')->toArray();
+                        $user = auth()->user();
+                        $tenant = Filament::getTenant();
+
+                        // Super admin can assign to all active tenants
+                        if ($user && $user->hasRole('super_admin')) {
+                            return Tenant::where('is_active', true)->pluck('name', 'id')->toArray();
+                        }
+
+                        // Owner can only assign to tenants they own
+                        if ($user) {
+                            return Tenant::where('is_active', true)
+                                ->whereIn('id', $user->tenants()->pluck('tenants.id'))
+                                ->pluck('name', 'id')
+                                ->toArray();
+                        }
+
+                        return [];
                     })
                     ->helperText('Assign this user to one or more tenants'),
             ]);
