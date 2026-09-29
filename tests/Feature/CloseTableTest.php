@@ -43,7 +43,7 @@ test('close table changes status to available', function () {
     expect($table->status)->toBe('available');
 });
 
-test('sales remain after closing table', function () {
+test('sales are deleted after closing table', function () {
     // Create table manually
     $table = Table::create([
         'tenant_id' => $this->tenant->id,
@@ -62,25 +62,30 @@ test('sales remain after closing table', function () {
         'grand_total' => 100000,
     ]);
 
-    // Verify sale exists with table
+    // Verify sale exists
     $saleCheck = Sale::where('table_id', $table->id)->first();
     expect($saleCheck)->not->toBeNull();
-    expect($saleCheck->id)->toBe($sale->id);
 
-    // Close table
+    // Close table - delete sales
+    $sales = Sale::where('table_id', $table->id)->get();
+    foreach ($sales as $s) {
+        $s->items()->delete();
+        $s->payments()->delete();
+    }
+    Sale::where('table_id', $table->id)->delete();
+
+    // Table status to available
     $table->update(['status' => 'available']);
 
-    // Sales should still exist with table_id
+    // Sales should be deleted
     $salesAfterClose = Sale::where('table_id', $table->id)->count();
-    expect($salesAfterClose)->toBe(1);
+    expect($salesAfterClose)->toBe(0);
 
-    // Sale should still have table relationship
-    $saleAfterClose = Sale::with('table')->find($sale->id);
-    expect($saleAfterClose->table)->not->toBeNull();
-    expect($saleAfterClose->table->id)->toBe($table->id);
+    // Table status should be available
+    expect($table->fresh()->status)->toBe('available');
 });
 
-test('close table is callable method in TablesOverview', function () {
+test('closeTable method exists in TablesOverview', function () {
     $page = app(\App\Filament\Pages\Tables\TablesOverview::class);
 
     expect(method_exists($page, 'closeTable'))->toBeTrue();

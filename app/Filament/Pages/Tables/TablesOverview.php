@@ -376,7 +376,15 @@ class TablesOverview extends Page
             return;
         }
 
-        // Reset the table to available
+        // Delete all sales for this table (cleanup)
+        $sales = Sale::where('table_id', $tableId)->get();
+        foreach ($sales as $sale) {
+            $sale->items()->delete();
+            $sale->payments()->delete();
+        }
+        Sale::where('table_id', $tableId)->delete();
+
+        // Reset table to available
         $table->update(['status' => 'available']);
 
         Notification::make()
