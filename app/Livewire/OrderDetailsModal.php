@@ -2,7 +2,7 @@
 
 namespace App\Livewire;
 
-use App\Filament\Pages\Tables\TablesOverview;
+use App\Filament\Pages\tables\TablesOverview;
 use App\Models\Sale;
 use App\Models\Table;
 use Livewire\Component;
@@ -78,12 +78,20 @@ class OrderDetailsModal extends Component
             return;
         }
 
-        // Load ALL orders for specific table - no status filter (show until closed)
+        // Load orders for specific table - EXCLUDE closed sales
         $sales = Sale::query()
             ->where('table_id', $this->selectedTableId)
+            ->whereNull('closed_at')  // Only show orders that are not closed
             ->with(['items.product', 'table'])
             ->orderByDesc('created_at')
             ->get();
+
+        // If no orders, reset to empty
+        if ($sales->isEmpty()) {
+            $this->orders = [];
+
+            return;
+        }
 
         // Group by table_id
         $grouped = $sales->groupBy(function ($sale) {
@@ -108,12 +116,20 @@ class OrderDetailsModal extends Component
 
     public function loadAllOrders()
     {
-        // Load ALL orders grouped by table - no status filter (show until table is closed)
+        // Load ALL orders - EXCLUDE closed sales
         $sales = Sale::query()
             ->where('tenant_id', $this->selectedTenantId)
+            ->whereNull('closed_at')  // Only show orders that are not closed
             ->with(['items.product', 'table'])
             ->orderByDesc('created_at')
             ->get();
+
+        // If no orders, reset to empty
+        if ($sales->isEmpty()) {
+            $this->orders = [];
+
+            return;
+        }
 
         // Group by table_id
         $grouped = $sales->groupBy(function ($sale) {
