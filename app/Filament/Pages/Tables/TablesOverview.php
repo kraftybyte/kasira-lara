@@ -395,6 +395,9 @@ class TablesOverview extends Page
             ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
             ->success()
             ->send();
+
+        // Dispatch browser event to reload page
+        $this->dispatch('reload-page');
     }
 
     public function hasUnpaidOrders(int $tableId): bool
