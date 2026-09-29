@@ -184,10 +184,11 @@ class TablesOverview extends Page
             return collect();
         }
 
-        // Get ALL orders for this tenant with valid table_id
+        // Get ALL orders for this tenant with valid table_id - EXCLUDE closed sales
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->whereNotNull('table_id')
+            ->whereNull('closed_at')  // Only show non-closed orders
             ->with(['table', 'items'])
             ->orderByDesc('created_at')
             ->get()
@@ -197,7 +198,7 @@ class TablesOverview extends Page
     #[Computed]
     public function ordersWithoutTable(): Collection
     {
-        // Get orders without table_id (QR Meja customer orders)
+        // Get orders without table_id (QR Meja customer orders) - EXCLUDE closed sales
         $tenant = filament()->getTenant();
         if (! $tenant) {
             return collect();
@@ -206,6 +207,7 @@ class TablesOverview extends Page
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->whereNull('table_id')
+            ->whereNull('closed_at')  // Only show non-closed orders
             ->whereIn('status', ['open', 'pending', 'completed'])
             ->with(['items'])
             ->orderByDesc('created_at')
