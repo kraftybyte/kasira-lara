@@ -21,7 +21,14 @@ class ViewSale extends ViewRecord
 
     protected function getRecordQuery(): Builder
     {
-        return parent::getRecordQuery()->with(['items', 'payments', 'table', 'customer', 'user']);
+        return parent::getRecordQuery()->with([
+            'items.modifiers',
+            'items.product',
+            'payments',
+            'table',
+            'customer',
+            'user',
+        ]);
     }
 
     public function infolist(Schema $schema): Schema
