@@ -379,9 +379,6 @@ class TablesOverview extends Page
         // Reset the table to available
         $table->update(['status' => 'available']);
 
-        // Force Livewire to re-render by skipping current render
-        $this->skipRender();
-
         Notification::make()
             ->title('Bill ditutup')
             ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
