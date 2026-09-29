@@ -387,17 +387,14 @@ class TablesOverview extends Page
             $sale->payments()->delete();
         }
 
-        // Reset table to available
+        // Reset table status
         $table->update(['status' => 'available']);
 
         Notification::make()
             ->title('Bill ditutup')
-            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru. Penjualan tercatat di laporan.")
+            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
             ->success()
             ->send();
-
-        // Refresh page via redirect
-        return redirect()->refresh();
     }
 
     public function hasUnpaidOrders(int $tableId): bool
