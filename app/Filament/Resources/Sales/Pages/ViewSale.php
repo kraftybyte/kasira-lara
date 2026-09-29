@@ -11,12 +11,18 @@ use Filament\Forms\Components\Textarea;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ViewRecord;
 use Filament\Schemas\Schema;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
 use RuntimeException;
 
 class ViewSale extends ViewRecord
 {
     protected static string $resource = SaleResource::class;
+
+    protected function getRecordQuery(): Builder
+    {
+        return parent::getRecordQuery()->with(['items', 'payments', 'table', 'customer', 'user']);
+    }
 
     public function infolist(Schema $schema): Schema
     {

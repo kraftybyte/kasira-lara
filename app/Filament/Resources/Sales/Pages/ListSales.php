@@ -28,6 +28,6 @@ class ListSales extends ListRecords
 
     protected function getTableQuery(): Builder
     {
-        return parent::getTableQuery()->with(['items', 'table', 'customer', 'user']);
+        return parent::getTableQuery()->with(['items', 'table', 'customer', 'user', 'payments']);
     }
 }

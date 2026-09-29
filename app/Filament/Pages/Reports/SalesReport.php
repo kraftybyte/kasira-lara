@@ -129,7 +129,7 @@ class SalesReport extends Page
             });
         }
 
-        return $query->with(['customer', 'user', 'table'])
+        return $query->with(['customer', 'user', 'table', 'payments'])
             ->orderByDesc('created_at')
             ->paginate(100);
     }
