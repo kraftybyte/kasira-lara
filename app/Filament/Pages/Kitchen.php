@@ -46,13 +46,14 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that are not yet served
+        // Orders that are not yet served - EXCLUDE closed sales
         // POS orders: show all (already paid when created)
         // Customer orders:
         // - Paid/completed orders appear immediately
         // - Counter orders appear immediately (will be paid via POS)
         return Sale::query()
             ->where('tenant_id', $tenant->id)
+            ->whereNull('closed_at')  // Exclude closed sales
             ->whereNull('served_at')
             ->where(function ($query) {
                 $query->where('source', 'pos')
@@ -82,10 +83,11 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that are ready to serve (not yet completed)
+        // Orders that are ready to serve (not yet completed) - EXCLUDE closed sales
         // Only show POS orders or paid customer orders
         return Sale::query()
             ->where('tenant_id', $tenant->id)
+            ->whereNull('closed_at')  // Exclude closed sales
             ->whereNotNull('served_at')
             ->where('status', '!=', 'completed')
             ->where(function ($query) {
