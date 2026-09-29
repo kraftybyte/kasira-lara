@@ -396,8 +396,8 @@ class TablesOverview extends Page
             ->success()
             ->send();
 
-        // Force re-render by redirecting to same page
-        $this->redirect(request()->url(), navigate: true);
+        // Refresh page via redirect
+        return redirect()->refresh();
     }
 
     public function hasUnpaidOrders(int $tableId): bool
