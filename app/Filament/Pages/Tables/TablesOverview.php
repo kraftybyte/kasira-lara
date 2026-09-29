@@ -2,10 +2,8 @@
 
 namespace App\Filament\Pages\Tables;
 
-use App\Models\Payment;
 use App\Models\Reservation;
 use App\Models\Sale;
-use App\Models\SaleItem;
 use App\Models\Table;
 use BackedEnum;
 use Filament\Notifications\Notification;
@@ -412,15 +410,13 @@ class TablesOverview extends Page
         // Get table info from first row
         $tableName = Table::find($tableId)?->name;
 
-        // Update all sales for this table
+        // Update all sales for this table - mark as closed
+        // DO NOT delete items/payments - keep for historical records
         $saleIds = collect($lockedRows)->pluck('sale_id')->filter()->toArray();
         if (! empty($saleIds)) {
             // Mark sales as closed
             Sale::whereIn('id', $saleIds)->update(['closed_at' => now()]);
-
-            // Delete items and payments
-            SaleItem::whereIn('sale_id', $saleIds)->delete();
-            Payment::whereIn('sale_id', $saleIds)->delete();
+            // Items and payments are PRESERVED for historical records/reports
         }
 
         // Reset table status
