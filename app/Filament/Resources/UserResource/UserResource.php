@@ -8,6 +8,7 @@ use App\Models\User;
 use BackedEnum;
 use Filament\Actions\CreateAction;
 use Filament\Actions\EditAction;
+use Filament\Facades\Filament;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Resources\Resource;
@@ -95,25 +96,33 @@ class UserResource extends Resource
                 $query = User::query()->with('roles');
 
                 $user = auth()->user();
+                $tenant = Filament::getTenant();
 
                 // Super admin can see all users
                 if ($user && $user->hasRole('super_admin')) {
                     return $query;
                 }
 
-                // Owner with multiple tenants can see all users (except super_admin)
-                if ($user && $user->tenants()->count() > 1) {
-                    return $query->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'));
+                // If viewing from a specific tenant context, filter by that tenant only
+                if ($tenant) {
+                    return $query
+                        ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
+                        ->whereHas('tenants', function ($q) use ($tenant) {
+                            $q->where('tenants.id', $tenant->id);
+                        });
                 }
 
-                // Single-tenant users only see users from their tenant
-                return $query
-                    ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
-                    ->whereHas('tenants', function ($q) use ($user) {
-                        if ($user) {
+                // Fallback: show users based on user's assigned tenants
+                if ($user && $user->tenants()->count() > 0) {
+                    return $query
+                        ->whereDoesntHave('roles', fn ($q) => $q->where('name', 'super_admin'))
+                        ->whereHas('tenants', function ($q) use ($user) {
                             $q->whereIn('tenants.id', $user->tenants()->pluck('tenants.id'));
-                        }
-                    });
+                        });
+                }
+
+                // No access
+                return $query->whereRaw('1 = 0');
             })
             ->columns([
                 TextColumn::make('name')
