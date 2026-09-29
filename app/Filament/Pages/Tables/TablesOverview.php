@@ -376,20 +376,23 @@ class TablesOverview extends Page
             return;
         }
 
-        // Delete all sales for this table (cleanup)
+        // Keep sales for reports (with closed_at timestamp)
+        Sale::where('table_id', $tableId)
+            ->update(['closed_at' => now()]);
+
+        // Delete items and payments (temp data cleanup)
         $sales = Sale::where('table_id', $tableId)->get();
         foreach ($sales as $sale) {
             $sale->items()->delete();
             $sale->payments()->delete();
         }
-        Sale::where('table_id', $tableId)->delete();
 
         // Reset table to available
         $table->update(['status' => 'available']);
 
         Notification::make()
             ->title('Bill ditutup')
-            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru.")
+            ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru. Penjualan tercatat di laporan.")
             ->success()
             ->send();
     }
