@@ -395,6 +395,9 @@ class TablesOverview extends Page
             ->body("Meja {$table->name} sudah bersih, siap untuk pelanggan baru. Penjualan tercatat di laporan.")
             ->success()
             ->send();
+
+        // Force re-render by redirecting to same page
+        $this->redirect(request()->url(), navigate: true);
     }
 
     public function hasUnpaidOrders(int $tableId): bool
