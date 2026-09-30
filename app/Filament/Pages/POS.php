@@ -2871,13 +2871,19 @@ class POS extends Page
         DB::beginTransaction();
 
         try {
+            // Lock the sale row to prevent race conditions
+            $sale = Sale::where('id', $sale->id)->lockForUpdate()->first();
+
+            if (! $sale) {
+                DB::rollBack();
+
+                return;
+            }
+
             $newSubtotal = 0;
 
-            // Track which sale items we've processed
-            $processedItemIds = [];
-
-            // Delete all existing sale items first (fresh start)
-            SaleItem::where('sale_id', $sale->id)->delete();
+            // Lock sale items for update as well
+            SaleItem::where('sale_id', $sale->id)->lockForUpdate()->delete();
 
             // Process cart items - create fresh
             foreach ($this->cart as $item) {

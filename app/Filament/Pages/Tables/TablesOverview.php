@@ -58,6 +58,27 @@ class TablesOverview extends Page
             ->get();
     }
 
+    /**
+     * Cached computed property for table IDs with active orders
+     * Used by availableTables, activeTables, and reservedTables to avoid duplicate queries
+     */
+    #[Computed]
+    public function tableIdsWithActiveOrders(): array
+    {
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return [];
+        }
+
+        return Sale::where('tenant_id', $tenant->id)
+            ->whereNotNull('table_id')
+            ->whereNull('closed_at')
+            ->whereNotIn('status', ['cancelled'])
+            ->pluck('table_id')
+            ->unique()
+            ->toArray();
+    }
+
     #[Computed]
     public function availableTables(): Collection
     {
@@ -68,19 +89,10 @@ class TablesOverview extends Page
             return collect();
         }
 
-        // Get table IDs that have active orders
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
-            ->whereNotNull('table_id')
-            ->whereNull('closed_at')
-            ->whereNotIn('status', ['cancelled'])
-            ->pluck('table_id')
-            ->unique()
-            ->toArray();
-
         // Available = status='available' AND NO active orders
-        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+        return $this->tables->filter(function ($table) {
             return $table->status === 'available'
-                && ! in_array($table->id, $tableIdsWithOrders);
+                && ! in_array($table->id, $this->tableIdsWithActiveOrders);
         });
     }
 
@@ -94,18 +106,9 @@ class TablesOverview extends Page
             return collect();
         }
 
-        // Get table IDs that have active orders
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
-            ->whereNotNull('table_id')
-            ->whereNull('closed_at')
-            ->whereNotIn('status', ['cancelled'])
-            ->pluck('table_id')
-            ->unique()
-            ->toArray();
-
         // Active if: has active orders (regardless of table.status)
-        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
-            return in_array($table->id, $tableIdsWithOrders);
+        return $this->tables->filter(function ($table) {
+            return in_array($table->id, $this->tableIdsWithActiveOrders);
         });
     }
 
@@ -119,19 +122,10 @@ class TablesOverview extends Page
             return collect();
         }
 
-        // Get table IDs that have active orders
-        $tableIdsWithOrders = Sale::where('tenant_id', $tenant->id)
-            ->whereNotNull('table_id')
-            ->whereNull('closed_at')
-            ->whereNotIn('status', ['cancelled'])
-            ->pluck('table_id')
-            ->unique()
-            ->toArray();
-
         // Reserved = status='reserved' AND NO active orders
-        return $this->tables->filter(function ($table) use ($tableIdsWithOrders) {
+        return $this->tables->filter(function ($table) {
             return $table->status === 'reserved'
-                && ! in_array($table->id, $tableIdsWithOrders);
+                && ! in_array($table->id, $this->tableIdsWithActiveOrders);
         });
     }
 

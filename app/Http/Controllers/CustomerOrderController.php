@@ -195,13 +195,19 @@ class CustomerOrderController extends Controller
         $customerPays = $paywuzFeeByMerchant ? $grandTotal : $grandTotal + $paywuzFeeAmount;
 
         // For counter payment, check if there's an existing pending counter order
+        // Wrap in transaction with locking to prevent race conditions
         if ($validatedPayment['payment_method'] === 'counter') {
-            $existingCounterOrder = Sale::where('table_id', $table->id)
-                ->where('source', 'customer')
-                ->where('payment_method', 'counter')
-                ->where('status', 'pending')
-                ->orderByDesc('created_at')
-                ->first();
+            $existingCounterOrder = DB::transaction(function () use ($table) {
+                // Lock the table row to prevent concurrent order creation
+                $lockedTable = Table::where('id', $table->id)->lockForUpdate()->first();
+
+                return Sale::where('table_id', $table->id)
+                    ->where('source', 'customer')
+                    ->where('payment_method', 'counter')
+                    ->where('status', 'pending')
+                    ->orderByDesc('created_at')
+                    ->first();
+            });
 
             if ($existingCounterOrder) {
                 // Add items to existing counter order
@@ -223,49 +229,54 @@ class CustomerOrderController extends Controller
         }
 
         // For other payment methods (transfer), customer bears the fee
-        $sale = Sale::create([
-            'tenant_id' => $tenant->id,
-            'table_id' => $table->id,
-            'user_id' => Auth::id(),
-            'invoice_number' => $invoiceNumber,
-            'customer_name' => $customerName,
-            'status' => 'pending',
-            'source' => 'customer',
-            'payment_method' => $validatedPayment['payment_method'],
-            'notes' => $request->input('notes'),
-            'subtotal' => $beforeTax,
-            'tax' => $taxAmount,
-            'discount' => 0,
-            'grand_total' => $customerPays,
-            'paywuz_fee' => $paywuzFeeAmount,
-            'paywuz_fee_by_merchant' => $paywuzFeeByMerchant,
-            'paid_amount' => 0,
-            'change_amount' => 0,
-            'payment_status' => 'pending',
-        ]);
+        // Wrap in transaction to prevent orphaned records
+        $sale = DB::transaction(function () use ($tenant, $table, $customerName, $validatedPayment, $invoiceNumber, $beforeTax, $taxAmount, $customerPays, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems, $request) {
+            $sale = Sale::create([
+                'tenant_id' => $tenant->id,
+                'table_id' => $table->id,
+                'user_id' => Auth::id(),
+                'invoice_number' => $invoiceNumber,
+                'customer_name' => $customerName,
+                'status' => 'pending',
+                'source' => 'customer',
+                'payment_method' => $validatedPayment['payment_method'],
+                'notes' => $request->input('notes'),
+                'subtotal' => $beforeTax,
+                'tax' => $taxAmount,
+                'discount' => 0,
+                'grand_total' => $customerPays,
+                'paywuz_fee' => $paywuzFeeAmount,
+                'paywuz_fee_by_merchant' => $paywuzFeeByMerchant,
+                'paid_amount' => 0,
+                'change_amount' => 0,
+                'payment_status' => 'pending',
+            ]);
 
-        // Create sale items
-        foreach ($saleItems as $item) {
-            $modifiers = $item['modifiers'] ?? [];
-            unset($item['modifiers']); // Remove modifiers from item data
+            // Create sale items
+            foreach ($saleItems as $item) {
+                $modifiers = $item['modifiers'] ?? [];
+                unset($item['modifiers']); // Remove modifiers from item data
 
-            $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
+                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
 
-            // Save modifiers for this sale item
-            foreach ($modifiers as $modifier) {
-                SaleItemModifier::create([
-                    'sale_item_id' => $saleItem->id,
-                    'product_modifier_id' => $modifier->id,
-                    'modifier_name' => $modifier->name,
-                    'price' => $modifier->price_adjustment,
-                ]);
+                // Save modifiers for this sale item
+                foreach ($modifiers as $modifier) {
+                    SaleItemModifier::create([
+                        'sale_item_id' => $saleItem->id,
+                        'product_modifier_id' => $modifier->id,
+                        'modifier_name' => $modifier->name,
+                        'price' => $modifier->price_adjustment,
+                    ]);
+                }
             }
-        }
 
-        // Update table status
-        if ($table->status === 'available') {
-            $table->update(['status' => 'active']);
-        }
+            // Update table status
+            if ($table->status === 'available') {
+                $table->update(['status' => 'active']);
+            }
+
+            return $sale;
+        });
 
         return redirect()->route('customer.order.payment', [
             'tenant' => $tenant->getRouteKey(),
