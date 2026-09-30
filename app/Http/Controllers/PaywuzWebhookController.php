@@ -185,10 +185,11 @@ class PaywuzWebhookController extends Controller
         try {
             $apiKey = $this->getApiKeyFromSale($sale);
 
+            // SECURITY: Fail closed - reject if we can't verify
             if (empty($apiKey)) {
-                Log::warning('Paywuz Webhook: Cannot verify - no API key');
+                Log::warning('Paywuz Webhook: Cannot verify - no API key, rejecting');
 
-                return true; // Accept if we can't verify (fail open - can be changed)
+                return false;
             }
 
             $baseUrl = config('services.paywuz.base_url', 'https://api.paywuz.id/v1');
@@ -197,10 +198,11 @@ class PaywuzWebhookController extends Controller
                 ->timeout(10)
                 ->get("{$baseUrl}/transactions/{$transactionId}");
 
+            // SECURITY: Fail closed - reject on API failure
             if (! $response->successful()) {
-                Log::warning('Paywuz Webhook: API verification request failed');
+                Log::warning('Paywuz Webhook: API verification request failed, rejecting');
 
-                return true; // Accept on API failure
+                return false;
             }
 
             $data = $response->json();
@@ -225,7 +227,8 @@ class PaywuzWebhookController extends Controller
                 'transaction_id' => $transactionId,
             ]);
 
-            return true; // Accept on exception
+            // SECURITY: Fail closed - reject on exception
+            return false;
         }
     }
 

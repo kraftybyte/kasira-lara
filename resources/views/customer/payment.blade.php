@@ -193,33 +193,54 @@
                     <div class="bg-white border-2 border-gray-100 rounded-2xl p-6 mb-6">
                         <p class="text-sm text-gray-500 mb-4">Transfer ke salah satu rekening berikut</p>
 
-                        {{-- Bank Accounts --}}
+                        {{-- Bank Accounts - Dynamic from TenantSetting --}}
                         <div class="space-y-3 text-left">
-                            <div class="bg-gray-50 rounded-xl p-4">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
-                                        <span class="text-white font-bold text-sm">BCA</span>
-                                    </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-900">Bank BCA</p>
-                                        <p class="text-xs text-gray-500">a.n. {{ $tenant->name }}</p>
-                                    </div>
-                                </div>
-                                <p class="font-mono text-lg text-gray-900">123-456-7890</p>
-                            </div>
+                            @php
+                                $bankAccounts = [];
+                                if ($tenantSetting?->bank_name && $tenantSetting?->bank_account) {
+                                    $bankAccounts[] = [
+                                        'name' => $tenantSetting->bank_name,
+                                        'account' => $tenantSetting->bank_account,
+                                        'account_name' => $tenantSetting->bank_account_name ?? $tenant->name,
+                                    ];
+                                }
+                                // Fallback for second bank if configured separately
+                                $hasSecondBank = !empty($tenantSetting?->bank_name_2) && !empty($tenantSetting?->bank_account_2);
+                            @endphp
 
-                            <div class="bg-gray-50 rounded-xl p-4">
-                                <div class="flex items-center gap-3 mb-2">
-                                    <div class="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center">
-                                        <span class="text-white font-bold text-xs">MANDIRI</span>
+                            @forelse($bankAccounts as $bank)
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 rounded-lg bg-blue-500 flex items-center justify-center">
+                                            <span class="text-white font-bold text-sm">{{ strtoupper(substr($bank['name'], 0, 3)) }}</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">Bank {{ $bank['name'] }}</p>
+                                            <p class="text-xs text-gray-500">a.n. {{ $bank['account_name'] }}</p>
+                                        </div>
                                     </div>
-                                    <div>
-                                        <p class="font-semibold text-gray-900">Bank Mandiri</p>
-                                        <p class="text-xs text-gray-500">a.n. {{ $tenant->name }}</p>
-                                    </div>
+                                    <p class="font-mono text-lg text-gray-900">{{ $bank['account'] }}</p>
                                 </div>
-                                <p class="font-mono text-lg text-gray-900">130-00-1234567-8</p>
-                            </div>
+                            @empty
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <p class="text-sm text-gray-500 text-center">Bank transfer tidak tersedia</p>
+                                </div>
+                            @endforelse
+
+                            @if($hasSecondBank)
+                                <div class="bg-gray-50 rounded-xl p-4">
+                                    <div class="flex items-center gap-3 mb-2">
+                                        <div class="w-10 h-10 rounded-lg bg-red-500 flex items-center justify-center">
+                                            <span class="text-white font-bold text-xs">{{ strtoupper(substr($tenantSetting->bank_name_2, 0, 3)) }}</span>
+                                        </div>
+                                        <div>
+                                            <p class="font-semibold text-gray-900">Bank {{ $tenantSetting->bank_name_2 }}</p>
+                                            <p class="text-xs text-gray-500">a.n. {{ $tenantSetting->bank_account_name_2 ?? $tenant->name }}</p>
+                                        </div>
+                                    </div>
+                                    <p class="font-mono text-lg text-gray-900">{{ $tenantSetting->bank_account_2 }}</p>
+                                </div>
+                            @endif
                         </div>
 
                         <div class="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-4">

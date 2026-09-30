@@ -277,28 +277,41 @@ class TablesOverview extends Page
 
     public function seatReservation(int $reservationId): void
     {
-        $reservation = Reservation::find($reservationId);
+        $customerName = null;
+        $tableName = null;
 
-        if (! $reservation) {
-            return;
-        }
+        DB::transaction(function () use ($reservationId, &$customerName, &$tableName) {
+            // Lock reservation and table for update to prevent race conditions
+            $reservation = Reservation::where('id', $reservationId)
+                ->lockForUpdate()
+                ->first();
 
-        // Update reservation status
-        $reservation->update(['status' => 'seated']);
-
-        // Update table status to active
-        if ($reservation->table_id) {
-            $table = Table::find($reservation->table_id);
-            if ($table && $table->status === 'available') {
-                $table->update(['status' => 'active']);
+            if (! $reservation) {
+                return;
             }
-        }
+
+            // Lock table if exists
+            if ($reservation->table_id) {
+                $table = Table::where('id', $reservation->table_id)
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($table && $table->status === 'available') {
+                    $table->update(['status' => 'active']);
+                    $tableName = $table->name;
+                }
+            }
+
+            // Update reservation status
+            $reservation->update(['status' => 'seated']);
+            $customerName = $reservation->customer_name;
+        });
 
         $this->reset('todayReservations');
 
         Notification::make()
             ->title('Tamu ditempatkan')
-            ->body("{$reservation->customer_name} sudah di tempatkan di meja {$reservation->table?->name}.")
+            ->body("{$customerName} sudah di tempatkan di meja {$tableName}.")
             ->success()
             ->send();
     }

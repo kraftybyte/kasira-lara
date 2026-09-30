@@ -559,11 +559,15 @@ class CustomerOrderController extends Controller
             }
         }
 
+        // Get tenant settings for dynamic bank accounts
+        $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
+
         return view('customer.payment', [
             'tenant' => $tenant,
             'table' => $table,
             'sale' => $sale,
             'qrData' => $qrData,
+            'tenantSetting' => $tenantSetting,
         ]);
     }
 
