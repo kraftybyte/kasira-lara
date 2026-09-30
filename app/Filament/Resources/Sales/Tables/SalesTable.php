@@ -200,7 +200,7 @@ class SalesTable
 
                             'cancelled' => 'Dibatalkan',
 
-                            default => ucfirst($record->payment_method),
+                            default => ucfirst($state),
 
                         }
                     ),

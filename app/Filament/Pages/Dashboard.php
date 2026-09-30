@@ -38,12 +38,6 @@ class Dashboard extends Page
         return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko', 'cashier']);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Date Range
-    |--------------------------------------------------------------------------
-    */
-
     protected function getStartDate(): Carbon
     {
         return Carbon::now()->subDays($this->days)->startOfDay();
@@ -54,33 +48,15 @@ class Dashboard extends Page
         return Carbon::now()->endOfDay();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Tenant
-    |--------------------------------------------------------------------------
-    */
-
     public function getTenantProperty(): ?Tenant
     {
         return Filament::getTenant();
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - User
-    |--------------------------------------------------------------------------
-    */
-
     public function getUserName(): string
     {
         return Auth::user()?->name ?? 'User';
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Sales Data (Last 30 Days)
-    |--------------------------------------------------------------------------
-    */
 
     public function getSalesDataProperty(): array
     {
@@ -93,11 +69,10 @@ class Dashboard extends Page
         $startDate = $this->getStartDate();
         $endDate = $this->getEndDate();
 
-        // Daily sales for chart
+        // Daily sales for chart (include all completed orders regardless of closed_at)
         $dailySales = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
-            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 DB::raw('DATE(created_at) as date'),
@@ -133,12 +108,6 @@ class Dashboard extends Page
         return array_values($salesByDay);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Top Products (Last 30 Days)
-    |--------------------------------------------------------------------------
-    */
-
     public function getTopProductsProperty(): Collection
     {
         $tenant = $this->tenant;
@@ -154,7 +123,6 @@ class Dashboard extends Page
             ->whereHas('sale', function ($query) use ($tenant, $startDate, $endDate) {
                 $query->where('tenant_id', $tenant->id)
                     ->where('status', 'completed')
-                    ->whereNull('closed_at')  // Exclude closed sales
                     ->whereBetween('created_at', [$startDate, $endDate]);
             })
             ->select(
@@ -167,12 +135,6 @@ class Dashboard extends Page
             ->limit(5)
             ->get();
     }
-
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Payment Summary (Last 30 Days)
-    |--------------------------------------------------------------------------
-    */
 
     public function getPaymentSummaryProperty(): array
     {
@@ -193,7 +155,6 @@ class Dashboard extends Page
         $summary = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
-            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 'payment_method',
@@ -212,12 +173,6 @@ class Dashboard extends Page
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | COMPUTED - Summary Stats
-    |--------------------------------------------------------------------------
-    */
-
     public function getTotalSales30DaysProperty(): float
     {
         return $this->paymentSummary['total'];
@@ -234,7 +189,6 @@ class Dashboard extends Page
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
-            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$this->getStartDate(), $this->getEndDate()])
             ->count();
     }

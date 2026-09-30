@@ -129,12 +129,13 @@ class Kitchen extends Page
     {
         try {
             $tenant = $this->getTenant();
-            // Set both status and closed_at so order disappears from Kitchen
+            // Only set status='completed' - do NOT set closed_at here
+            // closed_at should only be set when kasir explicitly closes table from TablesOverview
             $updated = Sale::where('id', $saleId)
                 ->where('tenant_id', $tenant?->id)
                 ->update([
                     'status' => 'completed',
-                    'closed_at' => now(),  // This makes order disappear from Kitchen queries
+                    // REMOVED: 'closed_at' should NOT be set here
                 ]);
 
             if ($updated) {

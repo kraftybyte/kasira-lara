@@ -2,10 +2,10 @@
 
     {{-- Active Table Banner --}}
     @if($this->activeTableId || $this->tableId)
-        <div class="mb-3 rounded-xl border-2 border-emerald-200 bg-emerald-50 p-3 dark:border-emerald-500/30 dark:bg-emerald-500/10">
+        <div class="mb-3 rounded-2xl border border-primary-500/20 bg-gradient-to-r from-primary-500/10 to-orange-500/10 p-4">
             <div class="flex flex-wrap items-center justify-between gap-4">
                 <div class="flex items-center gap-3">
-                    <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
+                    <div class="flex h-12 w-12 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
                         @if($this->tableId === 'takeaway')
                             <x-heroicon-o-shopping-bag class="h-6 w-6" />
                         @else
@@ -15,13 +15,13 @@
                     <div>
                         @if($this->tableId === 'takeaway')
                             <p class="text-lg font-bold text-gray-900 dark:text-white">Take Away</p>
-                            <p class="text-sm text-emerald-600 dark:text-emerald-400">Bawa Pulang</p>
+                            <p class="text-sm text-primary-600 dark:text-primary-400">Bawa Pulang</p>
                         @elseif($this->reservation && $this->reservation->status !== 'seated')
                             <p class="text-lg font-bold text-gray-900 dark:text-white">Reservasi</p>
-                            <p class="text-sm text-emerald-600 dark:text-emerald-400">{{ $this->reservation->customer_name }} - {{ $this->reservation->guest_count }} orang</p>
+                            <p class="text-sm text-primary-600 dark:text-primary-400">{{ $this->reservation->customer_name }} - {{ $this->reservation->guest_count }} orang</p>
                         @elseif($this->activeTableId)
                             <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $this->selectedTable?->name ?? 'Meja Aktif' }}</p>
-                            <p class="text-sm text-emerald-600 dark:text-emerald-400">Bill sedang aktif</p>
+                            <p class="text-sm text-primary-600 dark:text-primary-400">Bill sedang aktif</p>
                         @elseif($this->tableId)
                             <p class="text-lg font-bold text-gray-900 dark:text-white">{{ $this->selectedTable?->name ?? 'Meja Dipilih' }}</p>
                             <p class="text-sm text-gray-500">Siap menambahkan item</p>
@@ -36,12 +36,12 @@
                         </button>
                     @endif
                     @if($this->activeTableId)
-                        <button type="button" wire:click="saveToTable" @disabled(empty($this->cart)) class="btn btn-outline-success btn-md">
+                        <button type="button" wire:click="saveToTable" @disabled(empty($this->cart)) class="rounded-lg border-2 border-green-500 text-green-600 font-medium px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-green-50 transition-colors">
                             <x-heroicon-o-check class="h-4 w-4" />
                             Simpan
                         </button>
                     @endif
-                    <button type="button" wire:click="clearTable" class="btn btn-outline-danger btn-md">
+                    <button type="button" wire:click="clearTable" class="rounded-lg border-2 border-red-500 text-red-500 font-medium px-3 py-1.5 text-sm flex items-center gap-2 hover:bg-red-50 transition-colors">
                         <x-heroicon-o-x-mark class="h-4 w-4" />
                         @if($this->tableId === 'takeaway')
                             Batal
@@ -56,14 +56,14 @@
 
     {{-- Bulk Counter Mode Banner --}}
     @if($this->isBulkCounterMode)
-        <div class="mb-3 rounded-xl border-2 border-amber-200 bg-amber-50 p-3 dark:border-amber-500/30 dark:bg-amber-500/10">
+        <div class="mb-3 rounded-2xl border border-amber-500/20 bg-gradient-to-r from-amber-500/10 to-orange-500/10 p-4">
             <div class="flex items-center gap-3">
-                <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-amber-500 text-white">
+                <div class="flex h-10 w-10 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
                     <x-heroicon-s-banknotes class="h-5 w-5" />
                 </div>
                 <div>
                     <p class="text-sm font-bold text-gray-900 dark:text-white">Mode Bayar Counter</p>
-                    <p class="text-xs text-amber-600 dark:text-amber-400">Item dari pesanan counter telah dimuat. Selesaikan pembayaran untuk menghapus pesanan counter.</p>
+                    <p class="text-xs text-amber-600 dark:text-amber-400">Item dari pesanan counter telah dimuat. Selesaikan pembayaran.</p>
                 </div>
             </div>
         </div>
@@ -71,18 +71,21 @@
 
     {{-- Active Tables Quick View --}}
     @if($this->activeTables->count() > 0 && !$this->activeTableId)
-        <div class="mb-3 rounded-xl border border-gray-200 bg-white p-3 dark:border-gray-700 dark:bg-gray-900">
-            <div class="mb-2 flex items-center justify-between">
-                <div class="flex items-center gap-2">
-                    <span class="flex h-6 w-6 items-center justify-center rounded-lg bg-red-500 text-white">
-                        <x-heroicon-o-archive-box class="h-3.5 w-3.5" />
-                    </span>
-                    <span class="text-xs font-semibold text-gray-900 dark:text-white">Meja Terpakai</span>
-                    <span class="rounded-full bg-red-100 px-1.5 py-0.5 text-[10px] font-bold text-red-600 dark:bg-red-500/20 dark:text-red-400">{{ $this->activeTables->count() }}</span>
+        <div class="mb-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <div class="mb-3 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
+                        <x-heroicon-o-archive-box class="h-5 w-5" />
+                    </div>
+                    <span class="text-sm font-bold text-gray-900 dark:text-white">Meja Terpakai</span>
+                    <span class="flex h-6 min-w-6 items-center justify-center rounded-full gradient-bg px-2 text-[10px] font-bold text-white shadow">{{ $this->activeTables->count() }}</span>
                 </div>
-                <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables') }}" class="text-[10px] font-medium text-red-500 hover:text-red-600">Lihat Semua</a>
+                <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables') }}" class="flex items-center gap-1.5 rounded-lg bg-gradient-to-r from-primary-500 to-orange-500 px-3 py-1.5 text-xs font-semibold text-white shadow-md hover:opacity-90">
+                    <x-heroicon-o-eye class="h-3.5 w-3.5" />
+                    Lihat Semua
+                </a>
             </div>
-            <div class="flex flex-wrap gap-2">
+            <div class="flex flex-wrap gap-3">
                 @foreach($this->activeTables as $table)
                     @php
                         $tableSales = $table->sales ?? collect();
@@ -90,15 +93,15 @@
                         $paidOrders = $tableSales->where('status', 'completed')->sum('grand_total');
                         $hasUnpaidCash = $unpaidCash > 0;
                     @endphp
-                    <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview?table=' . $table->id) }}" class="inline-flex items-center gap-1.5 rounded-lg border border-gray-100 bg-gray-50 px-3 py-1.5 text-center transition-all hover:border-red-300 hover:bg-red-50/50 dark:border-gray-700 dark:bg-gray-800 dark:hover:border-red-500/30">
-                        <div class="flex h-5 w-5 items-center justify-center rounded-lg bg-red-100 text-red-600 dark:bg-red-500/20 dark:text-red-400">
-                            <x-heroicon-o-archive-box class="h-3 w-3" />
+                    <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview?table=' . $table->id) }}" class="flex items-center gap-3 rounded-xl border border-gray-100 bg-gradient-to-br from-gray-50 to-gray-100/50 px-4 py-3 transition-all hover:border-primary-200 hover:shadow-lg dark:border-gray-700 dark:from-gray-800 dark:to-gray-700 dark:hover:border-primary-500/30">
+                        <div class="flex h-8 w-8 items-center justify-center rounded-lg gradient-bg text-white shadow-md">
+                            <x-heroicon-o-archive-box class="h-4 w-4" />
                         </div>
-                        <span class="text-[10px] font-semibold text-gray-900 dark:text-white">{{ $table->name }}</span>
+                        <span class="text-sm font-semibold text-gray-900 dark:text-white">{{ $table->name }}</span>
                         @if($hasUnpaidCash)
-                            <span class="rounded-full bg-amber-100 px-1.5 py-0.5 text-[9px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Rp {{ number_format($unpaidCash/1000, 0, ',', '.') }}k</span>
+                            <span class="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">Rp {{ number_format($unpaidCash/1000, 0, ',', '.') }}k</span>
                         @elseif($paidOrders > 0)
-                            <span class="rounded-full bg-emerald-100 px-1.5 py-0.5 text-[9px] font-medium text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400">Lunas</span>
+                            <span class="rounded-full gradient-bg px-2.5 py-1 text-[10px] font-bold text-white">Lunas</span>
                         @endif
                     </a>
                 @endforeach
@@ -112,7 +115,7 @@
         <div class="lg:col-span-8">
 
             {{-- Search & Category Filter --}}
-            <div class="mb-3 space-y-2">
+            <div class="mb-3 space-y-3">
                 {{-- Search Bar --}}
                 <div class="relative">
                     <x-filament::input.wrapper>
@@ -120,20 +123,20 @@
                             type="search"
                             wire:model.live.debounce.300ms="search"
                             placeholder="Cari produk atau SKU..."
-                            class="pl-10 py-1.5 text-sm"
+                            class="pl-10 py-2.5 text-sm"
                         />
                         <x-slot name="prefix">
-                            <x-heroicon-o-magnifying-glass class="h-4 w-4 text-gray-400" />
+                            <x-heroicon-o-magnifying-glass class="h-5 w-5 text-gray-400" />
                         </x-slot>
                     </x-filament::input.wrapper>
                 </div>
 
                 {{-- Category Pills --}}
-                <div class="flex items-center gap-1.5 overflow-x-auto pb-1 scrollbar-thin">
+                <div class="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
                     <button
                         type="button"
                         wire:click="$set('selectedCategoryId', null)"
-                        class="{{ is_null($this->selectedCategoryId) ? 'gradient-bg text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.2"
+                        class="{{ is_null($this->selectedCategoryId) ? 'gradient-bg text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:shadow-md"
                     >
                         Semua
                     </button>
@@ -141,7 +144,7 @@
                         <button
                             type="button"
                             wire:click="$set('selectedCategoryId', {{ $category->id }})"
-                            class="{{ $this->selectedCategoryId === $category->id ? 'gradient-bg text-white' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold transition-all hover:-translate-y-0.5"
+                            class="{{ $this->selectedCategoryId === $category->id ? 'gradient-bg text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:shadow-md"
                         >
                             {{ $category->name }}
                         </button>
@@ -149,10 +152,10 @@
                 </div>
             </div>
 
-            <div class="rounded-xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
                 <div class="p-2">
                     {{-- Loading State --}}
-                    <div wire:loading class="mb-3 flex items-center justify-center rounded-lg bg-gray-50 p-4 dark:bg-gray-800">
+                    <div wire:loading class="mb-3 flex items-center justify-center rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
                         <div class="flex items-center gap-2 text-sm text-gray-500">
                             <svg class="h-5 w-5 animate-spin" viewBox="0 0 24 24" fill="none">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
@@ -161,54 +164,54 @@
                             <span>Memuat produk...</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 sm:grid-cols-4 lg:grid-cols-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                    <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-4 max-h-[calc(100vh-280px)] overflow-y-auto">
                         @forelse ($this->products as $product)
                             <button
                                 type="button"
                                 wire:click="addToCart({{ $product->id }})"
                                 wire:loading.attr="disabled"
-                                class="group flex flex-col overflow-hidden rounded-lg border border-gray-100 bg-white transition-all hover:shadow-md disabled:cursor-wait disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
+                                class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 disabled:cursor-wait disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
                             >
                                 {{-- Image (Square) --}}
-                                <div class="relative aspect-square w-full shrink-0 overflow-hidden bg-gray-50 dark:bg-gray-700">
+                                <div class="relative aspect-square w-full shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600">
                                     @if ($product->image)
                                         <img src="{{ Storage::disk('public')->url($product->image) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
                                     @else
-                                        <div class="flex h-full w-full items-center justify-center bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-700 dark:to-gray-600">
-                                            <span class="text-lg font-bold uppercase text-gray-300">{{ substr($product->name, 0, 2) }}</span>
+                                        <div class="flex h-full w-full items-center justify-center">
+                                            <span class="text-2xl font-bold uppercase text-gray-300 dark:text-gray-500">{{ substr($product->name, 0, 2) }}</span>
                                         </div>
                                     @endif
 
                                     {{-- Badge --}}
                                     @if ($product->rate_type === 'duration')
-                                        <div class="absolute left-1 top-1">
-                                            <span class="rounded-full bg-amber-500 px-2 py-0.5 text-xs font-semibold text-white shadow">Per Jam</span>
+                                        <div class="absolute left-2 top-2">
+                                            <span class="rounded-full gradient-bg px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">Per Jam</span>
                                         </div>
                                     @endif
                                     @if ($product->rate_type !== 'duration' && (float) $product->stock <= 0)
-                                        <div class="absolute left-1 top-1">
-                                            <span class="rounded-full bg-red-500 px-2 py-0.5 text-xs font-semibold text-white shadow">Habis</span>
+                                        <div class="absolute left-2 top-2">
+                                            <span class="rounded-full bg-gradient-to-r from-red-500 to-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">Habis</span>
                                         </div>
                                     @endif
                                 </div>
 
                                 {{-- Info --}}
-                                <div class="flex flex-1 flex-col p-2">
+                                <div class="flex flex-1 flex-col p-3">
                                     <div class="flex flex-1 flex-col items-center justify-center text-center">
-                                        <h3 class="text-xs font-medium leading-tight text-gray-900 dark:text-white">{{ $product->name }}</h3>
-                                        <p class="mt-1 flex items-center gap-1 text-sm font-bold text-red-500">
-                                            <span>Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
+                                        <h3 class="text-xs font-semibold leading-tight text-gray-900 dark:text-white line-clamp-2">{{ $product->name }}</h3>
+                                        <p class="mt-1 flex flex-col items-center gap-0.5 text-sm font-bold">
+                                            <span class="text-primary-600 dark:text-primary-400">Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
                                             @if($product->rate_type === 'duration')
                                                 @if((float) $product->rate >= 60)
-                                                    <span class="text-[10px] font-medium text-amber-600">/ Jam</span>
+                                                    <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400">/ Jam</span>
                                                 @else
-                                                    <span class="text-[10px] font-medium text-amber-600">/ {{ (int) $product->rate }} Menit</span>
+                                                    <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400">/ {{ (int) $product->rate }} Menit</span>
                                                 @endif
                                             @endif
                                         </p>
                                     </div>
                                     <div class="mt-2 flex justify-center">
-                                        <span class="flex h-7 w-7 items-center justify-center rounded-full bg-red-500 text-xs font-bold text-white shadow transition-transform duration-200 group-hover:scale-110">
+                                        <span class="flex h-8 w-8 items-center justify-center rounded-full gradient-bg text-xs font-bold text-white shadow-lg transition-transform duration-200 group-hover:scale-110">
                                             +
                                         </span>
                                     </div>
@@ -244,7 +247,7 @@
 
                         <div class="flex items-center gap-2.5">
 
-                            <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-500/10">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
 
                                 <x-heroicon-o-user class="h-4 w-4" />
 
@@ -261,10 +264,10 @@
                         <button
                             type="button"
                             wire:click="openAddCustomer"
-                            class="flex h-7 w-7 items-center justify-center rounded-lg text-red-500 transition-colors hover:bg-red-50 dark:hover:bg-red-500/10"
+                            class="flex h-8 w-8 items-center justify-center rounded-xl text-primary-500 transition-all hover:bg-primary-50 dark:hover:bg-primary-500/10"
                         >
 
-                            <x-heroicon-o-user class="h-4 w-4" />
+                            <x-heroicon-o-plus class="h-4 w-4" />
 
                         </button>
 
@@ -372,10 +375,7 @@
                                         >
 
                                             {{-- AVATAR --}}
-                                            <div
-                                                class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-xs font-bold text-white"
-                                                class="gradient-bg"
-                                            >
+                                            <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl text-sm font-bold text-white gradient-bg">
                                                 {{ strtoupper(substr($customer->name, 0, 1)) }}
                                             </div>
 
@@ -446,14 +446,11 @@
 
                             @if ($selectedCustomer)
 
-                                <div class="flex items-center gap-2.5 rounded-xl border border-red-100 bg-red-50/50 p-2.5 dark:border-red-500/20 dark:bg-red-500/5">
+                                <div class="flex items-center gap-2.5 rounded-xl border border-primary-100 bg-primary-50/50 p-2.5 dark:border-primary-500/20 dark:bg-primary-500/5">
 
-                                    <div
-                                        class="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg text-white"
-                                        class="gradient-bg"
-                                    >
+                                    <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl gradient-bg text-white shadow">
 
-                                        <x-heroicon-o-user class="h-3.5 w-3.5" />
+                                        <x-heroicon-o-user class="h-4 w-4" />
 
                                     </div>
 
@@ -490,22 +487,22 @@
                 </div>
 
                 {{-- CART --}}
-                <div class="overflow-hidden rounded-xl border border-gray-200/80 bg-white shadow-sm dark:border-gray-700/80 dark:bg-gray-900">
-                    <div class="flex items-center justify-between border-b border-gray-100/80 px-3 py-2 dark:border-gray-700/50">
+                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
                         <div class="flex items-center gap-2">
-                            <div class="flex h-7 w-7 items-center justify-center rounded-lg bg-red-50 text-red-500 dark:bg-red-500/10">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
                                 <x-heroicon-o-shopping-cart class="h-4 w-4" />
                             </div>
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">Keranjang</span>
                             @if ($this->cartCount > 0)
-                                <span class="flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-[10px] font-bold text-white">{{ $this->cartCount }}</span>
+                                <span class="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-bold text-white">{{ $this->cartCount }}</span>
                             @endif
                         </div>
                         @if (count($cart) > 0)
-                            <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-red-500 transition-colors hover:text-red-600">Hapus semua</button>
+                            <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-primary-500 transition-colors hover:text-primary-600">Hapus semua</button>
                         @endif
                     </div>
-                    <div class="scrollbar-thin p-3 max-h-48 overflow-y-auto">
+                    <div class="scrollbar-thin p-4 max-h-56 overflow-y-auto">
                         @forelse ($cart as $productId => $item)
                             @php
                                 // Handle variant keys (e.g., "1_1699999999")
@@ -518,12 +515,12 @@
                                 $isVariant = $item['is_variant'] ?? false;
                                 $isCompleted = $item['is_completed'] ?? false;
                             @endphp
-                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-2 rounded-xl border border-gray-100 bg-gray-50/50 p-2.5 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }} {{ $isCompleted ? 'border-emerald-200 dark:border-emerald-700/50 bg-emerald-50/30 dark:bg-emerald-500/10' : '' }}">
-                                <div class="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden rounded-lg {{ $isDuration ? 'bg-amber-100 dark:bg-amber-500/20' : 'bg-gray-200 dark:bg-gray-700' }}">
+                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-3 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }} {{ $isCompleted ? 'border-primary-200 dark:border-primary-700/50 bg-primary-50/30 dark:bg-primary-500/10' : '' }}">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl {{ $isDuration ? 'gradient-bg' : 'bg-gray-100 dark:bg-gray-700' }}">
                                     @if($cartProduct?->image)
                                         <img src="{{ Storage::disk('public')->url($cartProduct->image) }}" alt="{{ $item['product_name'] }}" class="h-full w-full object-cover">
                                     @else
-                                        <x-heroicon-o-clock class="h-4 w-4 {{ $isDuration ? 'text-amber-600 dark:text-amber-400' : 'text-gray-400' }}" />
+                                        <x-heroicon-o-clock class="h-5 w-5 {{ $isDuration ? 'text-white' : 'text-gray-400' }}" />
                                     @endif
                                 </div>
                                 <div class="min-w-0 flex-1">
@@ -564,30 +561,31 @@
                                             @endif
                                         </div>
                                         @if(!$isCompleted)
-                                            <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-lg p-1.5 text-gray-400 transition-colors hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                                            <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
                                                 <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
                                             </button>
                                         @endif
                                     </div>
                                 </div>
                                 @if(!$isCompleted)
-                                <div class="flex items-center gap-1">
+                                <div class="flex items-center gap-2">
                                     <button type="button" wire:click="decrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
-                                        <x-heroicon-o-minus class="h-3 w-3" />
+                                        <x-heroicon-o-minus class="h-3.5 w-3.5" />
                                     </button>
-                                    <span class="w-6 text-center text-xs font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
+                                    <span class="w-8 text-center text-sm font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
                                     <button type="button" wire:click="incrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
-                                        <x-heroicon-o-plus class="h-3 w-3" />
+                                        <x-heroicon-o-plus class="h-3.5 w-3.5" />
                                     </button>
                                 </div>
                                 @endif
                             </div>
                         @empty
-                            <div class="py-8 text-center">
-                                <div class="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-gray-100 dark:bg-gray-800">
-                                    <x-heroicon-o-shopping-cart class="h-6 w-6 text-gray-400" />
+                            <div class="py-10 text-center">
+                                <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
+                                    <x-heroicon-o-shopping-cart class="h-7 w-7 text-gray-400" />
                                 </div>
-                                <p class="mt-2 text-xs text-gray-500">Keranjang kosong</p>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Keranjang kosong</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Pilih produk untuk memulai</p>
                             </div>
                         @endforelse
                     </div>
@@ -601,7 +599,7 @@
                                         <span>Produk durasi wajib pilih meja</span>
                                     </div>
                                 @endif
-                                <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-lg border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 transition-colors focus:border-red-500 focus:outline-none focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white {{ $this->cartHasDurationProducts && !$tableId && $tableId !== 'takeaway' ? 'border-amber-400' : '' }}">
+                                <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-xl border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
                                     <option value="">Pilih Meja</option>
                                 @if(!$this->cartHasDurationProducts)
                                     <option value="takeaway">Take Away / Bawa Pulang</option>
@@ -648,42 +646,26 @@
                         <div class="mt-4">
                         @if($this->activeTableId)
                             {{-- Checkout Button for Active Table --}}
-                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full">
-                                <x-heroicon-o-credit-card class="h-4 w-4" />
-                                @if($this->tableId === 'takeaway')
-                                    Bayar Sekarang
-                                @elseif($this->cartHasDurationProducts)
-                                    Checkout - {{ $this->selectedTable?->name }}
-                                @else
-                                    Bayar Sekarang
-                                @endif
+                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-credit-card class="h-5 w-5" />
+                                Bayar Sekarang
                             </button>
                         @elseif(count($cart) > 0 && $this->tableId)
-                            {{-- Save to Table Button (Required for Duration Products) --}}
-                            <button type="button" wire:click="saveToTable" class="btn btn-primary btn-lg w-full">
-                                <x-heroicon-o-archive-box class="h-4 w-4" />
-                                @if($this->tableId === 'takeaway')
-                                    Bayar Sekarang
-                                @elseif($this->cartHasDurationProducts)
-                                    Simpan ke Meja
-                                @else
-                                    Simpan & Bayar
-                                @endif
+                            {{-- Save & Pay Button (same style as Bayar Sekarang --}}
+                            <button type="button" wire:click="saveToTable" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-check-circle class="h-5 w-5" />
+                                Simpan & Bayar
                             </button>
                         @elseif(count($cart) > 0)
                             {{-- Need Table Selection for Duration Products --}}
-                            <button type="button" disabled class="btn btn-primary btn-lg w-full opacity-50">
-                                <x-heroicon-o-information-circle class="h-4 w-4" />
-                                @if($this->cartHasDurationProducts)
-                                    Pilih Meja Dulu
-                                @else
-                                    Pilih Meja atau Bayar Sekarang
-                                @endif
+                            <button type="button" disabled class="btn btn-primary btn-lg w-full opacity-50 shadow-lg">
+                                <x-heroicon-o-information-circle class="h-5 w-5" />
+                                Pilih Meja Dulu
                             </button>
                         @else
                             {{-- Regular Checkout Button --}}
-                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full">
-                                <x-heroicon-o-credit-card class="h-4 w-4" />
+                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-credit-card class="h-5 w-5" />
                                 Bayar Sekarang
                             </button>
                         @endif
@@ -700,17 +682,17 @@
             <div class="flex w-full max-w-lg flex-col overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900 max-h-[92vh]">
 
                 {{-- HEADER --}}
-                <div class="flex shrink-0 items-center justify-between border-b border-gray-100 px-6 py-5 dark:border-gray-700 bg-gradient-to-r from-red-500 to-red-600">
+                <div class="flex shrink-0 items-center justify-between border-b border-white/10 px-6 py-5 gradient-bg">
                     <div class="flex items-center gap-3">
-                        <div class="flex h-11 w-11 items-center justify-center rounded-xl bg-white/20 text-white">
-                            <x-heroicon-o-credit-card class="h-5 w-5" />
+                        <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-white/20 text-white shadow-lg">
+                            <x-heroicon-o-credit-card class="h-6 w-6" />
                         </div>
                         <div>
                             <h2 class="text-lg font-bold text-white">Pembayaran</h2>
                             <p class="text-xs text-white/80">Selesaikan transaksi</p>
                         </div>
                     </div>
-                    <button type="button" wire:click="closeCheckout" class="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Tutup checkout">
+                    <button type="button" wire:click="closeCheckout" class="flex h-10 w-10 items-center justify-center rounded-xl text-white/80 transition hover:bg-white/20 hover:text-white" aria-label="Tutup checkout">
                         <x-heroicon-o-x-mark class="h-5 w-5" />
                     </button>
                 </div>
@@ -726,7 +708,7 @@
                                     <p class="text-xs font-medium uppercase tracking-wider text-gray-400">Total Pembayaran</p>
                                     <p class="mt-2 text-4xl font-black tracking-tight">Rp {{ number_format($this->total, 0, ',', '.') }}</p>
                                 </div>
-                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/10 backdrop-blur">
+                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl gradient-bg shadow-lg">
                                     <x-heroicon-o-shopping-cart class="h-7 w-7 text-white" />
                                 </div>
                             </div>
