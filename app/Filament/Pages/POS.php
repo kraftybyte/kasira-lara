@@ -23,6 +23,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Throwable;
 
 class POS extends Page
@@ -619,7 +620,8 @@ class POS extends Page
 
             // Create variant if NEW item has notes or modifiers (regardless of existing)
             if ($hasNewNotes || $hasNewMods) {
-                $newKey = $productId.'_'.time();
+                // Use UUID to prevent key collision
+                $newKey = $productId.'_'.Str::uuid()->toString();
                 $this->cart[$newKey] = [
                     'product_id' => $productId,
                     'product_name' => $product->name,

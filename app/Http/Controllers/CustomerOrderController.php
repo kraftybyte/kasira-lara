@@ -216,8 +216,32 @@ class CustomerOrderController extends Controller
             }
         }
 
-        // Generate unique invoice number
-        $invoiceNumber = 'INV-'.date('Ymd').'-'.strtoupper(substr(md5(uniqid()), 0, 6));
+        // Generate unique invoice number with lockForUpdate to prevent collision
+        $invoiceNumber = DB::transaction(function () use ($tenant) {
+            $prefix = 'INV-'.now()->format('Ymd').'-';
+
+            // Get highest existing number for today with lock
+            $lastInvoice = Sale::where('tenant_id', $tenant->id)
+                ->where('invoice_number', 'like', $prefix.'%')
+                ->lockForUpdate()
+                ->orderByDesc('id')
+                ->first();
+
+            $number = 0;
+            if ($lastInvoice) {
+                $suffix = substr($lastInvoice->invoice_number, strlen($prefix));
+                // Handle format: INV-YYYYMMDD-XXXX-XXXXXX or INV-YYYYMMDD-XXXX
+                $parts = explode('-', $suffix);
+                if (isset($parts[0]) && is_numeric($parts[0])) {
+                    $number = (int) $parts[0];
+                }
+            }
+
+            // Add microsecond suffix for uniqueness
+            $microSuffix = substr(now()->format('Hisu'), -6);
+
+            return $prefix.str_pad((string) ($number + 1), 4, '0', STR_PAD_LEFT).'-'.$microSuffix;
+        });
 
         // For QRIS payment, create Paywuz transaction first
         if ($validatedPayment['payment_method'] === 'qris') {

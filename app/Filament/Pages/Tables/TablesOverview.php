@@ -8,6 +8,7 @@ use App\Models\Table;
 use BackedEnum;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
+use Illuminate\Database\QueryException;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\Computed;
@@ -416,44 +417,62 @@ class TablesOverview extends Page
     {
         $tableName = Table::find($tableId)?->name;
 
-        // Lock table and all its sales in ONE atomic operation to prevent race conditions
-        DB::transaction(function () use ($tableId) {
-            // Lock the table row
-            $table = Table::where('id', $tableId)->lockForUpdate()->first();
+        try {
+            // Lock table and all its sales in ONE atomic operation to prevent race conditions
+            DB::transaction(function () use ($tableId) {
+                // Lock the table row
+                $table = Table::where('id', $tableId)->lockForUpdate()->first();
 
-            if (! $table) {
-                return;
+                if (! $table) {
+                    return;
+                }
+
+                // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
+                // Get all non-cancelled, non-closed sales for this table within same tenant
+                $sales = Sale::where('table_id', $tableId)
+                    ->where('tenant_id', $table->tenant_id)
+                    ->whereNull('closed_at')
+                    ->where('status', '!=', 'cancelled')
+                    ->lockForUpdate()
+                    ->get();
+
+                // Mark all sales as closed (preserve for historical records)
+                if ($sales->isNotEmpty()) {
+                    $sales->each(function ($sale) {
+                        $sale->update(['closed_at' => now()]);
+                    });
+                }
+
+                // Always reset table status to available
+                // This handles edge cases where table shows as active but has no sales
+                $table->update(['status' => 'available']);
+            });
+
+            Notification::make()
+                ->title('Bill ditutup')
+                ->body("Meja {$tableName} sudah bersih, siap untuk pelanggan baru.")
+                ->success()
+                ->send();
+
+            // Dispatch browser event to reload page
+            $this->dispatch('reload-page');
+
+        } catch (QueryException $e) {
+            // Handle lock timeout or deadlock
+            if (str_contains($e->getMessage(), 'Deadlock') || str_contains($e->getMessage(), 'Lock wait')) {
+                Notification::make()
+                    ->title('Gagal menutup meja')
+                    ->body('Meja sedang digunakan proses lain. Silakan coba lagi.')
+                    ->danger()
+                    ->send();
+            } else {
+                Notification::make()
+                    ->title('Gagal menutup meja')
+                    ->body('Terjadi kesalahan: '.$e->getMessage())
+                    ->danger()
+                    ->send();
             }
-
-            // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
-            // Get all non-cancelled, non-closed sales for this table within same tenant
-            $sales = Sale::where('table_id', $tableId)
-                ->where('tenant_id', $table->tenant_id)
-                ->whereNull('closed_at')
-                ->where('status', '!=', 'cancelled')
-                ->lockForUpdate()
-                ->get();
-
-            // Mark all sales as closed (preserve for historical records)
-            if ($sales->isNotEmpty()) {
-                $sales->each(function ($sale) {
-                    $sale->update(['closed_at' => now()]);
-                });
-            }
-
-            // Always reset table status to available
-            // This handles edge cases where table shows as active but has no sales
-            $table->update(['status' => 'available']);
-        });
-
-        Notification::make()
-            ->title('Bill ditutup')
-            ->body("Meja {$tableName} sudah bersih, siap untuk pelanggan baru.")
-            ->success()
-            ->send();
-
-        // Dispatch browser event to reload page
-        $this->dispatch('reload-page');
+        }
     }
 
     public function hasUnpaidOrders(int $tableId): bool
