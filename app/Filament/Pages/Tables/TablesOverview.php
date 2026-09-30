@@ -391,36 +391,35 @@ class TablesOverview extends Page
 
     public function closeTable(int $tableId): void
     {
-        $tableName = null;
-
-        // Lock table and its sales in ONE atomic operation to prevent race conditions
-        // This prevents new orders from being created between table lock and sales cleanup
-        $lockedRows = DB::select("
-            SELECT t.id as table_id, s.id as sale_id
-            FROM tables t
-            LEFT JOIN sales s ON s.table_id = t.id AND s.closed_at IS NULL AND s.status != 'cancelled'
-            WHERE t.id = ?
-            FOR UPDATE
-        ", [$tableId]);
-
-        if (empty($lockedRows)) {
-            return;
-        }
-
-        // Get table info from first row
         $tableName = Table::find($tableId)?->name;
 
-        // Update all sales for this table - mark as closed
-        // DO NOT delete items/payments - keep for historical records
-        $saleIds = collect($lockedRows)->pluck('sale_id')->filter()->toArray();
-        if (! empty($saleIds)) {
-            // Mark sales as closed
-            Sale::whereIn('id', $saleIds)->update(['closed_at' => now()]);
-            // Items and payments are PRESERVED for historical records/reports
-        }
+        // Lock table and all its sales in ONE atomic operation to prevent race conditions
+        DB::transaction(function () use ($tableId) {
+            // Lock the table row
+            $table = Table::where('id', $tableId)->lockForUpdate()->first();
 
-        // Reset table status
-        Table::where('id', $tableId)->update(['status' => 'available']);
+            if (! $table) {
+                return;
+            }
+
+            // Get all non-cancelled, non-closed sales for this table
+            $sales = Sale::where('table_id', $tableId)
+                ->whereNull('closed_at')
+                ->where('status', '!=', 'cancelled')
+                ->lockForUpdate()
+                ->get();
+
+            // Mark all sales as closed (preserve for historical records)
+            if ($sales->isNotEmpty()) {
+                $sales->each(function ($sale) {
+                    $sale->update(['closed_at' => now()]);
+                });
+            }
+
+            // Always reset table status to available
+            // This handles edge cases where table shows as active but has no sales
+            $table->update(['status' => 'available']);
+        });
 
         Notification::make()
             ->title('Bill ditutup')
