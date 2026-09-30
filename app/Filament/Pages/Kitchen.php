@@ -46,31 +46,11 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that are not yet served - EXCLUDE closed sales
-        // POS orders: show all (already paid when create)
-        // Customer orders:
-        // - Paid/completed orders appear immediately
-        // - Counter orders appear immediately (will be paid via POS)
+        // Orders that need cooking: not yet served, not closed
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->whereNull('closed_at')  // Exclude closed sales
+            ->whereNull('closed_at')
             ->whereNull('served_at')
-            ->where(function ($query) {
-                $query->where('source', 'pos')
-                    ->orWhere(function ($q) {
-                        $q->where('source', 'customer')
-                            ->where(function ($inner) {
-                                // Show paid/completed orders
-                                $inner->where('payment_status', 'paid')
-                                    ->orWhere('status', 'completed')
-                                    // OR show counter orders that need to be paid via POS
-                                    ->orWhere(function ($counterQuery) {
-                                        $counterQuery->where('payment_method', 'counter')
-                                            ->where('status', 'pending');
-                                    });
-                            });
-                    });
-            })
             ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -83,23 +63,13 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that are ready to serve (not yet completed) - EXCLUDE closed sales
-        // Only show POS orders or paid customer orders
+        // Orders that are marked as served - show regardless of status
+        // Orders with served_at=null are in "Sedang Dimasak"
+        // When status='completed', order is hidden by setting closed_at (done by closeTable)
         return Sale::query()
             ->where('tenant_id', $tenant->id)
-            ->whereNull('closed_at')  // Exclude closed sales
+            ->whereNull('closed_at')
             ->whereNotNull('served_at')
-            ->where('status', '!=', 'completed')
-            ->where(function ($query) {
-                $query->where('source', 'pos')
-                    ->orWhere(function ($q) {
-                        $q->where('source', 'customer')
-                            ->where(function ($inner) {
-                                $inner->where('payment_status', 'paid')
-                                    ->orWhere('status', 'completed');
-                            });
-                    });
-            })
             ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -159,9 +129,13 @@ class Kitchen extends Page
     {
         try {
             $tenant = $this->getTenant();
+            // Set both status and closed_at so order disappears from Kitchen
             $updated = Sale::where('id', $saleId)
                 ->where('tenant_id', $tenant?->id)
-                ->update(['status' => 'completed']);
+                ->update([
+                    'status' => 'completed',
+                    'closed_at' => now(),  // This makes order disappear from Kitchen queries
+                ]);
 
             if ($updated) {
                 Notification::make()

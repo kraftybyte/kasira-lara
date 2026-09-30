@@ -1857,7 +1857,13 @@ class POS extends Page
             }
         }
 
-        return $prefix.str_pad((string) ($number + 1), 4, '0', STR_PAD_LEFT);
+        $newNumber = $number + 1;
+
+        // Use timestamp-based suffix to reduce collision risk
+        // Format: INV-YYYYMMDD-XXXX-XXXXXX (timestamp for extra uniqueness)
+        $timestampSuffix = substr(now()->format('His'), -6);
+
+        return $prefix.str_pad((string) $newNumber, 4, '0', STR_PAD_LEFT).'-'.$timestampSuffix;
     }
 
     /*
@@ -2547,12 +2553,12 @@ class POS extends Page
             return;
         }
 
-        $table = Table::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('id', $tableId)
+        // Lock table row first to prevent race conditions
+        $table = Table::where('id', $tableId)
+            ->lockForUpdate()
             ->first();
 
-        if (! $table) {
+        if (! $table || $table->tenant_id !== $tenant->id) {
             return;
         }
 
@@ -2565,7 +2571,7 @@ class POS extends Page
         $this->reservationId = $reservation?->id;
 
         // Check for ALL active orders (pending/open, not completed, not closed)
-        // Use lockForUpdate to prevent race conditions with concurrent table selections
+        // Table row is already locked above, now lock sales
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
             ->where('status', '!=', 'completed')
@@ -2611,8 +2617,10 @@ class POS extends Page
             }
         } else {
             // Check for completed orders (QR paid orders, not closed) - show in cart but disabled
+            // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
             $completedOrders = Sale::query()
                 ->where('table_id', $tableId)
+                ->where('tenant_id', $tenant->id)
                 ->where('status', 'completed')
                 ->whereNull('closed_at')
                 ->with(['items.product'])

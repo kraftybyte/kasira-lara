@@ -2,7 +2,6 @@
 
 namespace App\Livewire;
 
-use App\Filament\Pages\tables\TablesOverview;
 use App\Models\Sale;
 use App\Models\Table;
 use Livewire\Component;

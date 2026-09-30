@@ -86,10 +86,12 @@ class Table extends Model
 
     public function getPendingOrdersAttribute(): Collection
     {
+        // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
         return Sale::query()
+            ->where('tenant_id', $this->tenant_id)
             ->where('table_id', $this->id)
             ->where('status', 'completed')
-            ->latest()
+            ->latest('created_at')
             ->get();
     }
 

@@ -197,7 +197,6 @@
                                     </span>
                                     <div class="flex-1 min-w-0">
                                         <p class="text-sm font-medium text-gray-900 dark:text-white line-clamp-2">{{ $item->product_name }}</p>
-                                        {{-- Modifiers --}}
                                         @if($item->modifiers && $item->modifiers->count() > 0)
                                             <div class="mt-1 flex flex-wrap items-center gap-1">
                                                 @foreach($item->modifiers as $modifier)
@@ -207,7 +206,6 @@
                                                 @endforeach
                                             </div>
                                         @endif
-                                        {{-- Notes --}}
                                         @if($item->notes)
                                             <span class="mt-1 flex items-center gap-1 text-xs text-amber-600 dark:text-amber-400">
                                                 <x-heroicon-o-pencil-square class="h-3 w-3 shrink-0" />

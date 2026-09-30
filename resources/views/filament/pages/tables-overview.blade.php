@@ -127,15 +127,7 @@
     {{-- Section Title --}}
     <div class="mb-4 flex items-center justify-between">
         <h2 class="text-lg font-bold text-gray-900 dark:text-white sm:text-xl">Daftar Meja</h2>
-        <div class="flex items-center gap-2">
-            <button
-                wire:click="$dispatch('showAllOrders')"
-                class="btn btn-secondary btn-sm">
-                <x-heroicon-o-list-bullet class="h-4 w-4" />
-                Semua Pesanan
-            </button>
-            <span class="text-xs text-gray-500">{{ $this->tables->count() }} meja</span>
-        </div>
+        <span class="text-xs text-gray-500">{{ $this->tables->count() }} meja</span>
     </div>
 
     {{-- Tables Grid --}}

@@ -245,7 +245,15 @@ class TablesOverview extends Page
 
     public function markAsServed(int $saleId): void
     {
-        $sale = Sale::find($saleId);
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return;
+        }
+
+        // SECURITY: Add tenant scoping to prevent cross-tenant access
+        $sale = Sale::where('id', $saleId)
+            ->where('tenant_id', $tenant->id)
+            ->first();
 
         if ($sale) {
             $sale->markAsServed();
@@ -255,7 +263,15 @@ class TablesOverview extends Page
 
     public function markAsUnserved(int $saleId): void
     {
-        $sale = Sale::find($saleId);
+        $tenant = filament()->getTenant();
+        if (! $tenant) {
+            return;
+        }
+
+        // SECURITY: Add tenant scoping to prevent cross-tenant access
+        $sale = Sale::where('id', $saleId)
+            ->where('tenant_id', $tenant->id)
+            ->first();
 
         if ($sale) {
             $sale->markAsUnserved();
@@ -409,8 +425,10 @@ class TablesOverview extends Page
                 return;
             }
 
-            // Get all non-cancelled, non-closed sales for this table
+            // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
+            // Get all non-cancelled, non-closed sales for this table within same tenant
             $sales = Sale::where('table_id', $tableId)
+                ->where('tenant_id', $table->tenant_id)
                 ->whereNull('closed_at')
                 ->where('status', '!=', 'cancelled')
                 ->lockForUpdate()
