@@ -97,6 +97,7 @@ class Dashboard extends Page
         $dailySales = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
+            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 DB::raw('DATE(created_at) as date'),
@@ -153,6 +154,7 @@ class Dashboard extends Page
             ->whereHas('sale', function ($query) use ($tenant, $startDate, $endDate) {
                 $query->where('tenant_id', $tenant->id)
                     ->where('status', 'completed')
+                    ->whereNull('closed_at')  // Exclude closed sales
                     ->whereBetween('created_at', [$startDate, $endDate]);
             })
             ->select(
@@ -191,6 +193,7 @@ class Dashboard extends Page
         $summary = Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
+            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$startDate, $endDate])
             ->select(
                 'payment_method',
@@ -231,6 +234,7 @@ class Dashboard extends Page
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->where('status', 'completed')
+            ->whereNull('closed_at')  // Exclude closed sales
             ->whereBetween('created_at', [$this->getStartDate(), $this->getEndDate()])
             ->count();
     }

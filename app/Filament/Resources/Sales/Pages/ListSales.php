@@ -5,6 +5,7 @@ namespace App\Filament\Resources\Sales\Pages;
 use App\Filament\Pages\Reports\SalesReport;
 use App\Filament\Resources\Sales\SaleResource;
 use Filament\Actions\Action;
+use Filament\Facades\Filament;
 use Filament\Resources\Pages\ListRecords;
 use Illuminate\Database\Eloquent\Builder;
 
@@ -28,6 +29,16 @@ class ListSales extends ListRecords
 
     protected function getTableQuery(): Builder
     {
-        return parent::getTableQuery()->with(['items', 'table', 'customer', 'user', 'payments']);
+        $query = parent::getTableQuery()
+            ->with(['items', 'table', 'customer', 'user', 'payments']);
+
+        // Tenant scoping
+        $tenant = Filament::getTenant();
+        if ($tenant) {
+            $query->where('tenant_id', $tenant->id);
+        }
+
+        // Note: Do NOT filter by closed_at - show ALL sales for historical records
+        return $query;
     }
 }

@@ -1440,7 +1440,18 @@ class POS extends Page
 
                         /*
                         |--------------------------------------------------------------------------
-                        | CREATE SALE ITEM
+                        | DELETE EXISTING ITEMS (prevent duplicates when updating existing bill)
+                        |--------------------------------------------------------------------------
+                        */
+
+                        // Only delete items when updating existing bill, not for new sales
+                        if ($isTableCheckout && $existingBill) {
+                            SaleItem::where('sale_id', $existingBill->id)->delete();
+                        }
+
+                        /*
+                        |--------------------------------------------------------------------------
+                        | CREATE SALE ITEMS
                         |--------------------------------------------------------------------------
                         */
 

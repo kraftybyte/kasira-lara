@@ -47,7 +47,7 @@ class Kitchen extends Page
         }
 
         // Orders that are not yet served - EXCLUDE closed sales
-        // POS orders: show all (already paid when created)
+        // POS orders: show all (already paid when create)
         // Customer orders:
         // - Paid/completed orders appear immediately
         // - Counter orders appear immediately (will be paid via POS)
@@ -119,7 +119,8 @@ class Kitchen extends Page
                 ->success()
                 ->send();
 
-            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
+            // Refresh the page
+            $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -143,7 +144,8 @@ class Kitchen extends Page
                 ->success()
                 ->send();
 
-            redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
+            // Refresh the page
+            $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -168,7 +170,8 @@ class Kitchen extends Page
                     ->success()
                     ->send();
 
-                redirect()->to(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]));
+                // Refresh the page
+                $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
             } else {
                 Notification::make()
                     ->title('Gagal')
@@ -178,7 +181,7 @@ class Kitchen extends Page
             }
         } catch (Throwable $e) {
             Notification::make()
-                ->title('Gagal')
+                ->title('Terjadi kesalahan')
                 ->body('Error: '.$e->getMessage())
                 ->danger()
                 ->send();

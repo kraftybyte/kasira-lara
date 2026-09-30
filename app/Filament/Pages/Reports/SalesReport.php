@@ -13,8 +13,8 @@ use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Pagination\Paginator;
-use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use UnitEnum;
 
 class SalesReport extends Page
@@ -108,6 +108,8 @@ class SalesReport extends Page
                 $this->getEndDateTime(),
             ]);
 
+        // Note: Do NOT filter by closed_at - show ALL sales for historical report
+
         if ($this->statusFilter) {
             $query->where('status', $this->statusFilter);
         }
@@ -181,19 +183,15 @@ class SalesReport extends Page
             return 0;
         }
 
-        // Calculate profit from sale items
-        $totalCost = SaleItem::query()
-            ->whereIn('sale_id', $saleIds)
-            ->get()
-            ->sum(function ($item) {
-                $product = $item->product;
-                if (! $product) {
-                    return 0;
-                }
+        // Calculate profit using aggregate query with JOIN to avoid N+1
+        // Join with products table to get cost_price in one query
+        $result = DB::table('sale_items as si')
+            ->join('products as p', 'si.product_id', '=', 'p.id')
+            ->whereIn('si.sale_id', $saleIds->toArray())
+            ->selectRaw('SUM(p.cost_price * si.quantity) as total_cost')
+            ->first();
 
-                // Cost = product cost_price * quantity
-                return (float) $product->cost_price * (float) $item->quantity;
-            });
+        $totalCost = (float) ($result->total_cost ?? 0);
 
         return max(0, $this->totalRevenue - $totalCost);
     }

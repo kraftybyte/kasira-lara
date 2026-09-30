@@ -118,12 +118,12 @@ class SalesTable
                 |--------------------------------------------------------------------------
                 */
 
-                TextColumn::make('payments.method')
+                TextColumn::make('payment_method')
                     ->label('Pembayaran')
                     ->badge()
                     ->color(
-                        function ($state) {
-                            return match (strtolower((string) $state)) {
+                        function ($record) {
+                            return match (strtolower($record->payment_method ?? '')) {
                                 'cash' => 'success',
                                 'qris' => 'info',
                                 'qris_manual' => 'warning',
@@ -133,9 +133,9 @@ class SalesTable
                             };
                         }
                     )
-                    ->formatStateUsing(function ($state) {
+                    ->formatStateUsing(function ($record) {
 
-                        return match (strtolower((string) $state)) {
+                        return match (strtolower($record->payment_method ?? '')) {
 
                             'cash' => '💵 Tunai',
 
@@ -155,12 +155,12 @@ class SalesTable
 
                             'va', 'virtual_account' => '🏧 VA',
 
-                            default => $state
+                            default => $record->payment_method
                                 ? '💰 '.ucfirst(
                                     str_replace(
                                         '_',
                                         ' ',
-                                        $state
+                                        $record->payment_method
                                     )
                                 )
                                 : '-',
@@ -200,7 +200,7 @@ class SalesTable
 
                             'cancelled' => 'Dibatalkan',
 
-                            default => ucfirst($state),
+                            default => ucfirst($record->payment_method),
 
                         }
                     ),
