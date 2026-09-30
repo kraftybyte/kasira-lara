@@ -2517,10 +2517,12 @@ class POS extends Page
         $this->reservationId = $reservation?->id;
 
         // Check for ALL active orders (pending/open, not completed, not closed)
+        // Use lockForUpdate to prevent race conditions with concurrent table selections
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
             ->where('status', '!=', 'completed')
             ->whereNull('closed_at')
+            ->lockForUpdate()
             ->with(['items.product'])
             ->get();
 

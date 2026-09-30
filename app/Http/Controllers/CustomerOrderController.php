@@ -22,7 +22,8 @@ class CustomerOrderController extends Controller
     {
         $tenant = Tenant::where('slug', $tenantSlug)->firstOrFail();
 
-        if ($table->tenant_id !== $tenant->id) {
+        // SECURITY: Check table ownership and active status
+        if ($table->tenant_id !== $tenant->id || ! $table->is_active) {
             abort(404);
         }
 
@@ -495,11 +496,24 @@ class CustomerOrderController extends Controller
             }
         }
 
-        // Update existing order totals
+        // Update existing order totals with proper tax calculation
         $newSubtotal = $existingOrder->subtotal + $additionalSubtotal;
+
+        // Recalculate tax based on tenant settings
+        $tenantSetting = TenantSetting::where('tenant_id', $existingOrder->tenant_id)->first();
+        $showTax = $tenantSetting?->show_tax ?? false;
+        $taxRate = (float) ($tenantSetting?->tax_rate ?? 0);
+
+        $beforeTax = $newSubtotal;
+        $taxAmount = 0;
+        if ($showTax && $taxRate > 0) {
+            $taxAmount = round($newSubtotal * ($taxRate / (100 + $taxRate)), 2);
+        }
+
         $existingOrder->update([
-            'subtotal' => $newSubtotal,
-            'grand_total' => $newSubtotal,
+            'subtotal' => $beforeTax,
+            'tax' => $taxAmount,
+            'grand_total' => $beforeTax + $taxAmount,
         ]);
 
         // Update table status if needed
@@ -692,14 +706,23 @@ class CustomerOrderController extends Controller
             return redirect()->back()->with('error', 'Pembayaran QRIS tidak valid. Silakan coba lagi.');
         }
 
-        // If we reach here with no Paywuz transaction (DEMO mode QRIS only)
+        // SECURITY: DEMO mode should require manual verification by staff
+        // DO NOT auto-complete payments in demo mode - this prevents fake payments
         if (empty($sale->paywuz_transaction_id) || str_starts_with($sale->paywuz_transaction_id, 'DEMO-')) {
-            // Demo mode - allow but log heavily
-            Log::info('CustomerOrderController: Processing DEMO mode payment', [
+            Log::warning('CustomerOrderController: DEMO mode payment blocked - requires manual verification', [
                 'sale_id' => $sale->id,
                 'invoice' => $sale->invoice_number,
                 'payment_method' => $sale->payment_method,
             ]);
+
+            if ($request->expectsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Demo mode - silakan verifikasi manual di kasir.',
+                ], 403);
+            }
+
+            return redirect()->back()->with('error', 'Demo mode - silakan verifikasi manual di kasir.');
         }
 
         // Mark as completed only if verified
