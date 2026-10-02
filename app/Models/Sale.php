@@ -43,6 +43,7 @@ class Sale extends Model
         'payment_status',
         'paid_at',
         'closed_at',
+        'kitchen_completed_at',
     ];
 
     protected function casts(): array
@@ -60,6 +61,7 @@ class Sale extends Model
             'served_at' => 'datetime',
             'paid_at' => 'datetime',
             'closed_at' => 'datetime',
+            'kitchen_completed_at' => 'datetime',
         ];
     }
 

@@ -46,11 +46,12 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that need cooking: not yet served, not closed
+        // Orders that need cooking: not yet served, not kitchen completed
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->whereNull('closed_at')
             ->whereNull('served_at')
+            ->whereNull('kitchen_completed_at')
             ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -63,13 +64,13 @@ class Kitchen extends Page
             return collect();
         }
 
-        // Orders that are marked as served - show regardless of status
-        // Orders with served_at=null are in "Sedang Dimasak"
-        // When status='completed', order is hidden by setting closed_at (done by closeTable)
+        // Orders that are marked as served - show regardless of payment status
+        // Not kitchen completed yet
         return Sale::query()
             ->where('tenant_id', $tenant->id)
             ->whereNull('closed_at')
             ->whereNotNull('served_at')
+            ->whereNull('kitchen_completed_at')
             ->with(['items.modifiers', 'items.product', 'table', 'customer'])
             ->orderBy('created_at', 'asc')
             ->get();
@@ -129,19 +130,18 @@ class Kitchen extends Page
     {
         try {
             $tenant = $this->getTenant();
-            // Only set status='completed' - do NOT set closed_at here
-            // closed_at should only be set when kasir explicitly closes table from TablesOverview
+            // Set kitchen_completed_at - does NOT affect payment status
+            // Payment status (open/pending/completed) is managed separately by kasir
             $updated = Sale::where('id', $saleId)
                 ->where('tenant_id', $tenant?->id)
                 ->update([
-                    'status' => 'completed',
-                    // REMOVED: 'closed_at' should NOT be set here
+                    'kitchen_completed_at' => now(),
                 ]);
 
             if ($updated) {
                 Notification::make()
                     ->title('Berhasil')
-                    ->body('Pesanan ditutup.')
+                    ->body('Pesanan ditutup dari dapur.')
                     ->success()
                     ->send();
 
