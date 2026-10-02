@@ -1,0 +1,372 @@
+@import 'tailwindcss' source(none);
+
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+
+/* ==================== GRADIENT ==================== */
+.gradient-bg {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
+}
+
+/* ==================== SIDEBAR ACTIVE NAV ITEM ==================== */
+/* Active sidebar navigation item with gradient background and white icon */
+/* Override Filament's default active state styles */
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+    --tw-gradient-from: #EF4444 !important;
+    --tw-gradient-to: #F97316 !important;
+    --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon {
+    color: white !important;
+}
+
+.fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label,
+.filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-sidebar-item-label {
+    color: white !important;
+    font-weight: 600;
+}
+
+/* Dark mode support */
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn,
+.dark .filament-sidebar-item.fi-active > .fi-sidebar-item-btn {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+}
+
+.dark .fi-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon,
+.dark .filament-sidebar-item.fi-active > .fi-sidebar-item-btn .fi-icon {
+    color: white !important;
+}
+
+/* Sidebar group header */
+.fi-sidebar-group-label {
+    color: #9CA3AF !important;
+    font-size: 0.75rem !important;
+    font-weight: 600 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+}
+
+/* ==================== FILAMENT PRIMARY BUTTON GRADIENT ==================== */
+/* Override Filament buttons with primary color to use gradient */
+.fi-btn.fi-color-primary,
+.fi-btn.fi-color-danger,
+a.fi-btn.fi-color-primary,
+a.fi-btn.fi-color-danger {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+    border-color: transparent !important;
+    color: white !important;
+}
+
+.fi-btn.fi-color-primary:hover,
+.fi-btn.fi-color-danger:hover {
+    background: linear-gradient(135deg, #DC2626 0%, #EA580C 100%) !important;
+    color: white !important;
+}
+
+/* Also override fi-bg-color-* when used with fi-color-primary */
+.fi-btn.fi-color-primary.fi-bg-color-400,
+.fi-btn.fi-color-danger.fi-bg-color-400,
+a.fi-btn.fi-color-primary.fi-bg-color-400,
+a.fi-btn.fi-color-danger.fi-bg-color-400 {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+    color: white !important;
+}
+
+.fi-btn.fi-color-primary.fi-bg-color-500,
+.fi-btn.fi-color-danger.fi-bg-color-500 {
+    background: linear-gradient(135deg, #DC2626 0%, #EA580C 100%) !important;
+    color: white !important;
+}
+
+/* Text color override for primary buttons */
+.fi-color-primary.fi-text-color-950,
+.fi-color-primary.fi-text-color-800,
+.fi-color-primary.fi-text-color-900 {
+    color: white !important;
+}
+
+/* Filament action button with primary color */
+.fi-ac-btn-action.fi-color-primary,
+a.fi-ac-btn-action.fi-color-primary {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%) !important;
+    color: white !important;
+}
+
+.fi-ac-btn-action.fi-color-primary:hover {
+    background: linear-gradient(135deg, #DC2626 0%, #EA580C 100%) !important;
+}
+
+.gradient-bg-shadow {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
+    box-shadow: 0 4px 14px 0 rgb(239 68 68 / 0.39);
+}
+
+.gradient-bg-soft {
+    background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(249, 115, 22, 0.1) 100%);
+}
+
+/* ==================== BUTTONS ==================== */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    border-radius: 0.5rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.btn-lg { padding: 0.75rem 1.5rem; font-size: 1rem; }
+.btn-md { padding: 0.5rem 1rem; font-size: 0.875rem; }
+.btn-sm { padding: 0.375rem 0.75rem; font-size: 0.75rem; }
+
+.btn-primary {
+    background: linear-gradient(135deg, #EF4444 0%, #F97316 100%);
+    color: white;
+    border: none;
+}
+.btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+
+.btn-secondary { background-color: #6B7280; color: white; border: none; }
+.btn-secondary:hover { background-color: #4B5563; }
+
+.btn-danger { background-color: #EF4444; color: white; border: none; }
+.btn-danger:hover { background-color: #DC2626; }
+
+.btn-success { background-color: #10B981; color: white; border: none; }
+.btn-success:hover { background-color: #059669; }
+
+.btn-ghost { background-color: transparent; color: #6B7280; border: none; }
+.btn-ghost:hover { background-color: #F3F4F6; }
+.dark .btn-ghost:hover { background-color: #374151; }
+
+.btn-outline-danger { background-color: transparent; color: #EF4444; border: 1px solid #EF4444; }
+.btn-outline-danger:hover { background-color: #FEF2F2; }
+
+.btn-outline-success { background-color: transparent; color: #10B981; border: 1px solid #10B981; }
+.btn-outline-success:hover { background-color: #ECFDF5; }
+
+.btn-qty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    border-radius: 0.375rem;
+    border: 1px solid #E5E7EB;
+    background: white;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-qty:hover { background-color: #F3F4F6; border-color: #D1D5DB; }
+.dark .btn-qty { background-color: #1F2937; border-color: #374151; color: #F9FAFB; }
+.dark .btn-qty:hover { background-color: #374151; }
+
+/* ==================== PAGINATION BUTTONS ==================== */
+.pagination-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0.25rem 0.75rem;
+    font-size: 0.875rem;
+    border-radius: 0.25rem;
+    border: 1px solid #E5E7EB;
+    background-color: white;
+    color: #4B5563;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.pagination-btn:hover { background-color: #F3F4F6; color: #111827; }
+.dark .pagination-btn { background-color: #1F2937; border-color: #374151; color: #9CA3AF; }
+.dark .pagination-btn:hover { background-color: #374151; color: #F9FAFB; }
+
+.btn-amount {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    background-color: #F3F4F6;
+    border: 1px solid #E5E7EB;
+    border-radius: 0.5rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.btn-amount:hover { background-color: #E5E7EB; }
+.dark .btn-amount { background-color: #374151; border-color: #4B5563; color: #F9FAFB; }
+.dark .btn-amount:hover { background-color: #4B5563; }
+
+/* ==================== CARDS ==================== */
+.card {
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    overflow: hidden;
+}
+.dark .card { border-color: #374151; background-color: #111827; }
+
+.card-hover {
+    border-radius: 0.75rem;
+    border: 1px solid #e5e7eb;
+    background-color: white;
+    transition: all 0.2s;
+}
+.card-hover:hover { border-color: #f3f4f6; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
+.dark .card-hover { border-color: #374151; background-color: #111827; }
+.dark .card-hover:hover { border-color: #4b5563; }
+
+/* ==================== BADGES ==================== */
+.badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.125rem 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border-radius: 9999px;
+}
+
+.badge-success { background-color: #D1FAE5; color: #059669; }
+.dark .badge-success { background-color: rgba(16, 185, 129, 0.2); color: #6EE7B7; }
+
+.badge-info { background-color: #DBEAFE; color: #2563EB; }
+.dark .badge-info { background-color: rgba(59, 130, 246, 0.2); color: #93C5FD; }
+
+.badge-warning { background-color: #FEF3C7; color: #D97706; }
+.dark .badge-warning { background-color: rgba(245, 158, 11, 0.2); color: #FCD34D; }
+
+.badge-danger { background-color: #FEE2E2; color: #DC2626; }
+.dark .badge-danger { background-color: rgba(239, 68, 68, 0.2); color: #FCA5A5; }
+
+.badge-transfer { background-color: #EDE9FE; color: #7C3AED; }
+.dark .badge-transfer { background-color: rgba(139, 92, 246, 0.2); color: #C4B5FD; }
+
+.badge-indigo { background-color: #E0E7FF; color: #4F46E5; }
+.dark .badge-indigo { background-color: rgba(99, 102, 241, 0.2); color: #A5B4FC; }
+
+.badge-violet { background-color: #EDE9FE; color: #8B5CF6; }
+.dark .badge-violet { background-color: rgba(139, 92, 246, 0.2); color: #C4B5FD; }
+
+.badge-pink { background-color: #FCE7F3; color: #DB2777; }
+.dark .badge-pink { background-color: rgba(219, 39, 119, 0.2); color: #F9A8D4; }
+
+/* ==================== ALERTS ==================== */
+.alert-danger {
+    display: flex;
+    padding: 1rem;
+    background-color: #FEE2E2;
+    border: 1px solid #FECACA;
+    border-radius: 0.75rem;
+}
+.dark .alert-danger { background-color: rgba(239, 68, 68, 0.1); border-color: rgba(239, 68, 68, 0.3); }
+
+/* ==================== STAT ICON ==================== */
+.stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 0.75rem;
+    flex-shrink: 0;
+}
+
+/* ==================== SECTION HEADER ==================== */
+.section-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 1.25rem;
+    border-bottom: 1px solid #e5e7eb;
+}
+.dark .section-header { border-color: #374151; }
+
+/* ==================== TABLES ==================== */
+.table-container { overflow-x: auto; }
+
+.table-header {
+    background-color: #F9FAFB;
+    border-bottom: 1px solid #E5E7EB;
+}
+.dark .table-header { background-color: #1F2937; border-color: #374151; }
+
+.table-row { border-bottom: 1px solid #E5E7EB; }
+.table-row:hover { background-color: #F9FAFB; }
+.dark .table-row { border-color: #374151; }
+.dark .table-row:hover { background-color: #1F2937; }
+
+/* ==================== EMPTY STATE ==================== */
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 3rem 1rem;
+    text-align: center;
+}
+
+.empty-state-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 4rem;
+    height: 4rem;
+    margin-bottom: 1rem;
+    border-radius: 9999px;
+    background-color: #F3F4F6;
+    color: #9CA3AF;
+}
+.dark .empty-state-icon { background-color: #374151; color: #6B7280; }
+
+/* ==================== SCROLLBARS ==================== */
+.kasira-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+.kasira-scrollbar::-webkit-scrollbar-track { background: #F3F4F6; border-radius: 3px; }
+.kasira-scrollbar::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 3px; }
+.kasira-scrollbar::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
+.dark .kasira-scrollbar::-webkit-scrollbar-track { background: #1F2937; }
+.dark .kasira-scrollbar::-webkit-scrollbar-thumb { background: #4B5563; }
+.dark .kasira-scrollbar::-webkit-scrollbar-thumb:hover { background: #6B7280; }
+
+.scrollbar-thin::-webkit-scrollbar { width: 4px; height: 4px; }
+.scrollbar-thin::-webkit-scrollbar-track { background: transparent; }
+.scrollbar-thin::-webkit-scrollbar-thumb { background: #D1D5DB; border-radius: 2px; }
+.dark .scrollbar-thin::-webkit-scrollbar-thumb { background: #4B5563; }
+
+/* ==================== FILAMENT BRAND OVERRIDES (MUST BE LAST) ==================== */
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
+
+/* Brand primary colors - MUST be after Filament import */
+:root {
+    --primary-50: oklch(0.977 0.013 25.331) !important;
+    --primary-100: oklch(0.950 0.033 25.331) !important;
+    --primary-200: oklch(0.905 0.063 25.331) !important;
+    --primary-300: oklch(0.840 0.106 25.331) !important;
+    --primary-400: oklch(0.754 0.150 25.331) !important;
+    --primary-500: oklch(0.683 0.170 25.331) !important;
+    --primary-600: oklch(0.598 0.169 25.331) !important;
+    --primary-700: oklch(0.515 0.149 25.331) !important;
+    --primary-800: oklch(0.446 0.123 25.331) !important;
+    --primary-900: oklch(0.395 0.100 25.331) !important;
+    --primary-950: oklch(0.278 0.071 25.331) !important;
+}
+
+/* Override Filament's color-primary to use brand colors */
+.fi-color-primary {
+    --color-50: var(--primary-50) !important;
+    --color-100: var(--primary-100) !important;
+    --color-200: var(--primary-200) !important;
+    --color-300: var(--primary-300) !important;
+    --color-400: var(--primary-400) !important;
+    --color-500: var(--primary-500) !important;
+    --color-600: var(--primary-600) !important;
+    --color-700: var(--primary-700) !important;
+    --color-800: var(--primary-800) !important;
+    --color-900: var(--primary-900) !important;
+    --color-950: var(--primary-950) !important;
+}
