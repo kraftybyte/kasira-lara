@@ -19,6 +19,7 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
@@ -62,12 +63,25 @@ class POS extends Page
         return false;
     }
 
+    /**
+     * Header dirender di dalam konten (lihat view) agar tinggi halaman POS bisa dikunci satu layar.
+     */
     public function getHeader(): ?View
     {
-        return view('filament.pages.pos-header', [
-            'availableTables' => $this->availableTables,
-            'activeTables' => $this->activeTables,
-        ]);
+        return null;
+    }
+
+    public function getHeading(): string|Htmlable|null
+    {
+        return null;
+    }
+
+    /**
+     * @return array<string, string>
+     */
+    public function getBreadcrumbs(): array
+    {
+        return [];
     }
 
     /*

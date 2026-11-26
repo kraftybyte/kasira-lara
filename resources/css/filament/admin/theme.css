@@ -339,6 +339,16 @@ a.fi-ac-btn-action.fi-color-primary {
 *::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 .dark *::-webkit-scrollbar-thumb { background: #4B5563; }
 
+/* ==================== POS SATU LAYAR ==================== */
+/* Meja kasir: halaman tidak ikut scroll, hanya daftar produk dan keranjang. 8rem = topbar 4rem + padding halaman 4rem. */
+@media (min-width: 1024px) {
+    .fi-body:has(.pos-screen) { overflow: hidden; }
+    .pos-screen { display: flex; flex-direction: column; height: calc(100dvh - 8rem); }
+    .pos-screen .pos-body { flex: 1; min-height: 0; }
+    .pos-screen .pos-grow { display: flex; flex-direction: column; flex: 1; min-height: 0; }
+    .pos-screen .pos-scroll { flex: 1; min-height: 0; overflow-y: auto; }
+}
+
 /* ==================== FILAMENT BRAND OVERRIDES (MUST BE LAST) ==================== */
 @import '../../../../vendor/filament/filament/resources/css/theme.css';
 

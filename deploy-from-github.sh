@@ -26,6 +26,10 @@ tar -xzf "$TMP/src.tgz" -C "$SITE" --strip-components=1 \
 cd "$SITE"
 echo "== Migrasi"
 php artisan migrate --force --no-interaction
+echo "== Storage publik"
+# Server lama menyimpan upload di storage_old; satukan ke storage lalu buat ulang symlink public/storage.
+if [ -d storage_old/app/public ]; then cp -Rn storage_old/app/public/. storage/app/public/; fi
+php artisan storage:link --force --no-interaction
 echo "== Bersihkan cache"
 php artisan optimize:clear --no-interaction
 php artisan filament:optimize-clear --no-interaction || true

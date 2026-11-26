@@ -1,4 +1,8 @@
 <x-filament-panels::page>
+    <div class="pos-screen">
+    <div class="mb-3">
+        @include('filament.pages.pos-header', ['availableTables' => $this->availableTables, 'activeTables' => $this->activeTables])
+    </div>
 
     {{-- Active Table Banner --}}
     @if($this->activeTableId || $this->tableId)
@@ -109,10 +113,10 @@
         </div>
     @endif
 
-    <div class="grid grid-cols-1 gap-3 lg:grid-cols-12">
+    <div class="pos-body grid grid-cols-1 gap-3 lg:grid-cols-12">
 
         {{-- PRODUCTS --}}
-        <div class="lg:col-span-8">
+        <div class="pos-grow lg:col-span-8">
 
             {{-- Search & Category Filter --}}
             <div class="mb-3 space-y-3">
@@ -152,8 +156,8 @@
                 </div>
             </div>
 
-            <div class="rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                <div class="p-2">
+            <div class="pos-grow rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <div class="pos-grow p-2">
                     {{-- Loading State --}}
                     <div wire:loading class="mb-3 flex items-center justify-center rounded-xl bg-gray-50 p-4 dark:bg-gray-800">
                         <div class="flex items-center gap-2 text-sm text-gray-500">
@@ -164,7 +168,7 @@
                             <span>Memuat produk...</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-4 max-h-[calc(100vh-280px)] overflow-y-auto">
+                    <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-4 pos-scroll overflow-y-auto">
                         @forelse ($this->products as $product)
                             <button
                                 type="button"
@@ -227,8 +231,8 @@
             </div>
         </div>
         {{-- CUSTOMER & CART --}}
-        <div class="lg:col-span-4">
-            <div class="flex flex-col gap-4">
+        <div class="pos-grow lg:col-span-4">
+            <div class="pos-grow flex flex-col gap-4">
 
                 {{-- ====================================================
                     CUSTOMER
@@ -487,7 +491,7 @@
                 </div>
 
                 {{-- CART --}}
-                <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                <div class="pos-grow overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
                     <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
                         <div class="flex items-center gap-2">
                             <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
@@ -502,7 +506,7 @@
                             <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-primary-500 transition-colors hover:text-primary-600">Hapus semua</button>
                         @endif
                     </div>
-                    <div class="scrollbar-thin p-4 max-h-56 overflow-y-auto">
+                    <div class="pos-scroll p-4 overflow-y-auto">
                         @forelse ($cart as $productId => $item)
                             @php
                                 // Handle variant keys (e.g., "1_1699999999")
@@ -676,6 +680,7 @@
             </div>
         </div>
 
+    </div>
     </div>
     @if ($showCheckout)
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4" wire:keydown.escape="closeCheckout">
