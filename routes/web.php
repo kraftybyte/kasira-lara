@@ -4,8 +4,6 @@ use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PaywuzWebhookController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReportExportController;
-use App\Livewire\OrderDetailsModal;
-use App\Models\Table;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin/login', 301)->name('home');
@@ -87,65 +85,3 @@ Route::get('/admin/{tenant}/reports/ingredients/csv', [ReportExportController::c
 
 Route::get('/admin/{tenant}/reports/ingredients/usage/csv', [ReportExportController::class, 'ingredientsUsageCsv'])
     ->name('reports.ingredients.usage.csv');
-
-Route::get('/test-modal', function () {
-    $tableId = (int) request('table', 1);
-    $tableName = 'Meja '.$tableId;
-
-    $modal = app(OrderDetailsModal::class);
-    $modal->selectedTableId = $tableId;
-    $modal->selectedTableName = $tableName;
-
-    $table = Table::find($tableId);
-    $modal->selectedTenantId = $table?->tenant_id;
-    $modal->selectedTenantSlug = $table?->tenant?->slug;
-
-    // Load orders
-    $modal->loadOrders();
-    $modal->isOpen = true;
-
-    // Debug output
-    $debug = "tableId={$modal->selectedTableId}, orders=".count($modal->orders);
-    if (! empty($modal->orders)) {
-        $debug .= ', first_keys='.implode(',', array_keys($modal->orders[0] ?? []));
-    }
-
-    return "<pre>DEBUG: {$debug}\n\n".$modal->render()->toHtml();
-});
-
-/*
-|--------------------------------------------------------------------------
-| Debug Routes - Hapus setelah debugging selesai
-|--------------------------------------------------------------------------
-*/
-
-Route::get('/debug/session', function () {
-    $data = [
-        'session_id' => session()->getId(),
-        'session_started' => session()->isStarted(),
-        'has_user' => auth()->check(),
-        'user' => auth()->user()?->email,
-        'path' => request()->path(),
-        'app_env' => config('app.env'),
-        'secure_cookie' => config('session.secure'),
-        'session_domain' => config('session.domain'),
-        'session_driver' => config('session.driver'),
-    ];
-
-    return response()->json($data);
-});
-
-Route::get('/debug/routes', function () {
-    $routes = [];
-    foreach (Route::getRoutes() as $route) {
-        if (str_starts_with($route->uri(), 'admin')) {
-            $routes[] = [
-                'uri' => $route->uri(),
-                'methods' => $route->methods(),
-                'middleware' => $route->middleware(),
-            ];
-        }
-    }
-
-    return response()->json($routes);
-});

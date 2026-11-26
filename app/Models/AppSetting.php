@@ -10,5 +10,6 @@ class AppSetting extends Model
         'app_name',
         'app_logo',
         'app_favicon',
+        'locale',
     ];
 }

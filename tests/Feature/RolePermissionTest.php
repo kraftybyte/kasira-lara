@@ -68,7 +68,7 @@ function createTestRoles(): void
         // cashier permissions
         ['viewAny:POS', 'View:POS'],
         ['viewAny:Kitchen', 'View:Kitchen'],
-        ['viewAny:Sale', 'View:Sale'],
+        ['ViewAny:Sale', 'View:Sale'],
         ['viewAny:Dashboard', 'View:Dashboard'],
         ['ViewAny:Customer', 'View:Customer', 'Create:Customer'],
         ['ViewAny:Reservation', 'View:Reservation', 'Create:Reservation'],
@@ -107,7 +107,7 @@ function createTestRoles(): void
     $cashier->permissions()->attach(collect([
         $permList['viewAny:POS'], $permList['View:POS'],
         $permList['viewAny:Kitchen'], $permList['View:Kitchen'],
-        $permList['viewAny:Sale'], $permList['View:Sale'],
+        $permList['ViewAny:Sale'], $permList['View:Sale'],
         $permList['viewAny:Dashboard'], $permList['View:Dashboard'],
         $permList['ViewAny:Customer'], $permList['View:Customer'], $permList['Create:Customer'],
         $permList['ViewAny:Reservation'], $permList['View:Reservation'], $permList['Create:Reservation'],
@@ -178,7 +178,7 @@ describe('permission existence', function () {
             ->toContain('View:POS')
             ->toContain('viewAny:Kitchen')
             ->toContain('View:Kitchen')
-            ->toContain('viewAny:Sale')
+            ->toContain('ViewAny:Sale')
             ->toContain('View:Sale')
             ->toContain('viewAny:Dashboard')
             ->toContain('View:Dashboard')
@@ -283,7 +283,7 @@ describe('policy authorization for kitchen', function () {
         expect($this->kitchenUser->can('viewAny:Kitchen'))->toBeTrue();
         expect($this->kitchenUser->can('viewAny:Dashboard'))->toBeFalse();
         expect($this->kitchenUser->can('viewAny:POS'))->toBeFalse();
-        expect($this->kitchenUser->can('viewAny:Sale'))->toBeFalse();
+        expect($this->kitchenUser->can('ViewAny:Sale'))->toBeFalse();
     });
 
     test('kitchen CANNOT access any resource CRUD', function () {
@@ -422,11 +422,12 @@ describe('BUGS FOUND - Summary', function () {
         }
     });
 
-    test('BUG 3: Dashboard accessible to ALL authenticated users regardless of permission', function () {
-        // Dashboard is in Shield config exclude list and has no canAccess() override
-        // This means ANY authenticated user can access Dashboard
-        // even without the viewAny:Dashboard permission
-        expect(method_exists(Dashboard::class, 'canAccess'))->toBeFalse();
+    test('Dashboard canAccess() denies kitchen role and allows cashier role', function () {
+        $this->actingAs($this->kitchenUser);
+        expect(Dashboard::canAccess())->toBeFalse();
+
+        $this->actingAs($this->cashierUser);
+        expect(Dashboard::canAccess())->toBeTrue();
     });
 
     test('BUG 4: POS and Kitchen pages accessible to any role via direct URL', function () {

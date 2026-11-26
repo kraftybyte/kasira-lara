@@ -6,6 +6,7 @@ use App\Filament\Auth\Pages\Login as BaseLogin;
 use App\Filament\Pages\Settings\GlobalSettings;
 use App\Filament\Pages\Settings\TenantSettings;
 use App\Http\Middleware\IdentifyTenant;
+use App\Http\Middleware\SetAppLocale;
 use App\Models\AppSetting;
 use App\Models\Tenant;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
@@ -125,6 +126,7 @@ class AdminPanelProvider extends PanelProvider
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
+                SetAppLocale::class,
             ])
 
             ->authMiddleware([

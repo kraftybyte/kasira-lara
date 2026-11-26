@@ -120,17 +120,9 @@
                         <p class="font-bold text-amber-800">Menunggu Pembayaran</p>
                         <p class="text-xs text-amber-600 mt-1">Invoice: {{ $pendingSale->invoice_number }}</p>
                     </div>
-                    <div class="flex gap-2 w-full">
-                        <a href="{{ route('customer.order.payment', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="flex-1 py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
-                            Bayar Sekarang
-                        </a>
-                        <form action="{{ route('customer.order.check-status', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" method="POST" class="flex-1">
-                            @csrf
-                            <button type="submit" class="w-full py-2.5 bg-gray-100 text-gray-700 rounded-lg font-semibold hover:bg-gray-200 transition-colors">
-                                Cek Status
-                            </button>
-                        </form>
-                    </div>
+                    <a href="{{ route('customer.order.payment', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="block w-full py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
+                        Bayar Sekarang
+                    </a>
                 </div>
             </div>
         @endif

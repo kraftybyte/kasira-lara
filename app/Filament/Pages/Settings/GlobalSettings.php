@@ -5,6 +5,7 @@ namespace App\Filament\Pages\Settings;
 use App\Models\AppSetting;
 use BackedEnum;
 use Filament\Forms\Components\FileUpload;
+use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
@@ -53,6 +54,7 @@ class GlobalSettings extends Page implements HasForms
             'app_name' => $this->settings->app_name ?? 'KasirAja',
             'app_logo' => $this->settings->app_logo,
             'app_favicon' => $this->settings->app_favicon,
+            'locale' => $this->settings->locale,
         ]);
     }
 
@@ -69,6 +71,15 @@ class GlobalSettings extends Page implements HasForms
                             ->label('Nama Aplikasi')
                             ->required()
                             ->maxLength(100),
+
+                        Select::make('locale')
+                            ->label('Bahasa Tampilan')
+                            ->options([
+                                'id' => 'Bahasa Indonesia',
+                                'en' => 'English',
+                            ])
+                            ->placeholder('Ikuti pengaturan server')
+                            ->helperText('Berlaku untuk teks bawaan panel admin: tabel, tombol, pesan validasi. Teks khusus Kasira tetap Bahasa Indonesia.'),
                     ]),
 
                 Section::make('Logo Aplikasi')
@@ -114,6 +125,7 @@ class GlobalSettings extends Page implements HasForms
             $this->settings->app_name = $data['app_name'] ?? 'KasirAja';
             $this->settings->app_logo = $data['app_logo'] ?? null;
             $this->settings->app_favicon = $data['app_favicon'] ?? null;
+            $this->settings->locale = $data['locale'] ?? null;
             $this->settings->save();
 
             Notification::make()
