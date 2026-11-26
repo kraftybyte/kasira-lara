@@ -203,6 +203,9 @@
                                 <div class="flex flex-1 flex-col p-3">
                                     <div class="flex flex-1 flex-col items-center justify-center text-center">
                                         <h3 class="text-xs font-semibold leading-tight text-gray-900 dark:text-white line-clamp-2">{{ $product->name }}</h3>
+                                        @if (filled($product->description))
+                                            <p class="mt-1 text-[10px] leading-tight text-gray-500 dark:text-gray-400 line-clamp-2">{{ $product->description }}</p>
+                                        @endif
                                         <p class="mt-1 flex flex-col items-center gap-0.5 text-sm font-bold">
                                             <span class="text-primary-600 dark:text-primary-400">Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
                                             @if($product->rate_type === 'duration')
