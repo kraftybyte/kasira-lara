@@ -339,6 +339,30 @@ a.fi-ac-btn-action.fi-color-primary {
 *::-webkit-scrollbar-thumb:hover { background: #9CA3AF; }
 .dark *::-webkit-scrollbar-thumb { background: #4B5563; }
 
+/* ==================== SIDEBAR RINGKAS ==================== */
+/* Saat dilipat di desktop: rel ikon dengan label kecil di bawahnya; label grup disembunyikan Filament. */
+@media (min-width: 1024px) {
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) {
+        width: var(--collapsed-sidebar-width);
+    }
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav {
+        padding-inline: 0.5rem;
+    }
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-btn {
+        flex-direction: column;
+        gap: 0.25rem;
+        padding: 0.5rem 0.25rem;
+    }
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-label {
+        flex: none;
+        max-width: 100%;
+        white-space: normal;
+        font-size: 0.6875rem;
+        line-height: 1.1;
+        text-align: center;
+    }
+}
+
 /* ==================== POS SATU LAYAR ==================== */
 /* Meja kasir: halaman tidak ikut scroll, hanya daftar produk dan keranjang. 8rem = topbar 4rem + padding halaman 4rem. */
 @media (min-width: 1024px) {

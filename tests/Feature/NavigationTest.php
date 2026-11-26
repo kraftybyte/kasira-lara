@@ -69,3 +69,17 @@ test('kitchen staff only sees the kitchen display', function () {
 
     expect(sidebarLabels($user, $tenant))->toBe(['Dapur']);
 });
+
+test('dashboard renders the collapsible sidebar with item labels', function () {
+    Role::create(['name' => 'owner']);
+    $tenant = Tenant::factory()->create();
+    $user = User::factory()->create();
+    $user->assignRole('owner');
+    $user->tenants()->attach($tenant->id, ['status' => 'active']);
+
+    $this->actingAs($user)
+        ->get("/admin/{$tenant->slug}/dashboard")
+        ->assertOk()
+        ->assertSee('fi-body-has-sidebar-collapsible-on-desktop')
+        ->assertSee('Dapur');
+});

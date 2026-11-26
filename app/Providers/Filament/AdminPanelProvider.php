@@ -85,6 +85,8 @@ class AdminPanelProvider extends PanelProvider
             ])
 
             ->topNavigation(false)
+            ->sidebarCollapsibleOnDesktop()
+            ->collapsedSidebarWidth('6rem')
 
             ->discoverResources(
                 in: app_path('Filament/Resources'),

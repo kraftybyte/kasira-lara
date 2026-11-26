@@ -84,15 +84,7 @@
             </div>
         @endif
 
-        <span
-            @if ($sidebarCollapsible && (! $subNavigation))
-                x-show="$store.sidebar.isOpen"
-                x-transition:enter="fi-transition-enter"
-                x-transition:enter-start="fi-transition-enter-start"
-                x-transition:enter-end="fi-transition-enter-end"
-            @endif
-            class="fi-sidebar-item-label"
-        >
+        <span class="fi-sidebar-item-label">
             {{ $slot }}
         </span>
 
