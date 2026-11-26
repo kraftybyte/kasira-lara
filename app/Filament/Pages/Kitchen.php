@@ -15,13 +15,13 @@ class Kitchen extends Page
 {
     protected string $view = 'filament.pages.kitchen';
 
-    protected static ?string $title = 'Kitchen Display';
+    protected static ?string $title = 'Dapur';
 
     protected static ?string $slug = 'kitchen';
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?int $navigationSort = 20;
+    protected static ?int $navigationSort = 4;
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedFire;
 

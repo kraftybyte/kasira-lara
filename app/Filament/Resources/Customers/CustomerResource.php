@@ -18,6 +18,7 @@ use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use UnitEnum;
 
 class CustomerResource extends Resource
 {
@@ -25,13 +26,15 @@ class CustomerResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = 'heroicon-o-users';
 
-    protected static ?string $navigationLabel = 'Customers';
+    protected static ?string $navigationLabel = 'Pelanggan';
 
-    protected static ?string $modelLabel = 'Customer';
+    protected static ?string $modelLabel = 'Pelanggan';
 
-    protected static ?string $pluralModelLabel = 'Customers';
+    protected static ?string $pluralModelLabel = 'Pelanggan';
 
-    protected static ?int $navigationSort = 10;
+    protected static ?int $navigationSort = 3;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Penjualan';
 
     /*
     |--------------------------------------------------------------------------

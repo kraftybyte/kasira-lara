@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class IngredientResource extends Resource
 {
@@ -24,7 +25,11 @@ class IngredientResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedCube;
 
-    protected static ?int $navigationSort = 4;
+    protected static ?int $navigationSort = 3;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Produk & Stok';
+
+    protected static ?string $modelLabel = 'Bahan Baku';
 
     protected static ?string $navigationLabel = 'Bahan Baku';
 

@@ -36,22 +36,13 @@ class AdminPanelProvider extends PanelProvider
     {
         // Lazy-load app settings to avoid DB query during app boot (breaks tests)
         $brandLogo = null;
+        $brandFavicon = null;
         $brandName = null;
         try {
             $appSetting = AppSetting::first();
             $brandName = $appSetting?->app_name ?? 'Kasira';
-            if ($appSetting?->app_logo) {
-                $logo = $appSetting->app_logo;
-                if (is_string($logo)) {
-                    $decoded = json_decode($logo, true);
-                    if (is_array($decoded) && ! empty($decoded)) {
-                        $logo = array_keys($decoded)[0];
-                    }
-                }
-                if ($logo) {
-                    $brandLogo = url('storage/'.$logo);
-                }
-            }
+            $brandLogo = $this->storageUrl($appSetting?->app_logo);
+            $brandFavicon = $this->storageUrl($appSetting?->app_favicon);
         } catch (\Throwable) {
             // AppSetting table may not exist during migrations or tests
             $brandName = 'Kasira';
@@ -68,6 +59,7 @@ class AdminPanelProvider extends PanelProvider
             // Branding - use app logo if available
             ->brandName($brandName ?? 'Kasira')
             ->brandLogo($brandLogo)
+            ->favicon($brandFavicon ?? asset('favicon.ico'))
             ->brandLogoHeight('2.5rem')
 
             // TENANCY - Tenant menu moved to header via custom views
@@ -75,6 +67,8 @@ class AdminPanelProvider extends PanelProvider
 
             // Disable global search in sidebar
             ->globalSearch(false)
+
+            ->navigationGroups(['Penjualan', 'Produk & Stok', 'Laporan', 'Pengaturan'])
 
             // Enable dark mode (no theme switcher)
             ->darkMode(false)
@@ -133,5 +127,17 @@ class AdminPanelProvider extends PanelProvider
                 Authenticate::class,
                 IdentifyTenant::class,
             ]);
+    }
+
+    /**
+     * Public URL of an uploaded file; older uploads were stored as a JSON map keyed by path.
+     */
+    private function storageUrl(mixed $path): ?string
+    {
+        if (is_string($path) && is_array($decoded = json_decode($path, true)) && $decoded !== []) {
+            $path = array_key_first($decoded);
+        }
+
+        return is_string($path) && $path !== '' ? url('storage/'.$path) : null;
     }
 }

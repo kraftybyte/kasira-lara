@@ -42,6 +42,12 @@ class RoleResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    protected static ?int $navigationSort = 3;
+
+    protected static ?string $modelLabel = 'Peran';
+
+    protected static ?string $pluralModelLabel = 'Peran';
+
     /**
      * Override to disable tenant scoping for roles.
      */

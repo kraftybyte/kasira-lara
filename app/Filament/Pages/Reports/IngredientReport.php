@@ -23,7 +23,9 @@ class IngredientReport extends Page
 
     protected static ?string $slug = 'ingredient-report';
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
+
+    protected static ?int $navigationSort = 2;
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedCube;
 

@@ -15,6 +15,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class SaleResource extends Resource
 {
@@ -23,7 +24,15 @@ class SaleResource extends Resource
     protected static string|BackedEnum|null $navigationIcon =
         Heroicon::OutlinedChartBar;
 
-    protected static ?int $navigationSort = 8;
+    protected static ?int $navigationSort = 1;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Penjualan';
+
+    protected static ?string $navigationLabel = 'Transaksi';
+
+    protected static ?string $modelLabel = 'Transaksi';
+
+    protected static ?string $pluralModelLabel = 'Transaksi';
 
     public static function form(Schema $schema): Schema
     {

@@ -14,6 +14,7 @@ use Filament\Pages\Page;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
+use UnitEnum;
 
 class GlobalSettings extends Page implements HasForms
 {
@@ -27,7 +28,9 @@ class GlobalSettings extends Page implements HasForms
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?int $navigationSort = 9990;
+    protected static ?int $navigationSort = 4;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Pengaturan';
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedCog6Tooth;
 

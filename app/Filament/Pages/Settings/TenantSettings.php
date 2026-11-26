@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Http;
+use UnitEnum;
 
 class TenantSettings extends Page implements HasForms
 {
@@ -27,13 +28,15 @@ class TenantSettings extends Page implements HasForms
 
     protected string $view = 'filament.pages.settings.tenant-settings';
 
-    protected static ?string $title = 'Pengaturan';
+    protected static ?string $title = 'Pengaturan Toko';
 
     protected static ?string $slug = 'settings';
 
     protected static bool $shouldRegisterNavigation = true;
 
-    protected static ?int $navigationSort = 9995;
+    protected static ?int $navigationSort = 1;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Pengaturan';
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-cog-6-tooth';
 

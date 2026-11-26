@@ -18,6 +18,7 @@ use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class TenantResource extends Resource
 {
@@ -25,13 +26,15 @@ class TenantResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
 
-    protected static ?string $navigationLabel = 'Tenants';
+    protected static ?string $navigationLabel = 'Tenant';
 
     protected static ?string $modelLabel = 'Tenant';
 
-    protected static ?string $pluralModelLabel = 'Tenants';
+    protected static ?string $pluralModelLabel = 'Tenant';
 
-    protected static ?int $navigationSort = 50;
+    protected static ?int $navigationSort = 5;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Pengaturan';
 
     // Disable tenant scoping for Tenant resource
     protected static bool $isScopedToTenant = false;

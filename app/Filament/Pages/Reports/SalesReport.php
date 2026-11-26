@@ -25,7 +25,9 @@ class SalesReport extends Page
 
     protected static ?string $slug = 'sales-report';
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
+
+    protected static ?int $navigationSort = 1;
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedChartBar;
 

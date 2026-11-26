@@ -21,7 +21,9 @@ class TablesOverview extends Page
 
     protected string $view = 'filament.pages.tables-overview';
 
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
+
+    protected static ?int $navigationSort = 3;
 
     protected static BackedEnum|string|null $navigationIcon = 'heroicon-o-table-cells';
 

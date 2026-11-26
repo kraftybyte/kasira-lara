@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class ReservationResource extends Resource
 {
@@ -26,7 +27,11 @@ class ReservationResource extends Resource
 
     protected static ?string $pluralLabel = 'Reservasi';
 
-    protected static ?int $navigationSort = 9;
+    protected static ?int $navigationSort = 2;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Penjualan';
+
+    protected static ?string $modelLabel = 'Reservasi';
 
     public static function form(Schema $schema): Schema
     {

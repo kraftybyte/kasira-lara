@@ -13,6 +13,7 @@ use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Table;
+use UnitEnum;
 
 class SupplierResource extends Resource
 {
@@ -20,7 +21,15 @@ class SupplierResource extends Resource
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedTruck;
 
-    protected static ?int $navigationSort = 6;
+    protected static ?int $navigationSort = 4;
+
+    protected static string|UnitEnum|null $navigationGroup = 'Produk & Stok';
+
+    protected static ?string $navigationLabel = 'Supplier';
+
+    protected static ?string $modelLabel = 'Supplier';
+
+    protected static ?string $pluralModelLabel = 'Supplier';
 
     public static function form(Schema $schema): Schema
     {
