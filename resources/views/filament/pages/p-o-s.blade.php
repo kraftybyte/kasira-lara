@@ -168,7 +168,7 @@
                             <span>Memuat produk...</span>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-4 pos-scroll overflow-y-auto">
+                    <div class="grid auto-rows-max content-start grid-cols-3 gap-3 sm:grid-cols-4 lg:grid-cols-4 pos-scroll overflow-y-auto">
                         @forelse ($this->products as $product)
                             <button
                                 type="button"
