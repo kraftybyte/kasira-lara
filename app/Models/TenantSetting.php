@@ -78,6 +78,7 @@ class TenantSetting extends Model
         'tax_rate' => 'decimal:2',
 
         'paywuz_enabled' => 'boolean',
+        'paywuz_api_key' => 'encrypted',
         'paywuz_fee_by_merchant' => 'boolean',
 
         'loyalty_enabled' => 'boolean',

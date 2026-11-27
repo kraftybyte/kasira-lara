@@ -20,6 +20,7 @@ use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
 use Illuminate\Support\Facades\Http;
+use Livewire\Attributes\Locked;
 use UnitEnum;
 
 class TenantSettings extends Page implements HasForms
@@ -46,6 +47,7 @@ class TenantSettings extends Page implements HasForms
 
     public TenantSetting $settings;
 
+    #[Locked]
     public bool $canEditPaywuz = false;
 
     public static function canAccess(): bool
@@ -99,7 +101,8 @@ class TenantSettings extends Page implements HasForms
 
             'paywuz_enabled' => $this->settings->paywuz_enabled ?? false,
             'paywuz_merchant_name' => $this->settings->paywuz_merchant_name ?? 'KasirAja',
-            'paywuz_api_key' => $this->settings->paywuz_api_key,
+            // Kunci hanya dikirim ke browser super_admin
+            'paywuz_api_key' => $this->canEditPaywuz ? $this->settings->paywuz_api_key : null,
             'paywuz_fee_by_merchant' => $this->settings->paywuz_fee_by_merchant ?? false,
 
             'bank_name' => $this->settings->bank_name,
@@ -231,6 +234,8 @@ class TenantSettings extends Page implements HasForms
 
                                         TextInput::make('paywuz_api_key')
                                             ->label('API Key')
+                                            ->password()
+                                            ->revealable()
                                             ->disabled(fn () => ! $this->canEditPaywuz)
                                             ->visible(fn (callable $get) => $get('paywuz_enabled') === true),
 
@@ -434,7 +439,7 @@ class TenantSettings extends Page implements HasForms
 
     public function testPaywuzConnection(): void
     {
-        $apiKey = $this->data['paywuz_api_key'] ?? null;
+        $apiKey = $this->canEditPaywuz ? ($this->data['paywuz_api_key'] ?? null) : $this->settings->paywuz_api_key;
 
         if (empty($apiKey)) {
             Notification::make()
