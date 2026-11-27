@@ -87,6 +87,13 @@
             </div>
         </div>
 
+        {{-- Error dari validasi atau proses pesanan --}}
+        @if (session('error') || $errors->any())
+            <div class="mx-4 mt-4 p-4 bg-red-50 border border-red-200 rounded-xl text-sm text-red-800" role="alert">
+                {{ session('error') ?? $errors->first() }}
+            </div>
+        @endif
+
         {{-- Success Message --}}
         @if($completedSale)
             <div class="mx-4 mt-4 p-4 bg-green-50 border border-green-200 rounded-xl text-center">

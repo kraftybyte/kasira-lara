@@ -83,20 +83,26 @@ class CustomerOrderController extends Controller
             $items = json_decode($items, true);
         }
 
-        if (empty($items)) {
-            return redirect()->back()->with('error', 'Pilih setidaknya satu produk untuk dipesan.');
-        }
+        $request->merge(['items' => is_array($items) ? $items : []]);
 
-        $validatedPayment = $request->validate([
+        $validated = $request->validate([
+            'items' => 'required|array|min:1',
+            'items.*.product_id' => 'required|integer',
+            'items.*.quantity' => 'required|integer|min:1|max:999',
+            'items.*.modifiers' => 'nullable|array',
+            'items.*.modifiers.*' => 'integer',
             'payment_method' => 'required|in:qris,transfer,counter',
-        ]);
-
-        // Validate customer name is required
-        $validatedCustomer = $request->validate([
             'customer_name' => 'required|string|max:255',
             'customer_phone' => 'nullable|string|max:20',
             'customer_email' => 'nullable|email|max:255',
+        ], [
+            'items.required' => 'Pilih setidaknya satu produk untuk dipesan.',
+            'items.*.quantity.min' => 'Jumlah pesanan tidak valid.',
         ]);
+
+        $items = $validated['items'];
+        $validatedPayment = $validated;
+        $validatedCustomer = $validated;
 
         $customerName = $validatedCustomer['customer_name'] ?? 'Customer';
         $customerPhone = $validatedCustomer['customer_phone'] ?? null;
@@ -149,10 +155,12 @@ class CustomerOrderController extends Controller
                         ->where('product_id', $product->id)
                         ->first();
 
-                    if ($modifier) {
-                        $modifierTotal += (float) $modifier->price_adjustment;
-                        $itemModifiers[] = $modifier;
+                    if (! $modifier) {
+                        return redirect()->back()->with('error', "Pilihan tambahan untuk {$product->name} tidak valid.");
                     }
+
+                    $modifierTotal += (float) $modifier->price_adjustment;
+                    $itemModifiers[] = $modifier;
                 }
             }
 
