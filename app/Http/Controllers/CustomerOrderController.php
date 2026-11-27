@@ -101,39 +101,15 @@ class CustomerOrderController extends Controller
         ]);
 
         $items = $validated['items'];
-        $validatedPayment = $validated;
-        $validatedCustomer = $validated;
-
-        $customerName = $validatedCustomer['customer_name'] ?? 'Customer';
-        $customerPhone = $validatedCustomer['customer_phone'] ?? null;
-        $customerEmail = $validatedCustomer['customer_email'] ?? null;
-
-        // Get tenant settings for tax and Paywuz fee calculation
         $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
-        $showTax = $tenantSetting?->show_tax ?? false;
-        $taxRate = (float) ($tenantSetting?->tax_rate ?? 0);
-
-        // Initialize Paywuz service for fee calculation
-        $paywuzFee = 0;
-        $paywuzFeeByMerchant = false;
-        $paywuzService = null;
-
-        if ($validatedPayment['payment_method'] === 'qris') {
-            $paywuzService = new PaywuzService($tenant->id);
-            $paywuzFeeByMerchant = $paywuzService->isFeeByMerchant();
-            if ($paywuzService->isConfigured()) {
-                $feeCalculation = $paywuzService->calculateQrisFee(0); // Just to get the structure
-                // We'll calculate after we know the subtotal
-            }
-        }
+        $paymentMethod = $validated['payment_method'];
+        $paywuz = new PaywuzService($tenant->id);
 
         $subtotal = 0;
         $saleItems = [];
 
         foreach ($items as $item) {
-            // ============================================================
-            // SECURITY FIX CWE-639: Validate product belongs to tenant
-            // ============================================================
+            // Produk harus milik tenant ini dan aktif
             $product = Product::where('id', $item['product_id'])
                 ->where('tenant_id', $tenant->id)
                 ->where('is_active', true)
@@ -143,29 +119,23 @@ class CustomerOrderController extends Controller
                 return redirect()->back()->with('error', 'Produk tidak valid atau tidak tersedia.');
             }
 
-            // Calculate modifier total
             $modifierTotal = 0;
             $itemModifiers = [];
-            if (! empty($item['modifiers'])) {
-                foreach ($item['modifiers'] as $modId) {
-                    // ============================================================
-                    // SECURITY FIX CWE-639: Validate modifier belongs to this product
-                    // ============================================================
-                    $modifier = ProductModifier::where('id', $modId)
-                        ->where('product_id', $product->id)
-                        ->first();
+            foreach ($item['modifiers'] ?? [] as $modId) {
+                // Modifier harus milik produk ini
+                $modifier = ProductModifier::where('id', $modId)
+                    ->where('product_id', $product->id)
+                    ->first();
 
-                    if (! $modifier) {
-                        return redirect()->back()->with('error', "Pilihan tambahan untuk {$product->name} tidak valid.");
-                    }
-
-                    $modifierTotal += (float) $modifier->price_adjustment;
-                    $itemModifiers[] = $modifier;
+                if (! $modifier) {
+                    return redirect()->back()->with('error', "Pilihan tambahan untuk {$product->name} tidak valid.");
                 }
+
+                $modifierTotal += (float) $modifier->price_adjustment;
+                $itemModifiers[] = $modifier;
             }
 
-            $baseTotal = $product->selling_price * $item['quantity'];
-            $itemTotal = $baseTotal + ($modifierTotal * $item['quantity']);
+            $itemTotal = ($product->selling_price + $modifierTotal) * $item['quantity'];
             $subtotal += $itemTotal;
 
             $saleItems[] = [
@@ -178,321 +148,126 @@ class CustomerOrderController extends Controller
                 'tax' => 0,
                 'subtotal' => $itemTotal,
                 'total' => $itemTotal,
-                'modifiers' => $itemModifiers, // Store modifiers for later saving
+                'modifiers' => $itemModifiers,
             ];
         }
 
-        // Calculate tax (PPN) if enabled
-        // Using same logic as POS: harga sudah termasuk PPN (subtotal includes tax)
-        $taxAmount = 0;
-        if ($showTax && $taxRate > 0) {
-            // Reverse calculation: tax is already included in subtotal
-            // tax = subtotal * rate / (100 + rate)
-            $taxAmount = round($subtotal * ($taxRate / (100 + $taxRate)), 2);
-        }
-        $beforeTax = $subtotal - $taxAmount;
+        // Harga sudah termasuk PPN: pajak dihitung mundur sekali di sini dan dipakai semua metode.
+        $taxAmount = $this->taxFromGross($subtotal, $tenantSetting);
 
-        // Calculate Paywuz fee for QRIS
-        $paywuzFeeAmount = 0;
-        $paywuzFeePercent = 0;
-        if ($validatedPayment['payment_method'] === 'qris' && $paywuzService && $paywuzService->isConfigured()) {
-            $feeCalc = $paywuzService->calculateQrisFee($subtotal);
-            $paywuzFeeAmount = $feeCalc['fee'];
-            $paywuzFeePercent = $feeCalc['fee_percent'];
+        $paywuzFee = 0;
+        $feeByMerchant = $paywuz->isFeeByMerchant();
+        if ($paymentMethod === 'qris' && $paywuz->isConfigured()) {
+            $paywuzFee = $paywuz->calculateQrisFee($subtotal)['fee'];
         }
 
-        // Calculate grand total
-        // If fee_by_merchant = true, merchant bears the fee (customer pays subtotal + tax only)
-        // If fee_by_merchant = false, customer bears the fee (customer pays subtotal + tax + fee)
-        $grandTotal = $beforeTax + $taxAmount;
-        $customerPays = $paywuzFeeByMerchant ? $grandTotal : $grandTotal + $paywuzFeeAmount;
+        $attributes = [
+            'payment_method' => $paymentMethod,
+            'notes' => $request->input('notes'),
+            'subtotal' => $subtotal - $taxAmount,
+            'tax' => $taxAmount,
+            'grand_total' => $subtotal,
+            'paywuz_fee' => 0,
+            'paywuz_fee_by_merchant' => false,
+        ];
 
-        // For counter payment, check if there's an existing pending counter order
-        // Wrap in transaction with locking to prevent race conditions
-        if ($validatedPayment['payment_method'] === 'counter') {
-            $existingCounterOrder = DB::transaction(function () use ($table) {
-                // Lock the table row to prevent concurrent order creation
-                $lockedTable = Table::where('id', $table->id)->lockForUpdate()->first();
-
-                return Sale::where('table_id', $table->id)
-                    ->where('source', 'customer')
-                    ->where('payment_method', 'counter')
-                    ->where('status', 'pending')
-                    ->orderByDesc('created_at')
-                    ->first();
-            });
-
-            if ($existingCounterOrder) {
-                // Add items to existing counter order
-                return $this->addToExistingCounterOrder($existingCounterOrder, $tenant, $saleItems);
-            }
-        }
-
-        // Generate unique invoice number with lockForUpdate to prevent collision
-        $invoiceNumber = DB::transaction(function () use ($tenant) {
-            $prefix = 'INV-'.now()->format('Ymd').'-';
-
-            // Get highest existing number for today with lock
-            $lastInvoice = Sale::where('tenant_id', $tenant->id)
-                ->where('invoice_number', 'like', $prefix.'%')
-                ->lockForUpdate()
-                ->orderByDesc('id')
-                ->first();
-
-            $number = 0;
-            if ($lastInvoice) {
-                $suffix = substr($lastInvoice->invoice_number, strlen($prefix));
-                // Handle format: INV-YYYYMMDD-XXXX-XXXXXX or INV-YYYYMMDD-XXXX
-                $parts = explode('-', $suffix);
-                if (isset($parts[0]) && is_numeric($parts[0])) {
-                    $number = (int) $parts[0];
-                }
+        if ($paymentMethod === 'counter') {
+            if ($appended = $this->appendToCounterOrder($tenant, $table, $saleItems, $tenantSetting)) {
+                return $appended;
             }
 
-            // Add microsecond suffix for uniqueness
-            $microSuffix = substr(now()->format('Hisu'), -6);
+            $sale = $this->createSale($tenant, $table, $attributes, $saleItems);
 
-            return $prefix.str_pad((string) ($number + 1), 4, '0', STR_PAD_LEFT).'-'.$microSuffix;
-        });
-
-        // For QRIS payment, create Paywuz transaction first
-        if ($validatedPayment['payment_method'] === 'qris') {
-            return $this->processQrisPayment($request, $tenant, $table, $invoiceNumber, $customerPays, $subtotal, $taxAmount, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems, $customerName);
+            return $this->redirectToPayment($tenant, $table, $sale)->with('info', 'Pesanan berhasil! Silakan bayar di kasir.');
         }
 
-        // For counter payment (bayar di kasir) - create order with pending payment
-        if ($validatedPayment['payment_method'] === 'counter') {
-            return $this->processCounterPayment($request, $tenant, $table, $invoiceNumber, $subtotal, $taxAmount, $saleItems, $customerName);
+        if ($paymentMethod === 'transfer') {
+            $sale = $this->createSale($tenant, $table, $attributes, $saleItems);
+
+            return $this->redirectToPayment($tenant, $table, $sale);
         }
 
-        // For other payment methods (transfer), customer bears the fee
-        // Wrap in transaction to prevent orphaned records
-        $sale = DB::transaction(function () use ($tenant, $table, $customerName, $validatedPayment, $invoiceNumber, $beforeTax, $taxAmount, $customerPays, $paywuzFeeAmount, $paywuzFeeByMerchant, $saleItems, $request) {
-            $sale = Sale::create([
+        // QRIS via Paywuz: pelanggan membayar tagihan plus biaya gateway jika toko tidak menanggungnya.
+        $sale = $this->createSale($tenant, $table, array_merge($attributes, [
+            'grand_total' => $feeByMerchant ? $subtotal : $subtotal + $paywuzFee,
+            'paywuz_fee' => $paywuzFee,
+            'paywuz_fee_by_merchant' => $feeByMerchant,
+        ]), $saleItems);
+
+        if (! $paywuz->isConfigured()) {
+            return $this->redirectToPayment($tenant, $table, $sale)->with('warning', 'Paywuz belum dikonfigurasi. Silakan bayar di kasir.');
+        }
+
+        $response = $paywuz->createDynamicQr($sale->invoice_number, (float) $sale->grand_total, $tenant->name ?? 'KasirAja');
+
+        if (! ($response['success'] ?? false)) {
+            Log::error('Paywuz QR Creation Failed', $response);
+            $sale->items()->delete();
+            $sale->delete();
+
+            return redirect()->back()->with('error', 'Gagal membuat QR payment: '.($response['message'] ?? 'Unknown error'));
+        }
+
+        $sale->update([
+            'paywuz_transaction_id' => $response['data']['id'] ?? null,
+            'paywuz_qr_url' => $response['data']['paymentUrl'] ?? null,
+            'paywuz_status' => 'pending',
+        ]);
+
+        return $this->redirectToPayment($tenant, $table, $sale);
+    }
+
+    /**
+     * PPN dihitung mundur dari harga yang sudah termasuk pajak.
+     */
+    protected function taxFromGross(float $gross, ?TenantSetting $setting): float
+    {
+        $rate = (float) ($setting?->tax_rate ?? 0);
+
+        if (! ($setting?->show_tax ?? false) || $rate <= 0) {
+            return 0.0;
+        }
+
+        return round($gross * ($rate / (100 + $rate)), 2);
+    }
+
+    /**
+     * Sale baru beserta item-itemnya dalam satu transaksi; nomor invoice dibuat di transaksi yang sama.
+     *
+     * @param  array<string, mixed>  $attributes
+     * @param  array<int, array<string, mixed>>  $saleItems
+     */
+    protected function createSale(Tenant $tenant, Table $table, array $attributes, array $saleItems): Sale
+    {
+        return DB::transaction(function () use ($tenant, $table, $attributes, $saleItems): Sale {
+            $sale = Sale::create(array_merge([
                 'tenant_id' => $tenant->id,
                 'table_id' => $table->id,
                 'user_id' => Auth::id(),
-                'invoice_number' => $invoiceNumber,
-                'customer_name' => $customerName,
+                'invoice_number' => $this->nextInvoiceNumber($tenant),
                 'status' => 'pending',
                 'source' => 'customer',
-                'payment_method' => $validatedPayment['payment_method'],
-                'notes' => $request->input('notes'),
-                'subtotal' => $beforeTax,
-                'tax' => $taxAmount,
                 'discount' => 0,
-                'grand_total' => $customerPays,
-                'paywuz_fee' => $paywuzFeeAmount,
-                'paywuz_fee_by_merchant' => $paywuzFeeByMerchant,
                 'paid_amount' => 0,
                 'change_amount' => 0,
                 'payment_status' => 'pending',
-            ]);
+            ], $attributes));
 
-            // Create sale items
-            foreach ($saleItems as $item) {
-                $modifiers = $item['modifiers'] ?? [];
-                unset($item['modifiers']); // Remove modifiers from item data
+            $this->createSaleItems($sale, $saleItems);
 
-                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
-
-                // Save modifiers for this sale item
-                foreach ($modifiers as $modifier) {
-                    SaleItemModifier::create([
-                        'sale_item_id' => $saleItem->id,
-                        'product_modifier_id' => $modifier->id,
-                        'modifier_name' => $modifier->name,
-                        'price' => $modifier->price_adjustment,
-                    ]);
-                }
-            }
-
-            // Update table status
             if ($table->status === 'available') {
                 $table->update(['status' => 'active']);
             }
 
             return $sale;
         });
-
-        return redirect()->route('customer.order.payment', [
-            'tenant' => $tenant->getRouteKey(),
-            'table' => $table->id,
-            'sale' => $sale->id,
-        ]);
     }
 
     /**
-     * Process QRIS payment via Paywuz
+     * @param  array<int, array<string, mixed>>  $saleItems
      */
-    protected function processQrisPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $customerPays, float $subtotal, float $taxAmount, float $paywuzFee, bool $feeByMerchant, array $saleItems, string $customerName)
+    protected function createSaleItems(Sale $sale, array $saleItems): void
     {
-        // Pass tenant ID to PaywuzService so it can load tenant-specific API key
-        $paywuz = new PaywuzService($tenant->id);
-
-        // Log for debugging
-        Log::info('PaywuzService initialized', [
-            'tenant_id' => $tenant->id,
-            'tenant_slug' => $tenant->slug,
-            'is_configured' => $paywuz->isConfigured(),
-            'is_enabled' => $paywuz->isEnabled(),
-        ]);
-
-        // Create Paywuz dynamic QR with customer pays amount (includes fee if not borne by merchant)
-        $response = $paywuz->createDynamicQr(
-            $invoiceNumber,
-            $customerPays,
-            $tenant->name ?? 'KasirAja'
-        );
-
-        Log::info('Paywuz QR Response', $response);
-
-        // Check if Paywuz is configured
-        if (! $paywuz->isConfigured()) {
-            // Paywuz not configured, create order without payment
-            $sale = Sale::create([
-                'tenant_id' => $tenant->id,
-                'table_id' => $table->id,
-                'user_id' => Auth::id(),
-                'invoice_number' => $invoiceNumber,
-                'customer_name' => $customerName,
-                'status' => 'pending',
-                'source' => 'customer',
-                'payment_method' => 'qris',
-                'notes' => $request->input('notes'),
-                'subtotal' => $subtotal,
-                'tax' => $taxAmount,
-                'discount' => 0,
-                'grand_total' => $customerPays,
-                'paywuz_fee' => $paywuzFee,
-                'paywuz_fee_by_merchant' => $feeByMerchant,
-                'paid_amount' => 0,
-                'change_amount' => 0,
-                'payment_status' => 'pending',
-            ]);
-
-            foreach ($saleItems as $item) {
-                $modifiers = $item['modifiers'] ?? [];
-                unset($item['modifiers']);
-
-                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
-
-                // Save modifiers for this sale item
-                foreach ($modifiers as $modifier) {
-                    SaleItemModifier::create([
-                        'sale_item_id' => $saleItem->id,
-                        'product_modifier_id' => $modifier->id,
-                        'modifier_name' => $modifier->name,
-                        'price' => $modifier->price_adjustment,
-                    ]);
-                }
-            }
-
-            if ($table->status === 'available') {
-                $table->update(['status' => 'active']);
-            }
-
-            return redirect()->route('customer.order.payment', [
-                'tenant' => $tenant->slug ?? $tenant->id,
-                'table' => $table->id,
-                'sale' => $sale->id,
-            ])->with('warning', 'Paywuz belum dikonfigurasi. Silakan bayar di kasir.');
-        }
-
-        // Check if Paywuz returned success
-        if (isset($response['success']) && $response['success']) {
-            // Create sale with Paywuz transaction ID
-            $sale = Sale::create([
-                'tenant_id' => $tenant->id,
-                'table_id' => $table->id,
-                'user_id' => Auth::id(),
-                'invoice_number' => $invoiceNumber,
-                'customer_name' => $customerName,
-                'status' => 'pending',
-                'source' => 'customer',
-                'payment_method' => 'qris',
-                'notes' => $request->input('notes'),
-                'subtotal' => $subtotal,
-                'tax' => $taxAmount,
-                'discount' => 0,
-                'grand_total' => $customerPays,
-                'paywuz_fee' => $paywuzFee,
-                'paywuz_fee_by_merchant' => $feeByMerchant,
-                'paid_amount' => 0,
-                'change_amount' => 0,
-                'paywuz_transaction_id' => $response['data']['id'] ?? null,
-                'paywuz_qr_url' => $response['data']['paymentUrl'] ?? null,
-                'paywuz_status' => 'pending',
-                'payment_status' => 'pending',
-            ]);
-
-            // Create sale items
-            foreach ($saleItems as $item) {
-                $modifiers = $item['modifiers'] ?? [];
-                unset($item['modifiers']);
-
-                $saleItem = SaleItem::create(array_merge(['sale_id' => $sale->id], $item));
-
-                // Save modifiers for this sale item
-                foreach ($modifiers as $modifier) {
-                    SaleItemModifier::create([
-                        'sale_item_id' => $saleItem->id,
-                        'product_modifier_id' => $modifier->id,
-                        'modifier_name' => $modifier->name,
-                        'price' => $modifier->price_adjustment,
-                    ]);
-                }
-            }
-
-            // Update table status
-            if ($table->status === 'available') {
-                $table->update(['status' => 'active']);
-            }
-
-            // Redirect to payment page with QR
-            return redirect()->route('customer.order.payment', [
-                'tenant' => $tenant->slug ?? $tenant->id,
-                'table' => $table->id,
-                'sale' => $sale->id,
-            ]);
-        }
-
-        // Paywuz error
-        Log::error('Paywuz QR Creation Failed', $response);
-
-        return redirect()->back()
-            ->with('error', 'Gagal membuat QR payment: '.($response['message'] ?? 'Unknown error'));
-    }
-
-    /**
-     * Process Counter payment (Bayar di Kasir)
-     */
-    protected function processCounterPayment(Request $request, Tenant $tenant, Table $table, string $invoiceNumber, float $subtotal, float $taxAmount, array $saleItems, string $customerName)
-    {
-        // For counter payment, no Paywuz fee - customer pays at cashier
-        $grandTotal = $subtotal + $taxAmount;
-
-        $sale = Sale::create([
-            'tenant_id' => $tenant->id,
-            'table_id' => $table->id,
-            'user_id' => Auth::id(),
-            'invoice_number' => $invoiceNumber,
-            'customer_name' => $customerName,
-            'status' => 'pending',
-            'source' => 'customer',
-            'payment_method' => 'counter',
-            'notes' => $request->input('notes'),
-            'subtotal' => $subtotal,
-            'tax' => $taxAmount,
-            'discount' => 0,
-            'grand_total' => $grandTotal,
-            'paywuz_fee' => 0,
-            'paywuz_fee_by_merchant' => false,
-            'paid_amount' => 0,
-            'change_amount' => 0,
-            'payment_status' => 'pending',
-        ]);
-
         foreach ($saleItems as $item) {
             $modifiers = $item['modifiers'] ?? [];
             unset($item['modifiers']);
@@ -508,73 +283,77 @@ class CustomerOrderController extends Controller
                 ]);
             }
         }
+    }
+
+    /**
+     * Nomor urut harian per tenant. Harus dipanggil di dalam transaksi yang sama dengan Sale::create.
+     */
+    protected function nextInvoiceNumber(Tenant $tenant): string
+    {
+        $prefix = 'INV-'.now()->format('Ymd').'-';
+
+        $number = Sale::where('tenant_id', $tenant->id)
+            ->where('invoice_number', 'like', $prefix.'%')
+            ->lockForUpdate()
+            ->pluck('invoice_number')
+            ->map(fn (string $invoice) => (int) explode('-', substr($invoice, strlen($prefix)))[0])
+            ->max() ?? 0;
+
+        return $prefix.str_pad((string) ($number + 1), 4, '0', STR_PAD_LEFT).'-'.substr(now()->format('Hisu'), -6);
+    }
+
+    /**
+     * Tambahkan item ke pesanan kasir yang masih pending di meja ini, jika ada.
+     *
+     * @param  array<int, array<string, mixed>>  $saleItems
+     */
+    protected function appendToCounterOrder(Tenant $tenant, Table $table, array $saleItems, ?TenantSetting $tenantSetting): ?RedirectResponse
+    {
+        $existingOrder = DB::transaction(function () use ($table, $saleItems, $tenantSetting): ?Sale {
+            $existingOrder = Sale::where('table_id', $table->id)
+                ->where('source', 'customer')
+                ->where('payment_method', 'counter')
+                ->where('status', 'pending')
+                ->orderByDesc('created_at')
+                ->lockForUpdate()
+                ->first();
+
+            if (! $existingOrder) {
+                return null;
+            }
+
+            $this->createSaleItems($existingOrder, $saleItems);
+
+            $gross = (float) $existingOrder->subtotal + (float) $existingOrder->tax + (float) array_sum(array_column($saleItems, 'subtotal'));
+            $tax = $this->taxFromGross($gross, $tenantSetting);
+
+            $existingOrder->update([
+                'subtotal' => $gross - $tax,
+                'tax' => $tax,
+                'grand_total' => $gross,
+            ]);
+
+            return $existingOrder;
+        });
+
+        if (! $existingOrder) {
+            return null;
+        }
 
         if ($table->status === 'available') {
             $table->update(['status' => 'active']);
         }
 
-        return redirect()->route('customer.order.payment', [
-            'tenant' => $tenant->slug ?? $tenant->id,
-            'table' => $table->id,
-            'sale' => $sale->id,
-        ])->with('info', 'Pesanan berhasil! Silakan bayar di kasir.');
+        return $this->redirectToPayment($tenant, $table, $existingOrder)->with('success', 'Item ditambahkan ke pesanan yang sudah ada!');
     }
 
-    /**
-     * Add items to existing counter order
-     */
-    protected function addToExistingCounterOrder(Sale $existingOrder, Tenant $tenant, array $saleItems): RedirectResponse
+    protected function redirectToPayment(Tenant $tenant, Table $table, Sale $sale): RedirectResponse
     {
-        $additionalSubtotal = 0;
-
-        foreach ($saleItems as $item) {
-            $modifiers = $item['modifiers'] ?? [];
-            unset($item['modifiers']);
-
-            $saleItem = SaleItem::create(array_merge(['sale_id' => $existingOrder->id], $item));
-            $additionalSubtotal += $item['subtotal'];
-
-            foreach ($modifiers as $modifier) {
-                SaleItemModifier::create([
-                    'sale_item_id' => $saleItem->id,
-                    'product_modifier_id' => $modifier->id,
-                    'modifier_name' => $modifier->name,
-                    'price' => $modifier->price_adjustment,
-                ]);
-            }
-        }
-
-        // Update existing order totals with proper tax calculation
-        $newSubtotal = $existingOrder->subtotal + $additionalSubtotal;
-
-        // Recalculate tax based on tenant settings
-        $tenantSetting = TenantSetting::where('tenant_id', $existingOrder->tenant_id)->first();
-        $showTax = $tenantSetting?->show_tax ?? false;
-        $taxRate = (float) ($tenantSetting?->tax_rate ?? 0);
-
-        $beforeTax = $newSubtotal;
-        $taxAmount = 0;
-        if ($showTax && $taxRate > 0) {
-            $taxAmount = round($newSubtotal * ($taxRate / (100 + $taxRate)), 2);
-        }
-
-        $existingOrder->update([
-            'subtotal' => $beforeTax,
-            'tax' => $taxAmount,
-            'grand_total' => $beforeTax + $taxAmount,
-        ]);
-
-        // Update table status if needed
-        $existingTable = $existingOrder->table;
-        if ($existingTable && is_object($existingTable) && $existingTable->status === 'available') {
-            $existingTable->update(['status' => 'active']);
-        }
-
         return redirect()->route('customer.order.payment', [
             'tenant' => $tenant->getRouteKey(),
-            'table' => $existingOrder->table_id,
-            'sale' => $existingOrder->id,
-        ])->with('success', 'Item ditambahkan ke pesanan yang sudah ada!');
+            'table' => $table->id,
+            'sale' => $sale->id,
+        ]);
     }
 
     public function payment(string $tenantSlug, Table $table, Sale $sale)
