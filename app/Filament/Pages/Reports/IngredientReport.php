@@ -63,8 +63,9 @@ class IngredientReport extends Page
 
     public function mount(): void
     {
-        $this->startDate = now()->startOfDay()->format('Y-m-d');
-        $this->endDate = now()->endOfDay()->format('Y-m-d');
+        $today = ($this->tenant?->now() ?? now())->format('Y-m-d');
+        $this->startDate = $today;
+        $this->endDate = $today;
     }
 
     /*
@@ -80,12 +81,12 @@ class IngredientReport extends Page
 
     public function getStartDateTime(): Carbon
     {
-        return Carbon::parse($this->startDate)->startOfDay();
+        return $this->tenant?->dayStart($this->startDate) ?? Carbon::parse($this->startDate)->startOfDay();
     }
 
     public function getEndDateTime(): Carbon
     {
-        return Carbon::parse($this->endDate)->endOfDay();
+        return $this->tenant?->dayEnd($this->endDate) ?? Carbon::parse($this->endDate)->endOfDay();
     }
 
     public function getIngredientsProperty(): Collection
@@ -165,26 +166,20 @@ class IngredientReport extends Page
             return [];
         }
 
-        // Get sale items
-        $saleItems = SaleItem::whereIn('sale_id', $sales)->get();
-
-        if ($saleItems->isEmpty()) {
-            return [];
-        }
-
-        // Get products with ingredients
-        $soldProductIds = $saleItems->pluck('product_id')->filter()->unique();
+        // Jumlah terjual per produk dalam satu query, lalu resep produk-produk itu dalam satu query lagi
+        $qtyByProduct = SaleItem::whereIn('sale_id', $sales)
+            ->whereNotNull('product_id')
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(quantity) AS qty')
+            ->pluck('qty', 'product_id');
 
         $usage = [];
-
-        foreach ($soldProductIds as $productId) {
-            $product = Product::with('ingredients')->find($productId);
-
-            if (! $product || $product->ingredients->isEmpty()) {
+        foreach (Product::with('ingredients.supplier')->whereIn('id', $qtyByProduct->keys())->get() as $product) {
+            if ($product->ingredients->isEmpty()) {
                 continue;
             }
 
-            $totalQty = $saleItems->where('product_id', $productId)->sum('quantity');
+            $totalQty = (float) $qtyByProduct[$product->id];
 
             foreach ($product->ingredients as $ingredient) {
                 $used = (float) $ingredient->pivot->quantity * $totalQty;
@@ -251,23 +246,24 @@ class IngredientReport extends Page
     public function setDateRange(string $range): void
     {
         $this->dateRange = $range;
+        $now = $this->tenant?->now() ?? now();
 
         switch ($range) {
             case 'today':
-                $this->startDate = now()->startOfDay()->format('Y-m-d');
-                $this->endDate = now()->endOfDay()->format('Y-m-d');
+                $this->startDate = $now->startOfDay()->format('Y-m-d');
+                $this->endDate = $now->endOfDay()->format('Y-m-d');
                 break;
             case 'yesterday':
-                $this->startDate = now()->subDay()->startOfDay()->format('Y-m-d');
-                $this->endDate = now()->subDay()->endOfDay()->format('Y-m-d');
+                $this->startDate = $now->subDay()->startOfDay()->format('Y-m-d');
+                $this->endDate = $now->subDay()->endOfDay()->format('Y-m-d');
                 break;
             case 'week':
-                $this->startDate = now()->startOfWeek()->format('Y-m-d');
-                $this->endDate = now()->endOfWeek()->format('Y-m-d');
+                $this->startDate = $now->startOfWeek()->format('Y-m-d');
+                $this->endDate = $now->endOfWeek()->format('Y-m-d');
                 break;
             case 'month':
-                $this->startDate = now()->startOfMonth()->format('Y-m-d');
-                $this->endDate = now()->endOfMonth()->format('Y-m-d');
+                $this->startDate = $now->startOfMonth()->format('Y-m-d');
+                $this->endDate = $now->endOfMonth()->format('Y-m-d');
                 break;
         }
     }

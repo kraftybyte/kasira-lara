@@ -2379,7 +2379,7 @@ class POS extends Page
         // Check for active reservation
         $reservation = Reservation::where('table_id', $tableId)
             ->whereIn('status', ['pending', 'confirmed'])
-            ->where('reservation_date', now()->toDateString())
+            ->where('reservation_date', $tenant->now()->toDateString())
             ->first();
 
         $this->reservationId = $reservation?->id;

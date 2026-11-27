@@ -24,10 +24,10 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        [$startDate, $endDate] = $this->dateRange($request);
+        [$startDate, $endDate] = $this->dateRange($request, $tenantModel);
         $statusFilter = $request->query('statusFilter');
 
-        $sales = $this->getSalesQuery($tenantModel->id, $startDate, $endDate, $statusFilter)
+        $sales = $this->getSalesQuery($tenantModel, $startDate, $endDate, $statusFilter)
             ->with(['customer', 'user', 'table'])
             ->get();
 
@@ -60,10 +60,10 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        [$startDate, $endDate] = $this->dateRange($request);
+        [$startDate, $endDate] = $this->dateRange($request, $tenantModel);
         $statusFilter = $request->query('statusFilter');
 
-        $sales = $this->getSalesQuery($tenantModel->id, $startDate, $endDate, $statusFilter)
+        $sales = $this->getSalesQuery($tenantModel, $startDate, $endDate, $statusFilter)
             ->with(['customer', 'user', 'table'])
             ->get();
 
@@ -155,14 +155,14 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        [$startDate, $endDate] = $this->dateRange($request);
+        [$startDate, $endDate] = $this->dateRange($request, $tenantModel);
 
         // Get sales in date range
         $sales = Sale::query()
             ->where('tenant_id', $tenantModel->id)
             ->whereBetween('created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
+                $tenantModel->dayStart($startDate),
+                $tenantModel->dayEnd($endDate),
             ])
             ->where('status', 'completed')
             ->pluck('id');
@@ -171,20 +171,20 @@ class ReportExportController extends Controller
             $sales = collect([0]);
         }
 
-        // Get sale items and products with ingredients
-        $saleItems = SaleItem::whereIn('sale_id', $sales)->get();
-        $soldProductIds = $saleItems->pluck('product_id')->filter()->unique();
+        // Jumlah terjual per produk dalam satu query, lalu resep produk-produk itu dalam satu query lagi
+        $qtyByProduct = SaleItem::whereIn('sale_id', $sales)
+            ->whereNotNull('product_id')
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(quantity) AS qty')
+            ->pluck('qty', 'product_id');
 
         $usage = [];
-
-        foreach ($soldProductIds as $productId) {
-            $product = Product::with('ingredients')->find($productId);
-
-            if (! $product || $product->ingredients->isEmpty()) {
+        foreach (Product::with('ingredients.supplier')->whereIn('id', $qtyByProduct->keys())->get() as $product) {
+            if ($product->ingredients->isEmpty()) {
                 continue;
             }
 
-            $totalQty = $saleItems->where('product_id', $productId)->sum('quantity');
+            $totalQty = (float) $qtyByProduct[$product->id];
 
             foreach ($product->ingredients as $ingredient) {
                 $used = (float) $ingredient->pivot->quantity * $totalQty;
@@ -252,23 +252,23 @@ class ReportExportController extends Controller
      *
      * @return array{0: string, 1: string}
      */
-    protected function dateRange(Request $request): array
+    protected function dateRange(Request $request, Tenant $tenant): array
     {
-        $startDate = $request->query('startDate', now()->format('Y-m-d'));
-        $endDate = $request->query('endDate', now()->format('Y-m-d'));
+        $startDate = $request->query('startDate', $tenant->now()->format('Y-m-d'));
+        $endDate = $request->query('endDate', $tenant->now()->format('Y-m-d'));
 
         abort_if(Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate), false) > 92, 422, 'Rentang tanggal maksimal 92 hari.');
 
         return [$startDate, $endDate];
     }
 
-    protected function getSalesQuery(int $tenantId, string $startDate, string $endDate, ?string $statusFilter = null)
+    protected function getSalesQuery(Tenant $tenant, string $startDate, string $endDate, ?string $statusFilter = null)
     {
         $query = Sale::query()
-            ->where('tenant_id', $tenantId)
+            ->where('tenant_id', $tenant->id)
             ->whereBetween('created_at', [
-                Carbon::parse($startDate)->startOfDay(),
-                Carbon::parse($endDate)->endOfDay(),
+                $tenant->dayStart($startDate),
+                $tenant->dayEnd($endDate),
             ]);
 
         if ($statusFilter) {

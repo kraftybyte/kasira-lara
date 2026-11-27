@@ -19,7 +19,7 @@
             <p class="mt-1 text-sm text-gray-500">{{ $this->getTenant()?->name }}</p>
         </div>
         <div class="flex items-center gap-3">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ now('Asia/Jakarta')->format('H:i') }} WIB</span>
+            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
             <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
                 <x-heroicon-o-arrow-path class="h-4 w-4" />
                 Refresh
@@ -86,7 +86,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 ml-2">
-                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone('Asia/Jakarta')->format('H:i') }}</p>
+                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone($this->getTenant()?->timezone ?? config('app.timezone'))->format('H:i') }}</p>
                                 </div>
                             </div>
                         </div>
@@ -183,7 +183,7 @@
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 ml-2">
-                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone('Asia/Jakarta')->format('H:i') }}</p>
+                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone($this->getTenant()?->timezone ?? config('app.timezone'))->format('H:i') }}</p>
                                 </div>
                             </div>
                         </div>

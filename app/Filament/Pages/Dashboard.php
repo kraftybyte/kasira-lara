@@ -6,7 +6,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Tenant;
 use BackedEnum;
-use Carbon\Carbon;
+use Carbon\CarbonInterface;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -38,14 +38,14 @@ class Dashboard extends Page
         return $user->hasAnyRole(['super_admin', 'owner', 'kepala_toko', 'cashier']);
     }
 
-    protected function getStartDate(): Carbon
+    protected function getStartDate(): CarbonInterface
     {
-        return Carbon::now()->subDays($this->days)->startOfDay();
+        return ($this->tenant?->now() ?? now())->subDays($this->days)->startOfDay()->setTimezone(config('app.timezone'));
     }
 
-    protected function getEndDate(): Carbon
+    protected function getEndDate(): CarbonInterface
     {
-        return Carbon::now()->endOfDay();
+        return ($this->tenant?->now() ?? now())->endOfDay()->setTimezone(config('app.timezone'));
     }
 
     public function getTenantProperty(): ?Tenant
@@ -134,6 +134,26 @@ class Dashboard extends Page
             ->orderByDesc('total_sales')
             ->limit(5)
             ->get();
+    }
+
+    public function getTotalItemsSoldProperty(): float
+    {
+        $tenant = $this->tenant;
+
+        if (! $tenant) {
+            return 0;
+        }
+
+        $startDate = $this->getStartDate();
+        $endDate = $this->getEndDate();
+
+        return (float) SaleItem::query()
+            ->whereHas('sale', function ($query) use ($tenant, $startDate, $endDate) {
+                $query->where('tenant_id', $tenant->id)
+                    ->where('status', 'completed')
+                    ->whereBetween('created_at', [$startDate, $endDate]);
+            })
+            ->sum('quantity');
     }
 
     public function getPaymentSummaryProperty(): array

@@ -16,6 +16,7 @@ class ProductsTable
     public static function configure(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->withCount('ingredients'))
             ->columns([
                 ImageColumn::make('image')
                     ->label('Image')
@@ -55,14 +56,14 @@ class ProductsTable
                 TextColumn::make('ingredients')
                     ->label('Bahan')
                     ->getStateUsing(function ($record) {
-                        $count = $record->ingredients()->count();
+                        $count = $record->ingredients_count;
 
                         return $count > 0
                             ? "{$count} bahan"
                             : '-';
                     })
                     ->badge()
-                    ->color(fn ($record) => $record->ingredients()->count() > 0 ? 'info' : 'gray'),
+                    ->color(fn ($record) => $record->ingredients_count > 0 ? 'info' : 'gray'),
 
                 TextColumn::make('selling_price')
                     ->label('Price')

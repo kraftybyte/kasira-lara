@@ -143,7 +143,7 @@ class TablesOverview extends Page
 
         return Reservation::query()
             ->where('tenant_id', $tenant->id)
-            ->where('reservation_date', now()->toDateString())
+            ->where('reservation_date', $tenant->now()->toDateString())
             ->whereIn('status', ['pending', 'confirmed'])
             ->with('table')
             ->orderBy('reservation_time')
@@ -161,7 +161,7 @@ class TablesOverview extends Page
 
         return Reservation::query()
             ->where('tenant_id', $tenant->id)
-            ->where('reservation_date', '>', now()->toDateString())
+            ->where('reservation_date', '>', $tenant->now()->toDateString())
             ->whereIn('status', ['pending', 'confirmed'])
             ->with('table')
             ->orderBy('reservation_date')

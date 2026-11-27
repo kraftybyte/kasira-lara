@@ -32,7 +32,7 @@
                 </button>
             </div>
             <p class="mt-1 text-xs text-gray-500 dark:text-gray-400">
-                {{ now()->subDays($days)->format('d M') }} - {{ now()->format('d M Y') }}
+                {{ ($this->tenant?->now() ?? now())->subDays($days)->format('d M') }} - {{ ($this->tenant?->now() ?? now())->format('d M Y') }}
             </p>
         </div>
     </div>
@@ -86,7 +86,7 @@
                 </div>
                 <div>
                     <p class="text-xs font-medium text-gray-500 dark:text-gray-400">Items Terjual</p>
-                    <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($this->topProducts->sum('total_qty')) }}</p>
+                    <p class="text-xl font-bold text-gray-900 dark:text-white">{{ number_format($this->totalItemsSold) }}</p>
                 </div>
             </div>
         </div>

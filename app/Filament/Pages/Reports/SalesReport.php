@@ -72,8 +72,9 @@ class SalesReport extends Page
 
     public function mount(): void
     {
-        $this->startDate = now()->startOfDay()->format('Y-m-d');
-        $this->endDate = now()->endOfDay()->format('Y-m-d');
+        $today = ($this->tenant?->now() ?? now())->format('Y-m-d');
+        $this->startDate = $today;
+        $this->endDate = $today;
     }
 
     /*
@@ -89,12 +90,12 @@ class SalesReport extends Page
 
     public function getStartDateTime(): Carbon
     {
-        return Carbon::parse($this->startDate)->startOfDay();
+        return $this->tenant?->dayStart($this->startDate) ?? Carbon::parse($this->startDate)->startOfDay();
     }
 
     public function getEndDateTime(): Carbon
     {
-        return Carbon::parse($this->endDate)->endOfDay();
+        return $this->tenant?->dayEnd($this->endDate) ?? Carbon::parse($this->endDate)->endOfDay();
     }
 
     /**
@@ -339,24 +340,25 @@ class SalesReport extends Page
     public function setDateRange(string $range): void
     {
         $this->dateRange = $range;
+        $now = $this->tenant?->now() ?? now();
         $this->resetPage();
 
         switch ($range) {
             case 'today':
-                $this->startDate = now()->startOfDay()->format('Y-m-d');
-                $this->endDate = now()->endOfDay()->format('Y-m-d');
+                $this->startDate = $now->startOfDay()->format('Y-m-d');
+                $this->endDate = $now->endOfDay()->format('Y-m-d');
                 break;
             case 'yesterday':
-                $this->startDate = now()->subDay()->startOfDay()->format('Y-m-d');
-                $this->endDate = now()->subDay()->endOfDay()->format('Y-m-d');
+                $this->startDate = $now->subDay()->startOfDay()->format('Y-m-d');
+                $this->endDate = $now->subDay()->endOfDay()->format('Y-m-d');
                 break;
             case 'week':
-                $this->startDate = now()->startOfWeek()->format('Y-m-d');
-                $this->endDate = now()->endOfWeek()->format('Y-m-d');
+                $this->startDate = $now->startOfWeek()->format('Y-m-d');
+                $this->endDate = $now->endOfWeek()->format('Y-m-d');
                 break;
             case 'month':
-                $this->startDate = now()->startOfMonth()->format('Y-m-d');
-                $this->endDate = now()->endOfMonth()->format('Y-m-d');
+                $this->startDate = $now->startOfMonth()->format('Y-m-d');
+                $this->endDate = $now->endOfMonth()->format('Y-m-d');
                 break;
         }
     }

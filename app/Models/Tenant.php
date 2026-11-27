@@ -2,11 +2,13 @@
 
 namespace App\Models;
 
+use Carbon\CarbonInterface;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
 
 class Tenant extends Model
@@ -125,6 +127,33 @@ class Tenant extends Model
      *
      * @param  string  $slug  The slug to search for
      */
+    /**
+     * Waktu sekarang di zona waktu tenant; "hari ini" untuk laporan dan dapur mengikuti ini.
+     */
+    public function now(): CarbonInterface
+    {
+        return now($this->timezone ?: config('app.timezone'));
+    }
+
+    public function dayStart(string $date): Carbon
+    {
+        return Carbon::parse($date, $this->timezone ?: config('app.timezone'))->startOfDay()->setTimezone(config('app.timezone'));
+    }
+
+    public function dayEnd(string $date): Carbon
+    {
+        return Carbon::parse($date, $this->timezone ?: config('app.timezone'))->endOfDay()->setTimezone(config('app.timezone'));
+    }
+
+    public function timezoneLabel(): string
+    {
+        return match ($this->timezone) {
+            'Asia/Makassar' => 'WITA',
+            'Asia/Jayapura' => 'WIT',
+            default => 'WIB',
+        };
+    }
+
     public static function findBySlug(string $slug): ?static
     {
         return static::whereRaw('LOWER(slug) = ?', [strtolower($slug)])->first();
