@@ -155,13 +155,13 @@ class PaywuzService
             $lastStatus = null;
 
             // Retry logic: up to 2 retries for server errors (502, 503, 504)
-            $maxAttempts = 3;
+            $maxAttempts = 2; // total < 30 s, batas eksekusi PHP di shared hosting
 
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
                     $response = Http::withToken($this->apiKey)
                         ->withHeaders(['Content-Type' => 'application/json'])
-                        ->timeout(15)
+                        ->timeout(8)
                         ->connectTimeout(5)
                         ->post("{$this->baseUrl}/transactions", $payload);
 
@@ -170,7 +170,7 @@ class PaywuzService
 
                     // Retry on server errors (502, 503, 504)
                     if (in_array($lastStatus, [502, 503, 504]) && $attempt < $maxAttempts) {
-                        $waitSeconds = $attempt * 2; // 2s, 4s backoff
+                        $waitSeconds = $attempt;
                         Log::warning("Paywuz server error, retrying in {$waitSeconds}s", [
                             'order_id' => $orderId,
                             'attempt' => $attempt,
@@ -192,7 +192,7 @@ class PaywuzService
 
                     // Retry on connection errors
                     if ($attempt < $maxAttempts) {
-                        $waitSeconds = $attempt * 2;
+                        $waitSeconds = $attempt;
                         Log::warning("Paywuz connection error, retrying in {$waitSeconds}s", [
                             'order_id' => $orderId,
                             'attempt' => $attempt,
@@ -589,13 +589,13 @@ class PaywuzService
             $lastStatus = null;
 
             // Retry logic: up to 2 retries for server errors (502, 503, 504)
-            $maxAttempts = 3;
+            $maxAttempts = 2; // total < 30 s, batas eksekusi PHP di shared hosting
 
             for ($attempt = 1; $attempt <= $maxAttempts; $attempt++) {
                 try {
                     $response = Http::withToken($this->apiKey)
                         ->withHeaders(['Content-Type' => 'application/json'])
-                        ->timeout(15)
+                        ->timeout(8)
                         ->connectTimeout(5)
                         ->post("{$this->baseUrl}/transactions", $payload);
 
@@ -604,7 +604,7 @@ class PaywuzService
 
                     // Retry on server errors (502, 503, 504)
                     if (in_array($lastStatus, [502, 503, 504]) && $attempt < $maxAttempts) {
-                        $waitSeconds = $attempt * 2;
+                        $waitSeconds = $attempt;
                         Log::warning("Paywuz VA server error, retrying in {$waitSeconds}s", [
                             'order_id' => $orderId,
                             'attempt' => $attempt,
@@ -625,7 +625,7 @@ class PaywuzService
                     $lastStatus = 0;
 
                     if ($attempt < $maxAttempts) {
-                        $waitSeconds = $attempt * 2;
+                        $waitSeconds = $attempt;
                         sleep($waitSeconds);
 
                         continue;

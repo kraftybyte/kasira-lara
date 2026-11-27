@@ -46,6 +46,8 @@ class Sale extends Model
         'closed_at',
         'kitchen_completed_at',
         'stock_deducted_at',
+        'loyalty_points_awarded',
+        'customer_name',
     ];
 
     protected function casts(): array
@@ -249,9 +251,53 @@ class Sale extends Model
             ]);
 
             $sale->deductStock();
+            $sale->awardLoyalty();
         });
 
         $this->refresh();
+    }
+
+    /**
+     * Poin dan statistik member untuk sale ini, sekali saja; jumlah poin disimpan agar bisa dibalik saat batal.
+     */
+    public function awardLoyalty(): int
+    {
+        $points = DB::transaction(function (): int {
+            $sale = static::query()->whereKey($this->id)->lockForUpdate()->firstOrFail();
+
+            if (! $sale->customer_id || $sale->loyalty_points_awarded !== null) {
+                return (int) $sale->loyalty_points_awarded;
+            }
+
+            $customer = Customer::query()->where('tenant_id', $sale->tenant_id)->whereKey($sale->customer_id)->lockForUpdate()->first();
+
+            if (! $customer) {
+                return 0;
+            }
+
+            $points = 0;
+
+            if ($customer->is_member) {
+                $settings = TenantSetting::where('tenant_id', $sale->tenant_id)->first();
+                $points = $settings && $settings->isLoyaltyEnabled()
+                    ? $settings->calculatePoints((float) $sale->grand_total)
+                    : (int) floor((float) $sale->grand_total / 1000);
+
+                if ($points > 0) {
+                    $customer->increment('points', $points);
+                }
+            }
+
+            $customer->increment('total_transactions');
+            $customer->increment('total_spent', (float) $sale->grand_total);
+            $sale->update(['loyalty_points_awarded' => $points]);
+
+            return $points;
+        });
+
+        $this->refresh();
+
+        return $points;
     }
 
     /**

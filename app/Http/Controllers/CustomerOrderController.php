@@ -162,6 +162,7 @@ class CustomerOrderController extends Controller
         }
 
         $attributes = [
+            'customer_name' => $validated['customer_name'],
             'payment_method' => $paymentMethod,
             'notes' => $request->input('notes'),
             'subtotal' => $subtotal - $taxAmount,

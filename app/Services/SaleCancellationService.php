@@ -146,6 +146,18 @@ class SaleCancellationService
             |--------------------------------------------------------------------------
             */
 
+            if ($sale->loyalty_points_awarded !== null && $sale->customer_id) {
+                $customer = $sale->customer()->lockForUpdate()->first();
+
+                if ($customer) {
+                    $customer->update([
+                        'points' => max(0, (int) $customer->points - (int) $sale->loyalty_points_awarded),
+                        'total_spent' => max(0, (float) $customer->total_spent - (float) $sale->grand_total),
+                        'total_transactions' => max(0, (int) $customer->total_transactions - 1),
+                    ]);
+                }
+            }
+
             $sale->update([
 
                 'status' => 'cancelled',
@@ -160,6 +172,8 @@ class SaleCancellationService
                 'cancellation_reason' => $reason,
 
                 'stock_deducted_at' => null,
+
+                'loyalty_points_awarded' => null,
 
             ]);
 

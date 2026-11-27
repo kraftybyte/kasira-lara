@@ -82,7 +82,7 @@
                                     </div>
                                     <div class="min-w-0 flex-1">
                                         <p class="truncate text-xs font-bold text-red-100" title="{{ $order->invoice_number }}">{{ $order->invoice_number }}</p>
-                                        <p class="truncate text-[11px] text-red-200">{{ $order->table?->name ?? 'Tanpa Meja' }}</p>
+                                        <p class="truncate text-[11px] text-red-200">{{ $order->table?->name ?? 'Tanpa Meja' }}@if ($order->customer_name) &middot; {{ $order->customer_name }}@endif</p>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 ml-2">

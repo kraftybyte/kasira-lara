@@ -1327,6 +1327,15 @@ class POS extends Page
                         }
                     }
 
+                    $customerId = null;
+                    if ($this->customerId) {
+                        $customerId = Customer::query()->where('tenant_id', $tenantId)->whereKey($this->customerId)->value('id');
+
+                        if (! $customerId) {
+                            throw new \Exception('Customer tidak ditemukan.');
+                        }
+                    }
+
                     $invoiceNumber =
                         $this->generateInvoiceNumber(
                             $tenantId
@@ -1341,6 +1350,7 @@ class POS extends Page
                     if ($isTableCheckout && $existingBill) {
                         // Update existing bill to completed
                         $existingBill->update([
+                            'customer_id' => $customerId ?? $existingBill->customer_id,
                             'status' => 'completed',
                             'payment_status' => 'paid',
                             'paid_at' => now(),
@@ -1374,8 +1384,7 @@ class POS extends Page
 
                                 'table_id' => $table_id,
 
-                                'customer_id' => $this->customerId
-                                        ?: null,
+                                'customer_id' => $customerId,
 
                                 'reservation_id' => $this->reservationId,
 
@@ -1509,95 +1518,7 @@ class POS extends Page
 
                     ]);
 
-                    /*
-                    |--------------------------------------------------------------------------
-                    | MEMBER / CUSTOMER
-                    |--------------------------------------------------------------------------
-                    */
-
-                    $pointsEarned = 0;
-
-                    if ($this->customerId) {
-
-                        $customer =
-                            Customer::query()
-                                ->where(
-                                    'tenant_id',
-                                    $tenantId
-                                )
-                                ->where(
-                                    'id',
-                                    $this->customerId
-                                )
-                                ->lockForUpdate()
-                                ->first();
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | CUSTOMER VALIDATION
-                        |--------------------------------------------------------------------------
-                        */
-
-                        if (! $customer) {
-
-                            throw new \Exception(
-                                'Customer tidak ditemukan.'
-                            );
-                        }
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | MEMBER POINT
-                        |--------------------------------------------------------------------------
-                        |
-                        | Calculate points based on tenant settings
-                        |
-                        */
-
-                        if (
-                            (bool)
-                            $customer->is_member
-                        ) {
-                            // Get loyalty settings
-                            $settings = TenantSetting::where('tenant_id', $tenantId)->first();
-
-                            if ($settings && $settings->isLoyaltyEnabled()) {
-                                $pointsEarned = $settings->calculatePoints($grandTotal);
-
-                                if ($pointsEarned > 0) {
-                                    $customer->increment(
-                                        'points',
-                                        $pointsEarned
-                                    );
-                                }
-                            } else {
-                                // Default: 1 point per 1000 rupiah
-                                $pointsEarned = (int) floor($grandTotal / 1000);
-
-                                if ($pointsEarned > 0) {
-                                    $customer->increment(
-                                        'points',
-                                        $pointsEarned
-                                    );
-                                }
-                            }
-                        }
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | CUSTOMER STATISTICS
-                        |--------------------------------------------------------------------------
-                        */
-
-                        $customer->increment(
-                            'total_transactions'
-                        );
-
-                        $customer->increment(
-                            'total_spent',
-                            $grandTotal
-                        );
-                    }
+                    $pointsEarned = $sale->awardLoyalty();
 
                     if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
                         $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)

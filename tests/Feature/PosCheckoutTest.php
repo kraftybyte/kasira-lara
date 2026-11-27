@@ -2,6 +2,7 @@
 
 use App\Filament\Pages\POS;
 use App\Models\Category;
+use App\Models\Customer;
 use App\Models\Product;
 use App\Models\ProductModifier;
 use App\Models\Sale;
@@ -10,6 +11,7 @@ use App\Models\Table;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
 use App\Models\User;
+use App\Services\SaleCancellationService;
 use Filament\Facades\Filament;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
@@ -240,4 +242,46 @@ it('does not delete a QRIS sale that was paid before the cashier pressed cancel'
 
     expect(Sale::find($sale->id))->not->toBeNull()->payment_status->toBe('paid')
         ->and($kopi->fresh()->stock)->toBe(9);
+});
+
+it('awards member points on a cash sale and takes them back on cancellation', function () {
+    [$tenant, $user] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+    $member = Customer::create(['tenant_id' => $tenant->id, 'name' => 'Ani', 'is_member' => true]);
+
+    Livewire::test(POS::class)
+        ->call('addToCart', $kopi)
+        ->set('customerId', $member->id)
+        ->set('paymentMethod', 'cash')
+        ->set('paidAmount', 15000)
+        ->call('processPayment');
+
+    $sale = Sale::where('source', 'pos')->first();
+    expect($sale->loyalty_points_awarded)->toBe(15)
+        ->and($member->fresh())->points->toBe(15)->total_transactions->toBe(1)->total_spent->toBe('15000.00');
+
+    app(SaleCancellationService::class)->cancel($sale, $user->id, 'batal');
+
+    expect($member->fresh())->points->toBe(0)->total_transactions->toBe(0)->total_spent->toBe('0.00');
+});
+
+it('awards member points when a POS QRIS sale is confirmed paid', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+    $member = Customer::create(['tenant_id' => $tenant->id, 'name' => 'Ani', 'is_member' => true]);
+
+    Livewire::test(POS::class)->call('addToCart', $kopi)->set('customerId', $member->id)->set('paymentMethod', 'qris')->call('generateQrisPayment');
+    $sale = Sale::where('payment_method', 'qris')->first();
+    $sale->markPaid('qris', 'TRX-1');
+    $sale->markPaid('qris', 'TRX-1');
+
+    expect($member->fresh()->points)->toBe(15)->and($sale->fresh()->loyalty_points_awarded)->toBe(15);
+});
+
+it('stores new sales as pending by default', function () {
+    [$tenant] = posOwner();
+
+    $sale = Sale::create(['tenant_id' => $tenant->id, 'invoice_number' => 'INV-X', 'grand_total' => 1]);
+
+    expect($sale->fresh()->status)->toBe('pending');
 });

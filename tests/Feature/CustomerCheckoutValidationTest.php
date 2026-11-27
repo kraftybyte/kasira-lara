@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Pages\Kitchen;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\ProductModifier;
@@ -7,7 +8,11 @@ use App\Models\Sale;
 use App\Models\Table;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
+use App\Models\User;
+use Filament\Facades\Filament;
 use Illuminate\Testing\TestResponse;
+use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 function checkoutFixture(): array
 {
@@ -68,4 +73,20 @@ it('creates a counter order for a valid cart', function () {
 
     expect(Sale::first())->grand_total->toBe('100000.00')
         ->and(Sale::first()->items()->count())->toBe(1);
+});
+
+it('keeps the customer name on the order and shows it in the kitchen', function () {
+    [$tenant, $table, $product] = checkoutFixture();
+    checkoutPost($tenant, $table, [['product_id' => $product->id, 'quantity' => 1]]);
+
+    expect(Sale::first()->customer_name)->toBe('Budi');
+
+    Role::create(['name' => 'owner']);
+    $owner = User::factory()->create();
+    $owner->assignRole('owner');
+    $owner->tenants()->attach($tenant->id, ['status' => 'active']);
+    $this->actingAs($owner);
+    Filament::setTenant($tenant);
+
+    Livewire::test(Kitchen::class)->assertSee('Budi');
 });
