@@ -8,6 +8,7 @@ use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
 use App\Models\Tenant;
+use App\Models\TenantSetting;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
@@ -158,4 +159,85 @@ it('numbers POS invoices consecutively within a day', function () {
     $prefix = 'INV-'.now()->format('Ymd').'-';
     $sequence = Sale::orderBy('id')->pluck('invoice_number')->map(fn ($n) => explode('-', substr($n, strlen($prefix)))[0]);
     expect($sequence->all())->toBe(['0001', '0002']);
+});
+
+it('pays variant lines of the same product separately and checks stock on the total', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000, stock: 3);
+
+    $page = Livewire::test(POS::class)
+        ->call('addToCart', $kopi)
+        ->call('incrementQuantity', (string) $kopi->id)
+        ->call('addToCartWithNotes', $kopi, 'less sugar')
+        ->set('paymentMethod', 'cash')
+        ->set('paidAmount', 50000)
+        ->call('processPayment');
+
+    $sale = Sale::where('source', 'pos')->first();
+    expect($sale->items()->count())->toBe(2)
+        ->and($sale->items()->sum('quantity'))->toBe('3.000')
+        ->and((float) $sale->grand_total)->toBe(45000.0)
+        ->and($kopi->fresh()->stock)->toBe(0);
+
+    // Stok habis: baris berikutnya ditolak sebelum masuk keranjang
+    $page->call('addToCart', $kopi);
+    expect($page->get('cart'))->toBe([]);
+});
+
+it('keeps modifier prices when a table bill is reloaded and stores them as separate rows', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+    $extra = ProductModifier::create(['product_id' => $kopi->id, 'name' => 'Extra Shot', 'type' => 'addon', 'price_adjustment' => 5000, 'is_active' => true]);
+    $table = Table::create(['tenant_id' => $tenant->id, 'name' => 'Meja 7', 'slug' => 'meja-7', 'status' => 'active', 'is_active' => true]);
+
+    Livewire::test(POS::class)
+        ->call('selectTable', $table->id)
+        ->call('addToCartWithNotes', $kopi, null, [['id' => $extra->id]])
+        ->call('saveToTable');
+
+    $bill = Sale::where('table_id', $table->id)->first();
+    expect($bill->items()->first())->unit_price->toBe('15000.00')->total->toBe('20000.00')
+        ->and($bill->items()->first()->modifiers()->count())->toBe(1);
+
+    $reloaded = Livewire::test(POS::class)->call('selectTable', $table->id);
+    $line = array_values($reloaded->get('cart'))[0];
+    expect($line['unit_price'])->toBe(20000.0)->and($line['modifiers'][0]['name'])->toBe('Extra Shot');
+
+    $reloaded->set('paymentMethod', 'cash')->set('paidAmount', 20000)->call('processPayment');
+    expect($bill->fresh())->status->toBe('completed')->grand_total->toBe('20000.00')
+        ->and($bill->items()->first()->modifiers()->count())->toBe(1);
+});
+
+it('blocks the plus button when stock is exhausted', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000, stock: 1);
+
+    $page = Livewire::test(POS::class)->call('addToCart', $kopi);
+    $page->call('incrementQuantity', (string) $kopi->id);
+
+    expect(array_values($page->get('cart'))[0]['quantity'])->toBe(1);
+});
+
+it('reads the tax rate from the store settings used by the customer page', function () {
+    [$tenant] = posOwner();
+    TenantSetting::create(['tenant_id' => $tenant->id, 'show_tax' => true, 'tax_rate' => 11]);
+    $nasi = posProduct($tenant, 'Nasi', 111000);
+
+    $page = Livewire::test(POS::class)->call('addToCart', $nasi)->instance();
+
+    expect($page->taxAmount)->toBe(11000.0)->and($page->total)->toBe(111000.0);
+});
+
+it('does not delete a QRIS sale that was paid before the cashier pressed cancel', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+
+    $page = Livewire::test(POS::class)->call('addToCart', $kopi)->set('paymentMethod', 'qris')->call('generateQrisPayment');
+    $sale = Sale::where('payment_method', 'qris')->first();
+    $sale->markPaid('qris', 'TRX-WEBHOOK');
+
+    $page->call('cancelQrisPayment');
+
+    expect(Sale::find($sale->id))->not->toBeNull()->payment_status->toBe('paid')
+        ->and($kopi->fresh()->stock)->toBe(9);
 });

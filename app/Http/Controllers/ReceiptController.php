@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Sale;
 use App\Models\Tenant;
+use App\Models\TenantSetting;
 
 class ReceiptController extends Controller
 {
@@ -47,7 +48,8 @@ class ReceiptController extends Controller
         |
         */
 
-        $receiptSetting = $tenant->receiptSetting;
+        // Pengaturan struk dan PPN dari tenant_settings, sama dengan POS dan halaman pelanggan
+        $receiptSetting = TenantSetting::getOrCreateForTenant($tenant->id);
 
         /*
         |--------------------------------------------------------------------------

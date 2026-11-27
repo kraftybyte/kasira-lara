@@ -305,36 +305,10 @@ class POS extends Page
         $sales = Sale::whereIn('id', $saleIds)
             ->where('tenant_id', $tenant->id)
             ->where('payment_method', 'counter')
-            ->with(['items.product'])
+            ->with(['items.product', 'items.modifiers'])
             ->get();
 
-        foreach ($sales as $sale) {
-            foreach ($sale->items as $item) {
-                $productId = (int) $item->product_id;
-                $isDuration = $item->product && $item->product->rate_type === 'duration';
-
-                if (isset($this->cart[$productId])) {
-                    $this->cart[$productId]['quantity'] += (float) $item->quantity;
-                    $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
-                    $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
-                } else {
-                    $this->cart[$productId] = [
-                        'product_id' => $productId,
-                        'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
-                        'sku' => $item->sku,
-                        'unit_price' => (float) $item->unit_price,
-                        'quantity' => (float) $item->quantity,
-                        'subtotal' => (float) $item->subtotal,
-                        'total' => (float) $item->total,
-                        'sale_item_id' => $item->id,
-                        'sale_id' => $sale->id,
-                        'is_duration' => $isDuration,
-                        'rate_type' => $item->product?->rate_type ?? 'fixed',
-                        'rate' => (float) ($item->product?->rate ?? 1),
-                    ];
-                }
-            }
-        }
+        $this->cart = $this->cartFromSales($sales);
 
         // Set to cash payment method
         $this->paymentMethod = 'cash';
@@ -603,7 +577,7 @@ class POS extends Page
 
         if (
             $product->rate_type !== 'duration'
-            && (float) $product->stock <= 0
+            && (float) ($product->fresh()?->stock ?? 0) < $this->quantityInCart((int) $product->id) + 1
         ) {
             Notification::make()
                 ->title('Stok habis')
@@ -758,7 +732,7 @@ class POS extends Page
 
         if (
             $product->rate_type !== 'duration'
-            && (float) $product->stock <= 0
+            && (float) ($product->fresh()?->stock ?? 0) < $this->quantityInCart((int) $product->id) + 1
         ) {
 
             Notification::make()
@@ -960,10 +934,20 @@ class POS extends Page
 
     public function incrementQuantity(int|string $productId): void
     {
-        if (isset($this->cart[$productId])) {
-            $this->cart[$productId]['quantity']++;
-            $this->recalculateCartItem($productId);
+        if (! isset($this->cart[$productId])) {
+            return;
         }
+
+        $this->cart[$productId]['quantity']++;
+
+        if ($shortage = $this->cartStockShortage((int) Filament::getTenant()?->id)) {
+            $this->cart[$productId]['quantity']--;
+            Notification::make()->title('Stok tidak cukup')->body($shortage)->danger()->send();
+
+            return;
+        }
+
+        $this->recalculateCartItem($productId);
     }
 
     /*
@@ -1285,89 +1269,44 @@ class POS extends Page
                     */
 
                     $products = [];
+                    $needed = [];
+                    $locked = [];
 
-                    foreach (
-                        $this->cart as $item
-                    ) {
+                    foreach ($this->cart as $cartKey => $item) {
+                        $productId = (int) $item['product_id'];
 
-                        $product =
-                            Product::query()
-                                ->where(
-                                    'id',
-                                    $item['product_id']
-                                )
-                                ->where(
-                                    'tenant_id',
-                                    $tenantId
-                                )
-                                ->lockForUpdate()
-                                ->first();
+                        $product = $locked[$productId] ??= Product::query()
+                            ->where('id', $productId)
+                            ->where('tenant_id', $tenantId)
+                            ->lockForUpdate()
+                            ->first();
 
                         if (! $product) {
-
-                            throw new \Exception(
-                                "Produk {$item['product_name']} tidak ditemukan."
-                            );
+                            throw new \Exception("Produk {$item['product_name']} tidak ditemukan.");
                         }
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | ACTIVE CHECK
-                        |--------------------------------------------------------------------------
-                        */
-
-                        if (
-                            ! (bool)
-                            $product->is_active
-                        ) {
-
-                            throw new \Exception(
-                                "Produk {$product->name} sudah tidak aktif."
-                            );
+                        if (! (bool) $product->is_active) {
+                            throw new \Exception("Produk {$product->name} sudah tidak aktif.");
                         }
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | QUANTITY
-                        |--------------------------------------------------------------------------
-                        */
-
-                        $quantity =
-                            (float) $item['quantity'];
+                        $quantity = (float) $item['quantity'];
 
                         if ($quantity <= 0) {
-
-                            throw new \Exception(
-                                "Jumlah produk {$product->name} tidak valid."
-                            );
+                            throw new \Exception("Jumlah produk {$product->name} tidak valid.");
                         }
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | STOCK CHECK (HANYA UNTUK FIXED TYPE)
-                        |--------------------------------------------------------------------------
-                        */
+                        // Satu entri per baris keranjang: varian catatan/modifier tidak saling menimpa
+                        $products[$cartKey] = ['product' => $product, 'quantity' => $quantity];
+                        $needed[$productId] = ($needed[$productId] ?? 0) + $quantity;
+                    }
 
-                        if (
-                            $product->rate_type !== 'duration'
-                            && (float) $product->stock < $quantity
-                        ) {
+                    // Stok dicek terhadap total per produk, bukan per baris
+                    foreach ($needed as $productId => $quantity) {
+                        $product = $locked[$productId];
 
-                            throw new \Exception(
-                                "Stok {$product->name} tidak mencukupi. ".
-                                'Stok tersedia: '.(int) $product->stock.'.'
-                            );
+                        if ($product->rate_type !== 'duration' && (float) $product->stock < $quantity) {
+                            throw new \Exception("Stok {$product->name} tidak mencukupi. Stok tersedia: ".(int) $product->stock.'.');
                         }
-
-                        $products[
-                            (int) $product->id
-                        ] = [
-
-                            'product' => $product,
-
-                            'quantity' => $quantity,
-
-                        ];
                     }
 
                     /*
@@ -1486,18 +1425,10 @@ class POS extends Page
                     }
 
                     foreach (
-                        $this->cart as $item
+                        $this->cart as $cartKey => $item
                     ) {
 
-                        $productId =
-                            (int)
-                            $item['product_id'];
-
-                        if (
-                            ! isset(
-                                $products[$productId]
-                            )
-                        ) {
+                        if (! isset($products[$cartKey])) {
 
                             throw new \Exception(
                                 'Produk dalam keranjang tidak valid.'
@@ -1505,7 +1436,7 @@ class POS extends Page
                         }
 
                         $productData =
-                            $products[$productId];
+                            $products[$cartKey];
 
                         $product =
                             $productData['product'];
@@ -1529,53 +1460,7 @@ class POS extends Page
                             $unitPrice *
                             $quantity;
 
-                        /*
-                        |--------------------------------------------------------------------------
-                        | CREATE SALE ITEMS
-                        |--------------------------------------------------------------------------
-                        */
-
-                        $saleItem = SaleItem::create([
-
-                            'sale_id' => $sale->id,
-
-                            'product_id' => $product->id,
-
-                            'product_name' => $product->name,
-
-                            'sku' => $product->sku,
-
-                            'quantity' => $quantity,
-
-                            'unit_price' => $unitPrice,
-
-                            'discount' => 0,
-
-                            'tax' => 0,
-
-                            'subtotal' => $subtotal,
-
-                            'total' => $subtotal,
-
-                            'notes' => $item['notes'] ?? null,
-
-                        ]);
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | SAVE MODIFIERS
-                        |--------------------------------------------------------------------------
-                        */
-
-                        $modifiers = $item['modifiers'] ?? [];
-                        foreach ($modifiers as $mod) {
-                            SaleItemModifier::create([
-                                'sale_item_id' => $saleItem->id,
-                                'product_modifier_id' => $mod['id'],
-                                'modifier_name' => $mod['name'],
-                                'price' => $mod['price'] ?? 0,
-                            ]);
-                        }
+                        $this->storeCartLine($sale, $item);
 
                         /*
                         |--------------------------------------------------------------------------
@@ -1999,39 +1884,24 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
+    /**
+     * Sumber PPN tunggal: tenant_settings (diedit di Pengaturan Toko), sama dengan alur pesan pelanggan.
+     */
+    public function getTenantSettingProperty(): ?TenantSetting
+    {
+        $tenantId = Filament::getTenant()?->id;
+
+        return $tenantId ? TenantSetting::where('tenant_id', $tenantId)->first() : null;
+    }
+
     public function getTaxRateProperty(): float
     {
-        $tenant = Filament::getTenant();
-
-        if (! $tenant) {
-            return 11.00;
-        }
-
-        $receiptSetting = $tenant->receiptSetting;
-
-        if (! $receiptSetting) {
-            return 11.00;
-        }
-
-        return (float) $receiptSetting->tax_rate;
+        return (float) ($this->tenantSetting?->tax_rate ?? 0);
     }
 
     public function getShowTaxProperty(): bool
     {
-        // Ambil dari tenant settings
-        $tenant = Filament::getTenant();
-
-        if (! $tenant) {
-            return false;
-        }
-
-        $receiptSetting = $tenant->receiptSetting;
-
-        if (! $receiptSetting) {
-            return false;
-        }
-
-        return (bool) $receiptSetting->show_tax;
+        return (bool) ($this->tenantSetting?->show_tax ?? false);
     }
 
     /*
@@ -2593,110 +2463,156 @@ class POS extends Page
 
         $this->reservationId = $reservation?->id;
 
-        // Check for ALL active orders (pending/open, not completed, not closed)
-        // Table row is already locked above, now lock sales
+        // Bill yang belum dibayar: open/pending dan belum lunas (bayar lewat QR membuat sale lunas tanpa menutup meja)
         $pendingOrders = Sale::query()
             ->where('table_id', $tableId)
-            ->where('status', '!=', 'completed')
+            ->where('tenant_id', $tenant->id)
+            ->whereIn('status', ['open', 'pending'])
+            ->where(fn ($q) => $q->whereNull('payment_status')->orWhere('payment_status', '!=', 'paid'))
             ->whereNull('closed_at')
             ->lockForUpdate()
-            ->with(['items.product'])
+            ->with(['items.product', 'items.modifiers'])
             ->get();
 
-        if ($pendingOrders->count() > 0) {
-            // Has pending cash orders - load them into cart
+        if ($pendingOrders->isNotEmpty()) {
             $this->activeTableId = $tableId;
             $this->currentBillId = $pendingOrders->first()->id;
-            $this->cart = [];
+            $this->cart = $this->cartFromSales($pendingOrders);
 
-            // Merge all pending order items into cart
-            foreach ($pendingOrders as $order) {
-                foreach ($order->items as $item) {
-                    $productId = (int) $item->product_id;
-                    $isDuration = $item->product && $item->product->rate_type === 'duration';
+            return;
+        }
 
-                    if (isset($this->cart[$productId])) {
-                        // Add to existing quantity
-                        $this->cart[$productId]['quantity'] += (float) $item->quantity;
-                        $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
-                        $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
-                    } else {
-                        $this->cart[$productId] = [
-                            'product_id' => $productId,
-                            'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
-                            'sku' => $item->sku,
-                            'unit_price' => (float) $item->unit_price,
-                            'quantity' => (float) $item->quantity,
-                            'subtotal' => (float) $item->subtotal,
-                            'total' => (float) $item->total,
-                            'sale_item_id' => $item->id,
-                            'sale_id' => $order->id,
-                            'is_duration' => $isDuration,
-                            'rate_type' => $item->product?->rate_type ?? 'fixed',
-                            'rate' => (float) ($item->product?->rate ?? 1),
-                        ];
-                    }
-                }
-            }
-        } else {
-            // Check for completed orders (QR paid orders, not closed) - show in cart but disabled
-            // SECURITY: Add tenant_id scoping to prevent cross-tenant data leak
-            $completedOrders = Sale::query()
-                ->where('table_id', $tableId)
-                ->where('tenant_id', $tenant->id)
-                ->where('status', 'completed')
-                ->whereNull('closed_at')
-                ->with(['items.product'])
-                ->get();
+        // Sudah lunas tapi meja belum ditutup: tampilkan saja, tidak bisa ditagih lagi
+        $paidOrders = Sale::query()
+            ->where('table_id', $tableId)
+            ->where('tenant_id', $tenant->id)
+            ->where(fn ($q) => $q->where('status', 'completed')->orWhere('payment_status', 'paid'))
+            ->whereNull('closed_at')
+            ->with(['items.product', 'items.modifiers'])
+            ->get();
 
-            if ($completedOrders->count() > 0) {
-                // Table has paid orders - show them in cart (read-only display)
-                $this->activeTableId = $tableId;
-                $this->currentBillId = null;
-                $this->cart = [];
+        if ($paidOrders->isNotEmpty()) {
+            $this->activeTableId = $tableId;
+            $this->currentBillId = null;
+            $this->cart = $this->cartFromSales($paidOrders);
 
-                foreach ($completedOrders as $order) {
-                    foreach ($order->items as $item) {
-                        $productId = (int) $item->product_id;
-                        $isDuration = $item->product && $item->product->rate_type === 'duration';
+            Notification::make()
+                ->title('Pesanan sudah dibayar')
+                ->body('Pesanan di meja ini sudah lunas.')
+                ->info()
+                ->send();
 
-                        if (isset($this->cart[$productId])) {
-                            $this->cart[$productId]['quantity'] += (float) $item->quantity;
-                            $this->cart[$productId]['subtotal'] = $this->cart[$productId]['quantity'] * $this->cart[$productId]['unit_price'];
-                            $this->cart[$productId]['total'] = $this->cart[$productId]['subtotal'];
-                        } else {
-                            $this->cart[$productId] = [
-                                'product_id' => $productId,
-                                'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
-                                'sku' => $item->sku,
-                                'unit_price' => (float) $item->unit_price,
-                                'quantity' => (float) $item->quantity,
-                                'subtotal' => (float) $item->subtotal,
-                                'total' => (float) $item->total,
-                                'sale_item_id' => $item->id,
-                                'sale_id' => $order->id,
-                                'is_duration' => $isDuration,
-                                'rate_type' => $item->product?->rate_type ?? 'fixed',
-                                'rate' => (float) ($item->product?->rate ?? 1),
-                                'is_completed' => true, // Mark as completed so UI can disable editing
-                            ];
-                        }
-                    }
-                }
+            return;
+        }
 
-                // Show notification that orders are already paid
-                Notification::make()
-                    ->title('Pesanan sudah dibayar')
-                    ->body('Pesanan di meja ini sudah lunas.')
-                    ->info()
-                    ->send();
-            } else {
-                // No orders at all - start fresh cart
-                $this->currentBillId = null;
-                $this->activeTableId = null;
-                $this->cart = [];
+        $this->currentBillId = null;
+        $this->activeTableId = null;
+        $this->cart = [];
+    }
+
+    /**
+     * Isi keranjang dari item sale tersimpan: satu baris per item, catatan dan modifier ikut, harga baris = harga dasar + modifier.
+     *
+     * @param  Collection<int, Sale>  $sales
+     * @return array<string, array<string, mixed>>
+     */
+    protected function cartFromSales(Collection $sales): array
+    {
+        $cart = [];
+
+        foreach ($sales as $sale) {
+            foreach ($sale->items as $item) {
+                $modifiers = $item->modifiers
+                    ->map(fn ($m) => ['id' => $m->product_modifier_id, 'name' => $m->modifier_name, 'price' => (float) $m->price])
+                    ->all();
+                $unitPrice = (float) $item->unit_price + (float) array_sum(array_column($modifiers, 'price'));
+                $quantity = (float) $item->quantity;
+
+                $cart[$item->product_id.'_'.$item->id] = [
+                    'product_id' => (int) $item->product_id,
+                    'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
+                    'sku' => $item->sku,
+                    'unit_price' => $unitPrice,
+                    'quantity' => $quantity,
+                    'subtotal' => $unitPrice * $quantity,
+                    'total' => $unitPrice * $quantity,
+                    'sale_item_id' => $item->id,
+                    'sale_id' => $sale->id,
+                    'is_duration' => $item->product?->rate_type === 'duration',
+                    'rate_type' => $item->product?->rate_type ?? 'fixed',
+                    'rate' => (float) ($item->product?->rate ?? 1),
+                    'notes' => $item->notes,
+                    'modifiers' => $modifiers,
+                    'is_variant' => $modifiers !== [] || filled($item->notes),
+                ];
             }
         }
+
+        return $cart;
+    }
+
+    /**
+     * Simpan satu baris keranjang: SaleItem dengan harga dasar, total baris termasuk modifier, plus baris modifier-nya.
+     *
+     * @param  array<string, mixed>  $line
+     */
+    protected function storeCartLine(Sale $sale, array $line): SaleItem
+    {
+        $modifiers = $line['modifiers'] ?? [];
+        $modifierTotal = (float) array_sum(array_column($modifiers, 'price'));
+        $quantity = (float) $line['quantity'];
+        $lineTotal = (float) $line['unit_price'] * $quantity;
+
+        $saleItem = SaleItem::create([
+            'sale_id' => $sale->id,
+            'product_id' => (int) $line['product_id'],
+            'product_name' => $line['product_name'],
+            'sku' => $line['sku'] ?? null,
+            'quantity' => $quantity,
+            'unit_price' => (float) $line['unit_price'] - $modifierTotal,
+            'discount' => 0,
+            'tax' => 0,
+            'subtotal' => $lineTotal,
+            'total' => $lineTotal,
+            'notes' => $line['notes'] ?? null,
+        ]);
+
+        foreach ($modifiers as $modifier) {
+            SaleItemModifier::create([
+                'sale_item_id' => $saleItem->id,
+                'product_modifier_id' => $modifier['id'],
+                'modifier_name' => $modifier['name'],
+                'price' => $modifier['price'] ?? 0,
+            ]);
+        }
+
+        return $saleItem;
+    }
+
+    protected function quantityInCart(int $productId): float
+    {
+        return (float) collect($this->cart)->where('product_id', $productId)->sum('quantity');
+    }
+
+    /**
+     * Pesan kekurangan stok untuk isi keranjang (dihitung per produk, lintas baris varian), atau null jika cukup.
+     */
+    protected function cartStockShortage(int $tenantId): ?string
+    {
+        $needed = [];
+        foreach ($this->cart as $line) {
+            $needed[(int) $line['product_id']] = ($needed[(int) $line['product_id']] ?? 0) + (float) $line['quantity'];
+        }
+
+        $products = Product::query()->where('tenant_id', $tenantId)->whereIn('id', array_keys($needed))->get();
+
+        foreach ($products as $product) {
+            if ($product->rate_type !== 'duration' && (float) $product->stock < $needed[$product->id]) {
+                return "Stok {$product->name} tidak mencukupi. Stok tersedia: ".(int) $product->stock.'.';
+            }
+        }
+
+        return null;
     }
 
     /*
@@ -2707,28 +2623,7 @@ class POS extends Page
 
     protected function loadBillToCart(Sale $sale): void
     {
-        $this->cart = [];
-
-        foreach ($sale->items as $item) {
-            $productId = (int) $item->product_id;
-            $isDuration = $item->product && $item->product->rate_type === 'duration';
-
-            $this->cart[$productId] = [
-                'product_id' => $productId,
-                'product_name' => $item->product_name ?? $item->product?->name ?? 'Item',
-                'sku' => $item->sku,
-                'unit_price' => (float) $item->unit_price,
-                'quantity' => (float) $item->quantity,
-                'subtotal' => (float) $item->subtotal,
-                'total' => (float) $item->total,
-                'sale_item_id' => $item->id,
-                'sale_id' => $sale->id,
-                'is_duration' => $isDuration,
-                'rate_type' => $item->product?->rate_type ?? 'fixed',
-                'rate' => (float) ($item->product?->rate ?? 1),
-            ];
-        }
-
+        $this->cart = $this->cartFromSales(collect([$sale->load(['items.product', 'items.modifiers'])]));
         $this->customerId = $sale->customer_id;
     }
 
@@ -2832,7 +2727,7 @@ class POS extends Page
             // Create sale
             $sale = Sale::create([
                 'tenant_id' => $tenantId,
-                'table_id' => $this->tableId,
+                'table_id' => $table->id,
                 'customer_id' => $this->customerId,
                 'reservation_id' => $this->reservationId,
                 'user_id' => auth()->id(),
@@ -2848,19 +2743,8 @@ class POS extends Page
                 'change_amount' => 0,
             ]);
 
-            // Create sale items
             foreach ($this->cart as $item) {
-                SaleItem::create([
-                    'sale_id' => $sale->id,
-                    'product_id' => $item['product_id'],
-                    'product_name' => $item['product_name'],
-                    'sku' => $item['sku'] ?? null,
-                    'quantity' => $item['quantity'],
-                    'unit_price' => $item['unit_price'],
-                    'subtotal' => $item['subtotal'],
-                    'total' => $item['total'],
-                    'notes' => $item['notes'] ?? null,
-                ]);
+                $this->storeCartLine($sale, $item);
             }
 
             // Update table status
@@ -2903,7 +2787,7 @@ class POS extends Page
 
         try {
             // Lock the sale row to prevent race conditions
-            $sale = Sale::where('id', $sale->id)->lockForUpdate()->first();
+            $sale = Sale::where('id', $sale->id)->where('tenant_id', Filament::getTenant()?->id)->lockForUpdate()->first();
 
             if (! $sale) {
                 DB::rollBack();
@@ -2916,23 +2800,9 @@ class POS extends Page
             // Lock sale items for update as well
             SaleItem::where('sale_id', $sale->id)->lockForUpdate()->delete();
 
-            // Process cart items - create fresh
             foreach ($this->cart as $item) {
-                $cartQuantity = (float) $item['quantity'];
-
-                if ($cartQuantity > 0) {
-                    SaleItem::create([
-                        'sale_id' => $sale->id,
-                        'product_id' => (int) $item['product_id'],
-                        'product_name' => $item['product_name'],
-                        'sku' => $item['sku'] ?? null,
-                        'quantity' => $cartQuantity,
-                        'unit_price' => (float) $item['unit_price'],
-                        'subtotal' => $cartQuantity * (float) $item['unit_price'],
-                        'total' => $cartQuantity * (float) $item['unit_price'],
-                        'notes' => $item['notes'] ?? null,
-                    ]);
-                    $newSubtotal += $cartQuantity * (float) $item['unit_price'];
+                if ((float) $item['quantity'] > 0) {
+                    $newSubtotal += (float) $this->storeCartLine($sale, $item)->total;
                 }
             }
 
@@ -3083,7 +2953,10 @@ class POS extends Page
         try {
             $tenantId = (int) $tenant->getKey();
 
-            // Calculate totals
+            if ($shortage = $this->cartStockShortage($tenantId)) {
+                throw new \Exception($shortage);
+            }
+
             $subtotal = (float) $this->subtotal;
             $taxAmount = (float) $this->taxAmount;
             $grandTotal = (float) $this->total;
@@ -3114,19 +2987,7 @@ class POS extends Page
 
                 // Create sale items
                 foreach ($this->cart as $item) {
-                    SaleItem::create([
-                        'sale_id' => $sale->id,
-                        'product_id' => (int) $item['product_id'],
-                        'product_name' => $item['product_name'],
-                        'sku' => $item['sku'] ?? null,
-                        'quantity' => (float) $item['quantity'],
-                        'unit_price' => (float) $item['unit_price'],
-                        'discount' => 0,
-                        'tax' => 0,
-                        'subtotal' => (float) $item['subtotal'],
-                        'total' => (float) $item['total'],
-                        'notes' => $item['notes'] ?? null,
-                    ]);
+                    $this->storeCartLine($sale, $item);
                 }
 
                 return $sale;
@@ -3341,7 +3202,13 @@ class POS extends Page
     public function cancelQrisPayment(): void
     {
         if ($this->currentQrisSale) {
-            // Cancel the pending sale
+            // Pelanggan keburu bayar (webhook): selesaikan, jangan dihapus
+            if ($this->currentQrisSale->fresh()?->payment_status === 'paid') {
+                $this->confirmQrisPayment();
+
+                return;
+            }
+
             $this->currentQrisSale->items()->delete();
             $this->currentQrisSale->delete();
         }
@@ -3504,7 +3371,10 @@ class POS extends Page
             $bankName = $banks[$bankCode]['name'] ?? 'Bank';
             $this->vaBankName = $bankName;
 
-            // Calculate totals
+            if ($shortage = $this->cartStockShortage($tenantId)) {
+                throw new \Exception($shortage);
+            }
+
             $subtotal = (float) $this->subtotal;
             $taxAmount = (float) $this->taxAmount;
             $grandTotal = (float) $this->total;
@@ -3535,19 +3405,7 @@ class POS extends Page
 
                 // Create sale items
                 foreach ($this->cart as $item) {
-                    SaleItem::create([
-                        'sale_id' => $sale->id,
-                        'product_id' => (int) $item['product_id'],
-                        'product_name' => $item['product_name'],
-                        'sku' => $item['sku'] ?? null,
-                        'quantity' => (float) $item['quantity'],
-                        'unit_price' => (float) $item['unit_price'],
-                        'discount' => 0,
-                        'tax' => 0,
-                        'subtotal' => (float) $item['subtotal'],
-                        'total' => (float) $item['total'],
-                        'notes' => $item['notes'] ?? null,
-                    ]);
+                    $this->storeCartLine($sale, $item);
                 }
 
                 return $sale;
@@ -3778,7 +3636,13 @@ class POS extends Page
     public function cancelVaPayment(): void
     {
         if ($this->currentVaSale) {
-            // Cancel the pending sale
+            // Pelanggan keburu bayar (webhook): selesaikan, jangan dihapus
+            if ($this->currentVaSale->fresh()?->payment_status === 'paid') {
+                $this->confirmVaPayment();
+
+                return;
+            }
+
             $this->currentVaSale->items()->delete();
             $this->currentVaSale->delete();
         }
