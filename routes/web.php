@@ -74,14 +74,16 @@ Route::post('/webhook/paywuz', [PaywuzWebhookController::class, 'handle'])
 |
 */
 
-Route::get('/admin/{tenant}/reports/sales/pdf', [ReportExportController::class, 'salesPdf'])
-    ->name('reports.sales.pdf');
+Route::middleware(['auth'])->group(function () {
+    Route::get('/admin/{tenant}/reports/sales/pdf', [ReportExportController::class, 'salesPdf'])
+        ->name('reports.sales.pdf');
 
-Route::get('/admin/{tenant}/reports/sales/csv', [ReportExportController::class, 'salesCsv'])
-    ->name('reports.sales.csv');
+    Route::get('/admin/{tenant}/reports/sales/csv', [ReportExportController::class, 'salesCsv'])
+        ->name('reports.sales.csv');
 
-Route::get('/admin/{tenant}/reports/ingredients/csv', [ReportExportController::class, 'ingredientsCsv'])
-    ->name('reports.ingredients.csv');
+    Route::get('/admin/{tenant}/reports/ingredients/csv', [ReportExportController::class, 'ingredientsCsv'])
+        ->name('reports.ingredients.csv');
 
-Route::get('/admin/{tenant}/reports/ingredients/usage/csv', [ReportExportController::class, 'ingredientsUsageCsv'])
-    ->name('reports.ingredients.usage.csv');
+    Route::get('/admin/{tenant}/reports/ingredients/usage/csv', [ReportExportController::class, 'ingredientsUsageCsv'])
+        ->name('reports.ingredients.usage.csv');
+});

@@ -179,3 +179,33 @@ it('exports ingredients CSV with search filter', function () {
     expect($content)->toContain('Tepung Terigu');
     expect($content)->not->toContain('Gula Pasir');
 });
+
+it('rejects report exports without login', function () {
+    $tenant = createTenant();
+
+    $this->get(route('reports.sales.csv', ['tenant' => $tenant->slug]))
+        ->assertRedirect('/admin/login');
+});
+
+it('rejects report exports for a tenant the user does not belong to', function () {
+    $tenant = createTenant();
+    $otherTenant = Tenant::create(['name' => 'Other', 'slug' => 'other']);
+    $user = createUserWithTenant($otherTenant);
+
+    $this->actingAs($user)
+        ->get(route('reports.sales.csv', ['tenant' => $tenant->slug]))
+        ->assertNotFound();
+
+    $this->actingAs($user)
+        ->get(route('reports.sales.csv', ['tenant' => $tenant->id]))
+        ->assertNotFound();
+});
+
+it('rejects report exports over 92 days', function () {
+    $tenant = createTenant();
+    $user = createUserWithTenant($tenant);
+
+    $this->actingAs($user)
+        ->get(route('reports.sales.csv', ['tenant' => $tenant->slug, 'startDate' => '2020-01-01', 'endDate' => '2030-01-01']))
+        ->assertStatus(422);
+});

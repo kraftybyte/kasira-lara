@@ -21,6 +21,8 @@ return Application::configure(basePath: dirname(__DIR__))
             SymfonyRequest::HEADER_X_FORWARDED_FOR | SymfonyRequest::HEADER_X_FORWARDED_HOST | SymfonyRequest::HEADER_X_FORWARDED_PORT | SymfonyRequest::HEADER_X_FORWARDED_PROTO | SymfonyRequest::HEADER_X_FORWARDED_PREFIX | SymfonyRequest::HEADER_X_FORWARDED_AWS_ELB
         );
 
+        $middleware->redirectGuestsTo('/admin/login');
+
         $middleware->validateCsrfTokens(except: [
             'webhook/paywuz',
         ]);

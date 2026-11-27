@@ -24,8 +24,7 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        $startDate = $request->query('startDate', now()->startOfDay()->format('Y-m-d'));
-        $endDate = $request->query('endDate', now()->endOfDay()->format('Y-m-d'));
+        [$startDate, $endDate] = $this->dateRange($request);
         $statusFilter = $request->query('statusFilter');
 
         $sales = $this->getSalesQuery($tenantModel->id, $startDate, $endDate, $statusFilter)
@@ -61,8 +60,7 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        $startDate = $request->query('startDate', now()->startOfDay()->format('Y-m-d'));
-        $endDate = $request->query('endDate', now()->endOfDay()->format('Y-m-d'));
+        [$startDate, $endDate] = $this->dateRange($request);
         $statusFilter = $request->query('statusFilter');
 
         $sales = $this->getSalesQuery($tenantModel->id, $startDate, $endDate, $statusFilter)
@@ -157,8 +155,7 @@ class ReportExportController extends Controller
     {
         $tenantModel = $this->resolveTenant($tenant);
 
-        $startDate = $request->query('startDate', now()->startOfDay()->format('Y-m-d'));
-        $endDate = $request->query('endDate', now()->endOfDay()->format('Y-m-d'));
+        [$startDate, $endDate] = $this->dateRange($request);
 
         // Get sales in date range
         $sales = Sale::query()
@@ -245,8 +242,24 @@ class ReportExportController extends Controller
         $tenantModel = Tenant::findBySlugOrId($tenant);
 
         abort_unless($tenantModel, 404, 'Tenant not found');
+        abort_unless(auth()->user()?->canAccessTenant($tenantModel), 404);
 
         return $tenantModel;
+    }
+
+    /**
+     * Date range from the query string, capped so one export cannot pull years of rows.
+     *
+     * @return array{0: string, 1: string}
+     */
+    protected function dateRange(Request $request): array
+    {
+        $startDate = $request->query('startDate', now()->format('Y-m-d'));
+        $endDate = $request->query('endDate', now()->format('Y-m-d'));
+
+        abort_if(Carbon::parse($startDate)->diffInDays(Carbon::parse($endDate), false) > 92, 422, 'Rentang tanggal maksimal 92 hari.');
+
+        return [$startDate, $endDate];
     }
 
     protected function getSalesQuery(int $tenantId, string $startDate, string $endDate, ?string $statusFilter = null)
