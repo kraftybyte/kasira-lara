@@ -14,8 +14,6 @@ class PaywuzService
 
     protected string $apiKey;
 
-    protected ?string $callbackUrl;
-
     protected string $merchantName;
 
     protected ?int $tenantId;
@@ -43,16 +41,13 @@ class PaywuzService
                 $this->apiKey = $settings->paywuz_api_key ?? '';
                 $this->merchantName = $settings->paywuz_merchant_name ?? 'KasirAja';
                 // Callback URL tenant-specific
-                $this->callbackUrl = url('/webhook/paywuz?tenant_id='.$tenantId);
             } else {
                 $this->apiKey = '';
                 $this->merchantName = 'KasirAja';
-                $this->callbackUrl = config('services.paywuz.callback_url', url('/webhook/paywuz'));
             }
         } else {
             $this->apiKey = config('services.paywuz.api_key', '');
             $this->merchantName = config('services.paywuz.merchant_name', 'KasirAja');
-            $this->callbackUrl = config('services.paywuz.callback_url', url('/webhook/paywuz'));
         }
     }
 
@@ -269,42 +264,6 @@ class PaywuzService
     }
 
     /**
-     * Create static QRIS (fixed amount)
-     */
-    public function createStaticQr(string $orderId, float $amount, ?string $cashierName = null): array
-    {
-        if (! $this->isConfigured()) {
-            return [
-                'success' => false,
-                'message' => 'Paywuz belum dikonfigurasi',
-            ];
-        }
-
-        try {
-            $response = Http::withToken($this->apiKey)
-                ->timeout(30)
-                ->post("{$this->baseUrl}/qris/static", [
-                    'order_id' => $orderId,
-                    'amount' => $amount,
-                    'cashier_name' => $cashierName ?? $this->merchantName,
-                    'callback_url' => $this->callbackUrl,
-                ]);
-
-            return $response->json() ?? [];
-        } catch (\Exception $e) {
-            Log::error('Paywuz createStaticQr error', [
-                'order_id' => $orderId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
      * Inquiry transaction status
      * Uses GET /v1/transactions/:id
      */
@@ -357,114 +316,6 @@ class PaywuzService
             'success' => false,
             'message' => 'Inquiry gagal: Transaction tidak ditemukan',
         ];
-    }
-
-    /**
-     * Get QR image by transaction ID
-     */
-    public function getQrImage(string $transactionId): ?string
-    {
-        if (! $this->isConfigured()) {
-            return null;
-        }
-
-        try {
-            $response = Http::withToken($this->apiKey)
-                ->timeout(30)
-                ->get("{$this->baseUrl}/qris/{$transactionId}/image");
-
-            if ($response->successful()) {
-                return $response->body();
-            }
-
-            return null;
-        } catch (\Exception $e) {
-            Log::error('Paywuz getQrImage error', [
-                'transaction_id' => $transactionId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return null;
-        }
-    }
-
-    /**
-     * Cancel transaction
-     */
-    public function cancel(string $transactionId): array
-    {
-        if (! $this->isConfigured()) {
-            return [
-                'success' => false,
-                'message' => 'Paywuz belum dikonfigurasi',
-            ];
-        }
-
-        try {
-            $response = Http::withToken($this->apiKey)
-                ->timeout(30)
-                ->post("{$this->baseUrl}/transaction/cancel", [
-                    'transaction_id' => $transactionId,
-                ]);
-
-            return $response->json() ?? [];
-        } catch (\Exception $e) {
-            Log::error('Paywuz cancel error', [
-                'transaction_id' => $transactionId,
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Get transaction history
-     */
-    public function getHistory(array $params = []): array
-    {
-        if (! $this->isConfigured()) {
-            return [
-                'success' => false,
-                'message' => 'Paywuz belum dikonfigurasi',
-            ];
-        }
-
-        try {
-            $response = Http::withToken($this->apiKey)
-                ->timeout(30)
-                ->get("{$this->baseUrl}/transaction/history", $params);
-
-            return $response->json() ?? [];
-        } catch (\Exception $e) {
-            Log::error('Paywuz getHistory error', [
-                'error' => $e->getMessage(),
-            ]);
-
-            return [
-                'success' => false,
-                'message' => $e->getMessage(),
-            ];
-        }
-    }
-
-    /**
-     * Get API key
-     */
-    public function getApiKey(): string
-    {
-        return $this->apiKey;
-    }
-
-    /**
-     * Get merchant name
-     */
-    public function getMerchantName(): string
-    {
-        return $this->merchantName;
     }
 
     /**

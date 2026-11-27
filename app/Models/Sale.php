@@ -70,37 +70,6 @@ class Sale extends Model
         ];
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | HELPER METHODS
-    |--------------------------------------------------------------------------
-    */
-
-    public function isPaid(): bool
-    {
-        return $this->status === 'completed';
-    }
-
-    public function isServed(): bool
-    {
-        return $this->served_at !== null;
-    }
-
-    public function isPending(): bool
-    {
-        return $this->status === 'pending';
-    }
-
-    public function isOpenBill(): bool
-    {
-        return $this->source === 'pos' && $this->status === 'open';
-    }
-
-    public function isFromCustomer(): bool
-    {
-        return $this->source === 'customer';
-    }
-
     public function markAsServed(): void
     {
         $this->update(['served_at' => now()]);

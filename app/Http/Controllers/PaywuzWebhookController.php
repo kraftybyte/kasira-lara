@@ -158,24 +158,9 @@ class PaywuzWebhookController extends Controller
      */
     protected function getApiKey(Request $request): ?string
     {
-        // Try to get transaction_id to find tenant
-        $payload = $request->all();
-        $transactionId = $payload['transaction_id'] ?? null;
+        $sale = Sale::where('paywuz_transaction_id', $request->input('transaction_id'))->first();
 
-        if ($transactionId) {
-            $sale = Sale::where('paywuz_transaction_id', $transactionId)->first();
-
-            if ($sale) {
-                $settings = TenantSetting::where('tenant_id', $sale->tenant_id)->first();
-
-                if ($settings?->paywuz_api_key) {
-                    return $settings->paywuz_api_key;
-                }
-            }
-        }
-
-        // Fallback to global config
-        return config('services.paywuz.api_key');
+        return $sale ? $this->getApiKeyFromSale($sale) : config('services.paywuz.api_key');
     }
 
     /**

@@ -103,16 +103,12 @@ Design system terpusat menggunakan CSS custom properties di `resources/css/filam
 <span class="badge badge-warning">Warning</span>
 <span class="badge badge-danger">Danger</span>
 <span class="badge badge-info">Info</span>
-<span class="badge badge-gray">Gray</span>
 ```
 
 ### Alerts
 
 ```html
-<div class="alert alert-success">Success message</div>
-<div class="alert alert-warning">Warning message</div>
 <div class="alert alert-danger">Error message</div>
-<div class="alert alert-info">Info message</div>
 ```
 
 ### Gradients
@@ -121,7 +117,6 @@ Design system terpusat menggunakan CSS custom properties di `resources/css/filam
 <div class="gradient-bg">Full gradient</div>
 <div class="gradient-bg-shadow">Gradient with shadow</div>
 <div class="gradient-bg-soft">Soft gradient (for backgrounds)</div>
-<span class="gradient-text">Gradient text</span>
 ```
 
 ### Table

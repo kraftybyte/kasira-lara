@@ -58,56 +58,6 @@ class Dashboard extends Page
         return Auth::user()?->name ?? 'User';
     }
 
-    public function getSalesDataProperty(): array
-    {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
-            return [];
-        }
-
-        $startDate = $this->getStartDate();
-        $endDate = $this->getEndDate();
-
-        // Daily sales for chart (include all completed orders regardless of closed_at)
-        $dailySales = Sale::query()
-            ->where('tenant_id', $tenant->id)
-            ->where('status', 'completed')
-            ->whereBetween('created_at', [$startDate, $endDate])
-            ->select(
-                DB::raw('DATE(created_at) as date'),
-                DB::raw('COUNT(*) as count'),
-                DB::raw('SUM(grand_total) as total')
-            )
-            ->groupBy('date')
-            ->orderBy('date')
-            ->get();
-
-        // Fill in missing days
-        $salesByDay = [];
-        $current = $startDate->copy();
-
-        while ($current <= $endDate) {
-            $dateKey = $current->format('Y-m-d');
-            $salesByDay[$dateKey] = [
-                'date' => $current->format('d M'),
-                'count' => 0,
-                'total' => 0,
-            ];
-            $current->addDay();
-        }
-
-        foreach ($dailySales as $sale) {
-            $dateKey = Carbon::parse($sale->date)->format('Y-m-d');
-            if (isset($salesByDay[$dateKey])) {
-                $salesByDay[$dateKey]['count'] = (int) $sale->count;
-                $salesByDay[$dateKey]['total'] = (float) $sale->total;
-            }
-        }
-
-        return array_values($salesByDay);
-    }
-
     public function getTopProductsProperty(): Collection
     {
         $tenant = $this->tenant;

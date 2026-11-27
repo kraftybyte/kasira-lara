@@ -433,33 +433,6 @@ class POS extends Page
 
     /*
     |--------------------------------------------------------------------------
-    | QR MEJA PAYMENT METHODS ENABLED
-    |--------------------------------------------------------------------------
-    */
-
-    public function getIsTableQrQrisAutoEnabledProperty(): bool
-    {
-        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
-
-        return $settings?->table_qr_qris_auto ?? true;
-    }
-
-    public function getIsTableQrVaEnabledProperty(): bool
-    {
-        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
-
-        return $settings?->table_qr_va ?? true;
-    }
-
-    public function getIsTableQrPayAtCounterEnabledProperty(): bool
-    {
-        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
-
-        return $settings?->table_qr_pay_at_counter ?? true;
-    }
-
-    /*
-    |--------------------------------------------------------------------------
     | MODIFIER MODAL
     |--------------------------------------------------------------------------
     */
@@ -523,17 +496,6 @@ class POS extends Page
         $this->addToCartWithNotes($product, $this->modifierNotes, $this->selectedModifiers);
 
         $this->closeModifierModal();
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | SEARCH PRODUCT
-    |--------------------------------------------------------------------------
-    */
-
-    public function searchProduct(): void
-    {
-        // Produk menggunakan computed property $this->products
     }
 
     /*
@@ -818,101 +780,6 @@ class POS extends Page
             'rate' => (float) $product->rate,
 
         ];
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | INCREASE QUANTITY
-    |--------------------------------------------------------------------------
-    */
-
-    public function increaseQuantity(
-        int $productId
-    ): void {
-
-        if (! isset($this->cart[$productId])) {
-            return;
-        }
-
-        $tenant = Filament::getTenant();
-
-        if (! $tenant) {
-            return;
-        }
-
-        $tenantId = (int) $tenant->getKey();
-
-        $product = Product::query()
-            ->where(
-                'id',
-                $productId
-            )
-            ->where(
-                'tenant_id',
-                $tenantId
-            )
-            ->first();
-
-        if (! $product) {
-            return;
-        }
-
-        $quantity =
-            (float) $this->cart[$productId]['quantity'];
-
-        if ($product->rate_type !== 'duration' && $quantity + 1 > (float) $product->stock) {
-
-            Notification::make()
-                ->title('Stok tidak mencukupi')
-                ->body(
-                    'Stok '.$product->name.' tersedia '.(int) $product->stock
-                )
-                ->warning()
-                ->send();
-
-            return;
-        }
-
-        $this->cart[$productId]['quantity'] =
-            $quantity + 1;
-
-        $this->recalculateCartItem(
-            $productId
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | DECREASE QUANTITY
-    |--------------------------------------------------------------------------
-    */
-
-    public function decreaseQuantity(
-        int $productId
-    ): void {
-
-        if (! isset($this->cart[$productId])) {
-            return;
-        }
-
-        $quantity =
-            (float) $this->cart[$productId]['quantity'];
-
-        if ($quantity <= 1) {
-
-            unset(
-                $this->cart[$productId]
-            );
-
-            return;
-        }
-
-        $this->cart[$productId]['quantity'] =
-            $quantity - 1;
-
-        $this->recalculateCartItem(
-            $productId
-        );
     }
 
     /*
@@ -1773,32 +1640,6 @@ class POS extends Page
         return false;
     }
 
-    public function getCartDurationTotalProperty(): int
-    {
-        $total = 0;
-        foreach ($this->cart as $item) {
-            if (isset($item['is_duration']) && $item['is_duration']) {
-                $total += (int) ($item['quantity'] ?? 0);
-            }
-        }
-
-        return $total;
-    }
-
-    public function formatDuration(int $minutes): string
-    {
-        $hours = floor($minutes / 60);
-        $mins = $minutes % 60;
-
-        if ($hours > 0 && $mins > 0) {
-            return "{$hours}j {$mins}m";
-        } elseif ($hours > 0) {
-            return "{$hours} jam";
-        } else {
-            return "{$mins} menit";
-        }
-    }
-
     /*
     |--------------------------------------------------------------------------
     | TAX RATE
@@ -1954,77 +1795,6 @@ class POS extends Page
         return max(
             0,
             $total - $paid
-        );
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | PRINT RECEIPT
-    |--------------------------------------------------------------------------
-    */
-
-    public function printReceipt(
-        int $saleId,
-        string $paperSize = '80mm'
-    ): void {
-
-        $tenant =
-            Filament::getTenant();
-
-        if (! $tenant) {
-            return;
-        }
-
-        $tenantId =
-            (int)
-            $tenant->getKey();
-
-        $sale =
-            Sale::query()
-                ->where(
-                    'tenant_id',
-                    $tenantId
-                )
-                ->find(
-                    $saleId
-                );
-
-        if (! $sale) {
-            return;
-        }
-
-        if (
-            ! in_array(
-                $paperSize,
-                [
-                    '58mm',
-                    '80mm',
-                ],
-                true
-            )
-        ) {
-
-            $paperSize =
-                '80mm';
-        }
-
-        $url =
-            route(
-                'receipt.show',
-                [
-                    'tenant' => $tenant->getRouteKey(),
-
-                    'sale' => $sale->getRouteKey(),
-                ]
-            )
-            .'?size='.
-            urlencode(
-                $paperSize
-            );
-
-        $this->dispatch(
-            'open-receipt',
-            url: $url
         );
     }
 
@@ -2329,17 +2099,6 @@ class POS extends Page
         return Table::query()
             ->where('tenant_id', $tenant->id)
             ->where('id', $this->tableId)
-            ->first();
-    }
-
-    public function getCurrentBillProperty(): ?Sale
-    {
-        if (! $this->currentBillId) {
-            return null;
-        }
-
-        return Sale::with(['items', 'table'])
-            ->where('id', $this->currentBillId)
             ->first();
     }
 
@@ -3142,20 +2901,6 @@ class POS extends Page
             ->send();
     }
 
-    public function newQrisPayment(): void
-    {
-        if ($this->currentQrisSale) {
-            // Cancel existing pending sale
-            $this->currentQrisSale->items()->delete();
-            $this->currentQrisSale->delete();
-        }
-
-        $this->resetQrisState();
-
-        // Generate new QR
-        $this->generateQrisPayment();
-    }
-
     public function confirmDemoQrisPayment(): void
     {
         // Manual confirmation for DEMO mode only
@@ -3574,16 +3319,5 @@ class POS extends Page
             ->title('Virtual Account Dibatalkan')
             ->warning()
             ->send();
-    }
-
-    public function newVaPayment(): void
-    {
-        if ($this->currentVaSale) {
-            // Cancel existing pending sale
-            $this->currentVaSale->items()->delete();
-            $this->currentVaSale->delete();
-        }
-
-        $this->resetVaState();
     }
 }
