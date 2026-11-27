@@ -1877,26 +1877,14 @@ class POS extends Page
             ->orderByDesc('id')
             ->pluck('invoice_number');
 
-        $number = 0;
-
-        foreach ($allInvoices as $invoiceNumber) {
-            // Extract suffix after the prefix (e.g., "0001" from "INV-20260927-0001")
-            // Handle both numeric (0001) and alphanumeric (E7D382) formats
-            $suffix = substr($invoiceNumber, strlen($prefix));
-
-            if (is_numeric($suffix)) {
-                $num = (int) $suffix;
-                if ($num > $number) {
-                    $number = $num;
-                }
-            }
-        }
+        $number = $allInvoices
+            ->map(fn (string $invoiceNumber) => (int) explode('-', substr($invoiceNumber, strlen($prefix)))[0])
+            ->max() ?? 0;
 
         $newNumber = $number + 1;
 
-        // Use timestamp-based suffix to reduce collision risk
-        // Format: INV-YYYYMMDD-XXXX-XXXXXX (timestamp for extra uniqueness)
-        $timestampSuffix = substr(now()->format('His'), -6);
+        // Format: INV-YYYYMMDD-XXXX-XXXXXX; sufiks mikrodetik mencegah tabrakan di detik yang sama
+        $timestampSuffix = substr(now()->format('Hisu'), -6);
 
         return $prefix.str_pad((string) $newNumber, 4, '0', STR_PAD_LEFT).'-'.$timestampSuffix;
     }
@@ -3100,23 +3088,10 @@ class POS extends Page
             $taxAmount = (float) $this->taxAmount;
             $grandTotal = (float) $this->total;
 
-            // Check for existing pending sale with same cart items and reuse if exists
-            $existingPending = Sale::where('tenant_id', $tenantId)
-                ->where('status', 'pending')
-                ->where('payment_method', 'qris')
-                ->where('payment_status', 'pending')
-                ->where('grand_total', $grandTotal)
-                ->first();
-
-            if ($existingPending) {
-                // Reuse existing pending sale
-                $sale = $existingPending;
-                $invoiceNumber = $sale->invoice_number;
-            } else {
-                // Generate invoice number
+            // Selalu sale pending baru (yang lama dibersihkan tombol Batal); nomor invoice dan item dalam satu transaksi.
+            $sale = DB::transaction(function () use ($tenantId, $subtotal, $taxAmount, $grandTotal): Sale {
                 $invoiceNumber = $this->generateInvoiceNumber($tenantId);
 
-                // Create sale with pending payment
                 $sale = Sale::create([
                     'tenant_id' => $tenantId,
                     'table_id' => $this->selectedTable?->id,
@@ -3153,7 +3128,10 @@ class POS extends Page
                         'notes' => $item['notes'] ?? null,
                     ]);
                 }
-            }
+
+                return $sale;
+            });
+            $invoiceNumber = $sale->invoice_number;
 
             // Call Paywuz to create QR
             $paywuz = new PaywuzService($tenantId);
@@ -3531,23 +3509,10 @@ class POS extends Page
             $taxAmount = (float) $this->taxAmount;
             $grandTotal = (float) $this->total;
 
-            // Check for existing pending sale with same cart items and reuse if exists
-            $existingPending = Sale::where('tenant_id', $tenantId)
-                ->where('status', 'pending')
-                ->where('payment_method', 'va')
-                ->where('payment_status', 'pending')
-                ->where('grand_total', $grandTotal)
-                ->first();
-
-            if ($existingPending) {
-                // Reuse existing pending sale
-                $sale = $existingPending;
-                $invoiceNumber = $sale->invoice_number;
-            } else {
-                // Generate invoice number
+            // Selalu sale pending baru (yang lama dibersihkan tombol Batal); nomor invoice dan item dalam satu transaksi.
+            $sale = DB::transaction(function () use ($tenantId, $subtotal, $taxAmount, $grandTotal): Sale {
                 $invoiceNumber = $this->generateInvoiceNumber($tenantId);
 
-                // Create sale with pending payment
                 $sale = Sale::create([
                     'tenant_id' => $tenantId,
                     'table_id' => $this->selectedTable?->id,
@@ -3584,7 +3549,10 @@ class POS extends Page
                         'notes' => $item['notes'] ?? null,
                     ]);
                 }
-            }
+
+                return $sale;
+            });
+            $invoiceNumber = $sale->invoice_number;
 
             // Call Paywuz to create VA
             $paywuz = new PaywuzService($tenantId);

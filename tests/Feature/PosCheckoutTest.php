@@ -133,3 +133,29 @@ it('stores a walk-in cash sale as completed and paid with stock deducted', funct
         ->and($sale->payments()->count())->toBe(1)
         ->and($kopi->fresh()->stock)->toBe(9);
 });
+
+it('creates a fresh pending sale for every QRIS attempt instead of reusing one with the same total', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+    $teh = posProduct($tenant, 'Teh', 15000);
+
+    Livewire::test(POS::class)->call('addToCart', $kopi)->set('paymentMethod', 'qris')->call('generateQrisPayment');
+    Livewire::test(POS::class)->call('addToCart', $teh)->set('paymentMethod', 'qris')->call('generateQrisPayment');
+
+    $pending = Sale::where('status', 'pending')->where('payment_method', 'qris')->with('items')->get();
+    expect($pending)->toHaveCount(2)
+        ->and($pending->map(fn ($s) => $s->items->first()->product_name)->sort()->values()->all())->toBe(['Kopi', 'Teh']);
+});
+
+it('numbers POS invoices consecutively within a day', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+
+    foreach ([1, 2] as $i) {
+        Livewire::test(POS::class)->call('addToCart', $kopi)->set('paymentMethod', 'cash')->set('paidAmount', 20000)->call('processPayment');
+    }
+
+    $prefix = 'INV-'.now()->format('Ymd').'-';
+    $sequence = Sale::orderBy('id')->pluck('invoice_number')->map(fn ($n) => explode('-', substr($n, strlen($prefix)))[0]);
+    expect($sequence->all())->toBe(['0001', '0002']);
+});
