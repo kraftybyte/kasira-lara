@@ -1458,6 +1458,11 @@ class POS extends Page
                     |--------------------------------------------------------------------------
                     */
 
+                    // Bill meja: item lama diganti seluruhnya dengan isi keranjang, sekali sebelum loop.
+                    if ($isTableCheckout && $existingBill) {
+                        SaleItem::where('sale_id', $existingBill->id)->delete();
+                    }
+
                     foreach (
                         $this->cart as $item
                     ) {
@@ -1501,17 +1506,6 @@ class POS extends Page
                         $subtotal =
                             $unitPrice *
                             $quantity;
-
-                        /*
-                        |--------------------------------------------------------------------------
-                        | DELETE EXISTING ITEMS (prevent duplicates when updating existing bill)
-                        |--------------------------------------------------------------------------
-                        */
-
-                        // Only delete items when updating existing bill, not for new sales
-                        if ($isTableCheckout && $existingBill) {
-                            SaleItem::where('sale_id', $existingBill->id)->delete();
-                        }
 
                         /*
                         |--------------------------------------------------------------------------
