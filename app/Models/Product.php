@@ -34,7 +34,7 @@ class Product extends Model
             'cost_price' => 'decimal:2',
             'selling_price' => 'decimal:2',
             'rate' => 'decimal:2',
-            'stock' => 'integer',
+            'stock' => 'float',
             'minimum_stock' => 'decimal:3',
             'is_active' => 'boolean',
         ];

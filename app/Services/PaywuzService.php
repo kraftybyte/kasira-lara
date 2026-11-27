@@ -344,20 +344,30 @@ class PaywuzService
     public function calculateQrisFee(float $amount): array
     {
         $threshold = 150000;
+        $feeByMerchant = $this->isFeeByMerchant();
 
-        if ($amount < $threshold) {
-            // Below 150k: 0.7% × amount + 290
-            $feePercent = 0.007;
-            $flatFee = 290;
-        } else {
-            // 150k and above: 0.95% × amount (no flat fee)
-            $feePercent = 0.0095;
-            $flatFee = 0;
+        $feeFor = static fn (float $base): float => $base < $threshold
+            ? 290 + ceil($base * 0.007)
+            : ceil($base * 0.0095);
+
+        $fee = $feeFor($amount);
+
+        if (! $feeByMerchant) {
+            // Gateway memotong biaya dari nominal yang dibayar pelanggan, jadi biaya dihitung dari (tagihan + biaya) sampai stabil agar toko menerima tagihan utuh.
+            for ($i = 0; $i < 5; $i++) {
+                $next = $feeFor($amount + $fee);
+
+                if ($next === $fee) {
+                    break;
+                }
+
+                $fee = $next;
+            }
         }
 
-        $fee = $flatFee + ceil($amount * $feePercent);
-
-        $feeByMerchant = $this->isFeeByMerchant();
+        $feeBase = $feeByMerchant ? $amount : $amount + $fee;
+        $feePercent = $feeBase < $threshold ? 0.007 : 0.0095;
+        $flatFee = $feeBase < $threshold ? 290 : 0;
 
         if ($feeByMerchant) {
             // Merchant bears the fee
@@ -377,7 +387,7 @@ class PaywuzService
             'customer_pays' => $customerPays,
             'merchant_receives' => $merchantReceives,
             'fee_by_merchant' => $feeByMerchant,
-            'tier' => $amount < $threshold ? 'under_150k' : 'above_150k',
+            'tier' => $feeBase < $threshold ? 'under_150k' : 'above_150k',
         ];
     }
 

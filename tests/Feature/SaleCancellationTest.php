@@ -44,7 +44,7 @@ it('restores stock when cancelling a sale whose stock was deducted', function ()
     app(SaleCancellationService::class)->cancel($sale, User::factory()->create()->id, 'salah input');
 
     expect($sale->fresh())->status->toBe('cancelled')->stock_deducted_at->toBeNull()
-        ->and($product->fresh()->stock)->toBe(10);
+        ->and($product->fresh()->stock)->toBe(10.0);
 });
 
 it('does not add stock when cancelling a sale whose stock was never deducted', function () {
@@ -53,7 +53,7 @@ it('does not add stock when cancelling a sale whose stock was never deducted', f
     app(SaleCancellationService::class)->cancel($sale, User::factory()->create()->id, 'salah input');
 
     expect($sale->fresh())->status->toBe('cancelled')
-        ->and($product->fresh()->stock)->toBe(8);
+        ->and($product->fresh()->stock)->toBe(8.0);
 });
 
 it('removes a cancelled sale from the kitchen screen', function () {

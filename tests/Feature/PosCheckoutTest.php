@@ -90,8 +90,8 @@ it('keeps every item when a table bill is paid at the POS', function () {
         ->status->toBe('completed')
         ->paid_amount->toBe('30000.00')
         ->and($bill->items()->count())->toBe(2)
-        ->and($nasi->fresh()->stock)->toBe(9)
-        ->and($teh->fresh()->stock)->toBe(9)
+        ->and($nasi->fresh()->stock)->toBe(9.0)
+        ->and($teh->fresh()->stock)->toBe(9.0)
         ->and($table->fresh()->status)->toBe('available');
 });
 
@@ -134,7 +134,7 @@ it('stores a walk-in cash sale as completed and paid with stock deducted', funct
     expect($sale)->status->toBe('completed')->payment_status->toBe('paid')->stock_deducted_at->not->toBeNull()
         ->change_amount->toBe('5000.00')
         ->and($sale->payments()->count())->toBe(1)
-        ->and($kopi->fresh()->stock)->toBe(9);
+        ->and($kopi->fresh()->stock)->toBe(9.0);
 });
 
 it('creates a fresh pending sale for every QRIS attempt instead of reusing one with the same total', function () {
@@ -179,7 +179,7 @@ it('pays variant lines of the same product separately and checks stock on the to
     expect($sale->items()->count())->toBe(2)
         ->and($sale->items()->sum('quantity'))->toBe('3.000')
         ->and((float) $sale->grand_total)->toBe(45000.0)
-        ->and($kopi->fresh()->stock)->toBe(0);
+        ->and($kopi->fresh()->stock)->toBe(0.0);
 
     // Stok habis: baris berikutnya ditolak sebelum masuk keranjang
     $page->call('addToCart', $kopi);
@@ -241,7 +241,7 @@ it('does not delete a QRIS sale that was paid before the cashier pressed cancel'
     $page->call('cancelQrisPayment');
 
     expect(Sale::find($sale->id))->not->toBeNull()->payment_status->toBe('paid')
-        ->and($kopi->fresh()->stock)->toBe(9);
+        ->and($kopi->fresh()->stock)->toBe(9.0);
 });
 
 it('awards member points on a cash sale and takes them back on cancellation', function () {
@@ -284,4 +284,29 @@ it('stores new sales as pending by default', function () {
     $sale = Sale::create(['tenant_id' => $tenant->id, 'invoice_number' => 'INV-X', 'grand_total' => 1]);
 
     expect($sale->fresh()->status)->toBe('pending');
+});
+
+it('refuses to pay merged counter orders that changed after the cashier loaded them', function () {
+    [$tenant] = posOwner();
+    TenantSetting::create(['tenant_id' => $tenant->id, 'table_qr_pay_at_counter' => true]);
+    $nasi = posProduct($tenant, 'Nasi Goreng', 20000);
+    $table = Table::create(['tenant_id' => $tenant->id, 'name' => 'Meja 5', 'slug' => 'meja-5', 'status' => 'available', 'is_active' => true]);
+    $order = fn () => test()->post(route('customer.order.checkout', ['tenant' => $tenant->slug, 'table' => $table->id]), [
+        'items' => json_encode([['product_id' => $nasi->id, 'quantity' => 1]]),
+        'payment_method' => 'counter',
+        'customer_name' => 'Budi',
+    ]);
+
+    $order();
+    $counter = Sale::where('payment_method', 'counter')->first();
+    $page = Livewire::withQueryParams(['bulk' => 'counter', 'table' => (string) $table->id, 'sale_ids' => (string) $counter->id])->test(POS::class);
+    expect($page->get('isBulkCounterMode'))->toBeTrue()->and($page->get('cart'))->toHaveCount(1);
+
+    $order(); // pelanggan menambah item setelah kasir memuat keranjang
+
+    $page->set('paymentMethod', 'cash')->set('paidAmount', 100000)->call('processPayment');
+
+    expect(Sale::find($counter->id))->not->toBeNull()
+        ->and($counter->items()->count())->toBe(2)
+        ->and(Sale::where('source', 'pos')->count())->toBe(0);
 });

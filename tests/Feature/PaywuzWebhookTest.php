@@ -73,7 +73,7 @@ it('marks the sale paid, records the payment, and deducts stock once', function 
         ->status->toBe('completed')
         ->stock_deducted_at->not->toBeNull()
         ->and($sale->payments()->count())->toBe(1)
-        ->and($product->fresh()->stock)->toBe(8);
+        ->and($product->fresh()->stock)->toBe(8.0);
 });
 
 it('keeps a paid sale paid when a late expired notification arrives', function () {
@@ -93,7 +93,7 @@ it('rejects a success notification whose amount differs from the bill', function
     signedWebhook(['transaction_id' => 'TRX-1', 'status' => 'success'])->assertStatus(422);
 
     expect($sale->fresh())->payment_status->toBe('pending')
-        ->and($product->fresh()->stock)->toBe(10);
+        ->and($product->fresh()->stock)->toBe(10.0);
 });
 
 it('rejects a notification with a bad signature', function () {

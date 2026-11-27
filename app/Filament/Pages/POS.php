@@ -1135,6 +1135,21 @@ class POS extends Page
                     |--------------------------------------------------------------------------
                     */
 
+                    if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
+                        // Kunci pesanan kasir yang dilebur; kalau isinya berubah sejak dimuat (pelanggan menambah item), hentikan.
+                        $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)
+                            ->where('tenant_id', $tenantId)
+                            ->where('payment_method', 'counter')
+                            ->lockForUpdate()
+                            ->with(['items.product', 'items.modifiers'])
+                            ->get();
+                        $freshCart = $this->cartFromSales($counterSales);
+
+                        if (count($freshCart) !== count($this->cart) || round((float) collect($freshCart)->sum('total'), 2) !== round((float) $this->subtotal, 2)) {
+                            throw new \Exception('Pesanan meja ini berubah sejak dimuat (pelanggan menambah item). Muat ulang halaman lalu bayar lagi.');
+                        }
+                    }
+
                     $products = [];
                     $needed = [];
                     $locked = [];
