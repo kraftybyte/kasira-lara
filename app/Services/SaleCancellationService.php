@@ -154,6 +154,9 @@ class SaleCancellationService
 
                 'cancelled_at' => now(),
 
+                // Keluar dari layar dapur dan daftar meja: keduanya memfilter closed_at
+                'closed_at' => now(),
+
                 'cancellation_reason' => $reason,
 
                 'stock_deducted_at' => null,

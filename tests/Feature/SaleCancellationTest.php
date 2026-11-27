@@ -1,5 +1,6 @@
 <?php
 
+use App\Filament\Pages\Kitchen;
 use App\Models\Category;
 use App\Models\Product;
 use App\Models\Sale;
@@ -7,6 +8,9 @@ use App\Models\SaleItem;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\SaleCancellationService;
+use Filament\Facades\Filament;
+use Livewire\Livewire;
+use Spatie\Permission\Models\Role;
 
 function completedSale(bool $stockDeducted): array
 {
@@ -50,4 +54,21 @@ it('does not add stock when cancelling a sale whose stock was never deducted', f
 
     expect($sale->fresh())->status->toBe('cancelled')
         ->and($product->fresh()->stock)->toBe(8);
+});
+
+it('removes a cancelled sale from the kitchen screen', function () {
+    [$sale] = completedSale(true);
+    Role::create(['name' => 'owner']);
+    $owner = User::factory()->create();
+    $owner->assignRole('owner');
+    $owner->tenants()->attach($sale->tenant_id, ['status' => 'active']);
+    $this->actingAs($owner);
+    Filament::setTenant(Tenant::find($sale->tenant_id));
+
+    expect(Livewire::test(Kitchen::class)->instance()->getPendingOrders()->pluck('id')->all())->toBe([$sale->id]);
+
+    app(SaleCancellationService::class)->cancel($sale, $owner->id, 'salah input');
+
+    expect($sale->fresh()->closed_at)->not->toBeNull()
+        ->and(Livewire::test(Kitchen::class)->instance()->getPendingOrders())->toBeEmpty();
 });
