@@ -412,8 +412,8 @@ class CustomerOrderController extends Controller
                 'paywuz_fee_by_merchant' => $feeByMerchant,
                 'paid_amount' => 0,
                 'change_amount' => 0,
-                'paywuz_transaction_id' => $response['data']['transaction_id'] ?? null,
-                'paywuz_qr_url' => $response['data']['qr_url'] ?? $response['data']['qr_string'] ?? null,
+                'paywuz_transaction_id' => $response['data']['id'] ?? null,
+                'paywuz_qr_url' => $response['data']['paymentUrl'] ?? null,
                 'paywuz_status' => 'pending',
                 'payment_status' => 'pending',
             ]);
@@ -648,7 +648,7 @@ class CustomerOrderController extends Controller
 
         // Check payment status via Paywuz if transaction exists
         if ($sale->paywuz_transaction_id) {
-            $paywuz = new PaywuzService;
+            $paywuz = new PaywuzService($tenant->id);
             $status = $paywuz->inquiry($sale->paywuz_transaction_id);
 
             if (isset($status['data']['status'])) {
@@ -773,27 +773,16 @@ class CustomerOrderController extends Controller
             return redirect()->back()->with('error', 'Demo mode - silakan verifikasi manual di kasir.');
         }
 
-        // Mark as completed only if verified
-        $sale->update([
-            'status' => 'completed',
-            'payment_status' => 'paid',
-            'paid_at' => now(),
-        ]);
-
-        // NOTE: Table stays occupied until kasir explicitly closes it
-        // DO NOT auto-release table after payment
-
-        $redirectUrl = route('customer.order.success', [
-            'tenant' => $tenant->slug ?? $tenant->id,
-            'table' => $table->id,
-            'sale' => $sale->id,
-        ]);
-
+        // Gateway belum melaporkan sukses (pending, atau inquiry gagal): jangan pernah menandai lunas dari sini.
         if ($request->expectsJson()) {
-            return response()->json(['success' => true, 'redirect' => $redirectUrl]);
+            return response()->json([
+                'success' => false,
+                'status' => $sale->paywuz_status ?? 'pending',
+                'message' => 'Pembayaran belum terkonfirmasi.',
+            ]);
         }
 
-        return redirect($redirectUrl)->with('success', 'Pembayaran berhasil!');
+        return redirect()->back()->with('info', 'Pembayaran belum terkonfirmasi. Silakan selesaikan pembayaran.');
     }
 
     public function success(string $tenantSlug, Table $table, Sale $sale)
