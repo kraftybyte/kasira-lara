@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Sale;
+use App\Policies\Concerns\ChecksTenantOwnership;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
 class SalePolicy
 {
+    use ChecksTenantOwnership;
     use HandlesAuthorization;
 
     public function viewAny(AuthUser $authUser): bool
@@ -19,7 +21,7 @@ class SalePolicy
 
     public function view(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('View:Sale');
+        return $authUser->can('View:Sale') && $this->ownedByTenant($sale);
     }
 
     public function create(AuthUser $authUser): bool
@@ -29,12 +31,12 @@ class SalePolicy
 
     public function update(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('Update:Sale');
+        return $authUser->can('Update:Sale') && $this->ownedByTenant($sale);
     }
 
     public function delete(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('Delete:Sale');
+        return $authUser->can('Delete:Sale') && $this->ownedByTenant($sale);
     }
 
     public function deleteAny(AuthUser $authUser): bool
@@ -44,12 +46,12 @@ class SalePolicy
 
     public function restore(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('Restore:Sale');
+        return $authUser->can('Restore:Sale') && $this->ownedByTenant($sale);
     }
 
     public function forceDelete(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('ForceDelete:Sale');
+        return $authUser->can('ForceDelete:Sale') && $this->ownedByTenant($sale);
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
@@ -64,7 +66,7 @@ class SalePolicy
 
     public function replicate(AuthUser $authUser, Sale $sale): bool
     {
-        return $authUser->can('Replicate:Sale');
+        return $authUser->can('Replicate:Sale') && $this->ownedByTenant($sale);
     }
 
     public function reorder(AuthUser $authUser): bool

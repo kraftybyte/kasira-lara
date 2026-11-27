@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Table;
+use App\Policies\Concerns\ChecksTenantOwnership;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
 class TablePolicy
 {
+    use ChecksTenantOwnership;
     use HandlesAuthorization;
 
     public function viewAny(AuthUser $authUser): bool
@@ -19,7 +21,7 @@ class TablePolicy
 
     public function view(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('View:Table');
+        return $authUser->can('View:Table') && $this->ownedByTenant($table);
     }
 
     public function create(AuthUser $authUser): bool
@@ -29,12 +31,12 @@ class TablePolicy
 
     public function update(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('Update:Table');
+        return $authUser->can('Update:Table') && $this->ownedByTenant($table);
     }
 
     public function delete(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('Delete:Table');
+        return $authUser->can('Delete:Table') && $this->ownedByTenant($table);
     }
 
     public function deleteAny(AuthUser $authUser): bool
@@ -44,12 +46,12 @@ class TablePolicy
 
     public function restore(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('Restore:Table');
+        return $authUser->can('Restore:Table') && $this->ownedByTenant($table);
     }
 
     public function forceDelete(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('ForceDelete:Table');
+        return $authUser->can('ForceDelete:Table') && $this->ownedByTenant($table);
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
@@ -64,7 +66,7 @@ class TablePolicy
 
     public function replicate(AuthUser $authUser, Table $table): bool
     {
-        return $authUser->can('Replicate:Table');
+        return $authUser->can('Replicate:Table') && $this->ownedByTenant($table);
     }
 
     public function reorder(AuthUser $authUser): bool

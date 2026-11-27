@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Product;
+use App\Policies\Concerns\ChecksTenantOwnership;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
 class ProductPolicy
 {
+    use ChecksTenantOwnership;
     use HandlesAuthorization;
 
     public function viewAny(AuthUser $authUser): bool
@@ -19,7 +21,7 @@ class ProductPolicy
 
     public function view(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('View:Product');
+        return $authUser->can('View:Product') && $this->ownedByTenant($product);
     }
 
     public function create(AuthUser $authUser): bool
@@ -29,12 +31,12 @@ class ProductPolicy
 
     public function update(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('Update:Product');
+        return $authUser->can('Update:Product') && $this->ownedByTenant($product);
     }
 
     public function delete(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('Delete:Product');
+        return $authUser->can('Delete:Product') && $this->ownedByTenant($product);
     }
 
     public function deleteAny(AuthUser $authUser): bool
@@ -44,12 +46,12 @@ class ProductPolicy
 
     public function restore(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('Restore:Product');
+        return $authUser->can('Restore:Product') && $this->ownedByTenant($product);
     }
 
     public function forceDelete(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('ForceDelete:Product');
+        return $authUser->can('ForceDelete:Product') && $this->ownedByTenant($product);
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
@@ -64,7 +66,7 @@ class ProductPolicy
 
     public function replicate(AuthUser $authUser, Product $product): bool
     {
-        return $authUser->can('Replicate:Product');
+        return $authUser->can('Replicate:Product') && $this->ownedByTenant($product);
     }
 
     public function reorder(AuthUser $authUser): bool

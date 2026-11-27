@@ -70,7 +70,8 @@ class User extends Authenticatable implements FilamentUser, HasTenants
             return Tenant::all();
         }
 
-        return $this->tenants;
+        // Hanya keanggotaan aktif, sama seperti canAccessTenant()
+        return $this->tenants()->wherePivot('status', 'active')->get();
     }
 
     public function canAccessTenant(Model $tenant): bool
@@ -93,8 +94,8 @@ class User extends Authenticatable implements FilamentUser, HasTenants
 
     public function canAccessPanel(Panel $panel): bool
     {
-        // Allow access to admin panel for all authenticated users
-        // Permission checks are done at resource level
-        return true;
+        // Staf yang dinonaktifkan dari semua tenant tidak bisa masuk panel
+        return $this->hasRole('super_admin')
+            || $this->tenants()->wherePivot('status', 'active')->exists();
     }
 }

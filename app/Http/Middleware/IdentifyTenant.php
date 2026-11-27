@@ -87,6 +87,7 @@ class IdentifyTenant
             // Let Authenticate middleware handle it (redirect to login)
             if (! $user) {
                 Log::info('IdentifyTenant: Allowing request through, auth middleware will redirect to login');
+
                 return $next($request);
             }
         }
@@ -121,12 +122,6 @@ class IdentifyTenant
 
         // Set tenant context
         Filament::setTenant($tenant);
-
-        Log::debug('IdentifyTenant: Success', [
-            'user' => $user->email,
-            'tenant' => $tenant->slug,
-            'path' => $path,
-        ]);
 
         return $next($request);
     }

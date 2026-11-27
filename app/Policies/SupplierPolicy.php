@@ -5,11 +5,13 @@ declare(strict_types=1);
 namespace App\Policies;
 
 use App\Models\Supplier;
+use App\Policies\Concerns\ChecksTenantOwnership;
 use Illuminate\Auth\Access\HandlesAuthorization;
 use Illuminate\Foundation\Auth\User as AuthUser;
 
 class SupplierPolicy
 {
+    use ChecksTenantOwnership;
     use HandlesAuthorization;
 
     public function viewAny(AuthUser $authUser): bool
@@ -19,7 +21,7 @@ class SupplierPolicy
 
     public function view(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('View:Supplier');
+        return $authUser->can('View:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function create(AuthUser $authUser): bool
@@ -29,12 +31,12 @@ class SupplierPolicy
 
     public function update(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('Update:Supplier');
+        return $authUser->can('Update:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function delete(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('Delete:Supplier');
+        return $authUser->can('Delete:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function deleteAny(AuthUser $authUser): bool
@@ -44,12 +46,12 @@ class SupplierPolicy
 
     public function restore(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('Restore:Supplier');
+        return $authUser->can('Restore:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function forceDelete(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('ForceDelete:Supplier');
+        return $authUser->can('ForceDelete:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function forceDeleteAny(AuthUser $authUser): bool
@@ -64,7 +66,7 @@ class SupplierPolicy
 
     public function replicate(AuthUser $authUser, Supplier $supplier): bool
     {
-        return $authUser->can('Replicate:Supplier');
+        return $authUser->can('Replicate:Supplier') && $this->ownedByTenant($supplier);
     }
 
     public function reorder(AuthUser $authUser): bool
