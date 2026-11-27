@@ -4,18 +4,23 @@ namespace App\Livewire;
 
 use App\Models\Sale;
 use App\Models\Table;
+use Filament\Facades\Filament;
+use Livewire\Attributes\Locked;
 use Livewire\Component;
 
 class OrderDetailsModal extends Component
 {
     public bool $isOpen = false;
 
+    #[Locked]
     public ?int $selectedTableId = null;
 
     public ?string $selectedTableName = null;
 
+    #[Locked]
     public ?int $selectedTenantId = null;
 
+    #[Locked]
     public ?string $selectedTenantSlug = null;
 
     public bool $showBulkPayConfirm = false;
@@ -32,9 +37,8 @@ class OrderDetailsModal extends Component
         $this->selectedTableId = null;
         $this->selectedTableName = 'Semua Pesanan';
 
-        // Get tenant from first table
-        $table = Table::first();
-        $tenant = $table?->tenant;
+        // Tenant aktif, bukan tenant pemilik meja pertama di database
+        $tenant = Filament::getTenant();
         $this->selectedTenantId = $tenant?->id;
         $this->selectedTenantSlug = $tenant?->slug;
 
@@ -44,14 +48,17 @@ class OrderDetailsModal extends Component
 
     public function openModal($tableId, $tableName)
     {
+        $tenant = Filament::getTenant();
+
+        // Hanya meja milik tenant aktif
+        if (! $tenant || ! Table::where('tenant_id', $tenant->id)->whereKey($tableId)->exists()) {
+            return;
+        }
+
         $this->selectedTableId = $tableId;
         $this->selectedTableName = $tableName;
-
-        // Get tenant info from table
-        $table = Table::find($tableId);
-        $tenant = $table?->tenant;
-        $this->selectedTenantId = $tenant?->id;
-        $this->selectedTenantSlug = $tenant?->slug;
+        $this->selectedTenantId = $tenant->id;
+        $this->selectedTenantSlug = $tenant->slug;
 
         $this->loadOrders();
         $this->isOpen = true;
@@ -80,6 +87,7 @@ class OrderDetailsModal extends Component
         // Load orders for specific table - EXCLUDE closed sales
         $sales = Sale::query()
             ->where('table_id', $this->selectedTableId)
+            ->where('tenant_id', $this->selectedTenantId)
             ->whereNull('closed_at')  // Only show orders that are not closed
             ->with(['items.product', 'table'])
             ->orderByDesc('created_at')
@@ -196,7 +204,7 @@ class OrderDetailsModal extends Component
 
     public function markAsServed($saleId)
     {
-        $sale = Sale::find($saleId);
+        $sale = Sale::where('tenant_id', $this->selectedTenantId)->find($saleId);
 
         if ($sale) {
             $sale->markAsServed();
@@ -207,7 +215,7 @@ class OrderDetailsModal extends Component
 
     public function markAsUnserved($saleId)
     {
-        $sale = Sale::find($saleId);
+        $sale = Sale::where('tenant_id', $this->selectedTenantId)->find($saleId);
 
         if ($sale) {
             $sale->markAsUnserved();
@@ -236,6 +244,7 @@ class OrderDetailsModal extends Component
 
         // Get the counter orders info
         $pendingOrders = Sale::where('table_id', $this->selectedTableId)
+            ->where('tenant_id', $this->selectedTenantId)
             ->where('status', 'pending')
             ->where('payment_method', 'counter')
             ->pluck('id')

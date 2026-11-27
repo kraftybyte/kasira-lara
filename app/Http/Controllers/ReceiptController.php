@@ -20,6 +20,9 @@ class ReceiptController extends Controller
             404
         );
 
+        // User harus anggota tenant ini, bukan sekadar login
+        abort_unless(auth()->user()?->canAccessTenant($tenant), 404);
+
         /*
         |--------------------------------------------------------------------------
         | LOAD DATA STRUK

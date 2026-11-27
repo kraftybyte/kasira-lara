@@ -260,7 +260,7 @@ class TablesOverview extends Page
 
         if ($sale) {
             $sale->markAsServed();
-            $this->reset('tableOrders');
+            unset($this->tableOrders);
         }
     }
 
@@ -278,7 +278,7 @@ class TablesOverview extends Page
 
         if ($sale) {
             $sale->markAsUnserved();
-            $this->reset('tableOrders');
+            unset($this->tableOrders);
         }
     }
 
@@ -292,10 +292,12 @@ class TablesOverview extends Page
     {
         $customerName = null;
         $tableName = null;
+        $tenantId = filament()->getTenant()?->id;
 
-        DB::transaction(function () use ($reservationId, &$customerName, &$tableName) {
+        DB::transaction(function () use ($reservationId, $tenantId, &$customerName, &$tableName) {
             // Lock reservation and table for update to prevent race conditions
             $reservation = Reservation::where('id', $reservationId)
+                ->where('tenant_id', $tenantId)
                 ->lockForUpdate()
                 ->first();
 
@@ -320,7 +322,7 @@ class TablesOverview extends Page
             $customerName = $reservation->customer_name;
         });
 
-        $this->reset('todayReservations');
+        unset($this->todayReservations);
 
         Notification::make()
             ->title('Tamu ditempatkan')
@@ -331,7 +333,7 @@ class TablesOverview extends Page
 
     public function confirmReservation(int $reservationId): void
     {
-        $reservation = Reservation::find($reservationId);
+        $reservation = Reservation::where('tenant_id', filament()->getTenant()?->id)->find($reservationId);
 
         if (! $reservation) {
             return;
@@ -339,7 +341,7 @@ class TablesOverview extends Page
 
         $reservation->update(['status' => 'confirmed']);
 
-        $this->reset('todayReservations');
+        unset($this->todayReservations);
 
         Notification::make()
             ->title('Reservasi dikonfirmasi')
@@ -350,7 +352,7 @@ class TablesOverview extends Page
 
     public function cancelReservation(int $reservationId): void
     {
-        $reservation = Reservation::find($reservationId);
+        $reservation = Reservation::where('tenant_id', filament()->getTenant()?->id)->find($reservationId);
 
         if (! $reservation) {
             return;
@@ -358,7 +360,7 @@ class TablesOverview extends Page
 
         $reservation->update(['status' => 'cancelled']);
 
-        $this->reset('todayReservations');
+        unset($this->todayReservations);
 
         Notification::make()
             ->title('Reservasi dibatalkan')
@@ -417,13 +419,14 @@ class TablesOverview extends Page
 
     public function closeTable(int $tableId): void
     {
-        $tableName = Table::find($tableId)?->name;
+        $tenantId = filament()->getTenant()?->id;
+        $tableName = Table::where('tenant_id', $tenantId)->find($tableId)?->name;
 
         try {
             // Lock table and all its sales in ONE atomic operation to prevent race conditions
-            DB::transaction(function () use ($tableId) {
-                // Lock the table row
-                $table = Table::where('id', $tableId)->lockForUpdate()->first();
+            DB::transaction(function () use ($tableId, $tenantId) {
+                // Lock the table row (hanya meja milik tenant ini)
+                $table = Table::where('id', $tableId)->where('tenant_id', $tenantId)->lockForUpdate()->first();
 
                 if (! $table) {
                     return;
@@ -480,6 +483,7 @@ class TablesOverview extends Page
     public function hasUnpaidOrders(int $tableId): bool
     {
         return Sale::where('table_id', $tableId)
+            ->where('tenant_id', filament()->getTenant()?->id)
             ->where('status', 'pending')
             ->exists();
     }
