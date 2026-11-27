@@ -13,13 +13,9 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // Trust proxies (LiteSpeed, Nginx, Cloudflare, etc.)
-        // Use '*' to trust all proxies (common for shared hosting)
-        // All X-Forwarded-* headers to properly detect HTTPS
-        $middleware->trustProxies(
-            '*',
-            SymfonyRequest::HEADER_X_FORWARDED_FOR | SymfonyRequest::HEADER_X_FORWARDED_HOST | SymfonyRequest::HEADER_X_FORWARDED_PORT | SymfonyRequest::HEADER_X_FORWARDED_PROTO | SymfonyRequest::HEADER_X_FORWARDED_PREFIX | SymfonyRequest::HEADER_X_FORWARDED_AWS_ELB
-        );
+        // Hanya X-Forwarded-Proto yang dipercaya (deteksi HTTPS di balik proxy). X-Forwarded-For tidak,
+        // supaya IP klien tidak bisa dipalsukan dan pembatas percobaan login tetap berlaku.
+        $middleware->trustProxies('*', SymfonyRequest::HEADER_X_FORWARDED_PROTO);
 
         $middleware->redirectGuestsTo('/admin/login');
 
