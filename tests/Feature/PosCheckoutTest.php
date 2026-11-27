@@ -116,3 +116,20 @@ it('ignores a modifier that belongs to another product', function () {
         ->and(array_values($cart)[0]['unit_price'])->toBe(15000.0)
         ->and(array_values($cart)[0]['modifiers'])->toBe([]);
 });
+
+it('stores a walk-in cash sale as completed and paid with stock deducted', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+
+    Livewire::test(POS::class)
+        ->call('addToCart', $kopi)
+        ->set('paymentMethod', 'cash')
+        ->set('paidAmount', 20000)
+        ->call('processPayment');
+
+    $sale = Sale::where('source', 'pos')->first();
+    expect($sale)->status->toBe('completed')->payment_status->toBe('paid')->stock_deducted_at->not->toBeNull()
+        ->change_amount->toBe('5000.00')
+        ->and($sale->payments()->count())->toBe(1)
+        ->and($kopi->fresh()->stock)->toBe(9);
+});

@@ -50,6 +50,11 @@ class PaywuzWebhookController extends Controller
             return response()->json(['success' => false, 'message' => 'Sale not found'], 404);
         }
 
+        // Sale yang sudah lunas tidak boleh diubah lagi oleh notifikasi susulan (ulangan, atau 'expired' yang terlambat).
+        if ($sale->payment_status === 'paid') {
+            return response()->json(['success' => true, 'message' => 'Already paid']);
+        }
+
         // ============================================================
         // DOUBLE VERIFICATION: Query Paywuz API to confirm status
         // Only accept 'success' if we verify with Paywuz API
@@ -68,11 +73,8 @@ class PaywuzWebhookController extends Controller
         // Update sale based on payment status
         switch ($status) {
             case 'success':
-                $sale->update([
-                    'payment_status' => 'paid',
-                    'paywuz_status' => 'success',
-                    // Keep status='pending' so order goes to Kitchen for processing
-                ]);
+                $sale->update(['paywuz_status' => 'success']);
+                $sale->markPaid('qris', $transactionId);
 
                 // Update table status to active (customer is being served)
                 if ($sale->table_id) {
@@ -207,6 +209,18 @@ class PaywuzWebhookController extends Controller
 
             $data = $response->json();
             $apiStatus = $data['data']['status'] ?? $data['status'] ?? null;
+            $apiAmount = $data['data']['amount'] ?? $data['amount'] ?? null;
+
+            // Nominal yang dibayar harus sama dengan tagihan; dilewati hanya kalau API tidak mengirim nominal.
+            if ($apiAmount !== null && (int) round((float) $apiAmount) !== (int) round((float) $sale->grand_total)) {
+                Log::warning('Paywuz Webhook: Amount mismatch', [
+                    'transaction_id' => $transactionId,
+                    'api_amount' => $apiAmount,
+                    'grand_total' => $sale->grand_total,
+                ]);
+
+                return false;
+            }
 
             // Only accept if API confirms success
             if ($apiStatus === 'success' || $apiStatus === 'paid') {

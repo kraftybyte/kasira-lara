@@ -660,11 +660,7 @@ class CustomerOrderController extends Controller
                 ]);
 
                 if ($paywuzStatus === 'success') {
-                    $sale->update([
-                        'status' => 'completed',
-                        'payment_status' => 'paid',
-                        'paid_at' => now(),
-                    ]);
+                    $sale->markPaid('qris', $sale->paywuz_transaction_id);
 
                     // NOTE: Table stays occupied until kasir explicitly closes it
                     // DO NOT auto-release table after payment

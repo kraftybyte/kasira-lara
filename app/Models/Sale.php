@@ -6,6 +6,7 @@ use Filament\Facades\Filament;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Facades\DB;
 
 class Sale extends Model
 {
@@ -44,6 +45,7 @@ class Sale extends Model
         'paid_at',
         'closed_at',
         'kitchen_completed_at',
+        'stock_deducted_at',
     ];
 
     protected function casts(): array
@@ -62,6 +64,7 @@ class Sale extends Model
             'paid_at' => 'datetime',
             'closed_at' => 'datetime',
             'kitchen_completed_at' => 'datetime',
+            'stock_deducted_at' => 'datetime',
         ];
     }
 
@@ -214,5 +217,76 @@ class Sale extends Model
     public function payments(): HasMany
     {
         return $this->hasMany(Payment::class);
+    }
+
+    /**
+     * Satu-satunya jalur menandai sale lunas untuk pembayaran non-tunai: status, catatan Payment, dan stok. Idempoten.
+     */
+    public function markPaid(string $method, ?string $reference = null, ?string $notes = null): void
+    {
+        DB::transaction(function () use ($method, $reference, $notes): void {
+            $sale = static::query()->whereKey($this->id)->lockForUpdate()->firstOrFail();
+
+            if ($sale->payment_status === 'paid') {
+                return;
+            }
+
+            $sale->update([
+                'status' => 'completed',
+                'payment_status' => 'paid',
+                'paid_at' => now(),
+                'paid_amount' => $sale->grand_total,
+                'change_amount' => 0,
+            ]);
+
+            Payment::create([
+                'sale_id' => $sale->id,
+                'method' => $method,
+                'amount' => $sale->grand_total,
+                'reference' => $reference,
+                'paid_at' => now(),
+                'notes' => $notes,
+            ]);
+
+            $sale->deductStock();
+        });
+
+        $this->refresh();
+    }
+
+    /**
+     * Kurangi stok produk dan bahan untuk sale ini sekali saja; stock_deducted_at adalah penandanya.
+     */
+    public function deductStock(): void
+    {
+        DB::transaction(function (): void {
+            $sale = static::query()->whereKey($this->id)->lockForUpdate()->firstOrFail();
+
+            if ($sale->stock_deducted_at) {
+                return;
+            }
+
+            foreach ($sale->items as $item) {
+                $product = $item->product_id ? Product::query()->whereKey($item->product_id)->lockForUpdate()->first() : null;
+
+                if (! $product || $product->rate_type === 'duration') {
+                    continue;
+                }
+
+                $product->decrement('stock', (float) $item->quantity);
+
+                foreach ($product->ingredients as $ingredient) {
+                    $needed = (float) $ingredient->pivot->quantity * (float) $item->quantity;
+
+                    if ($needed > 0) {
+                        $ingredient->decrement('stock', $needed);
+                    }
+                }
+            }
+
+            $sale->update(['stock_deducted_at' => now()]);
+        });
+
+        $this->refresh();
     }
 }

@@ -84,7 +84,8 @@ class SaleCancellationService
             |--------------------------------------------------------------------------
             */
 
-            foreach ($sale->items as $item) {
+            // Stok hanya dikembalikan kalau memang pernah dipotong (stock_deducted_at).
+            foreach ($sale->stock_deducted_at ? $sale->items : [] as $item) {
 
                 /*
                 |--------------------------------------------------------------------------
@@ -129,6 +130,14 @@ class SaleCancellationService
                     'stock',
                     (float) $item->quantity
                 );
+
+                foreach ($product->ingredients as $ingredient) {
+                    $used = (float) $ingredient->pivot->quantity * (float) $item->quantity;
+
+                    if ($used > 0) {
+                        $ingredient->increment('stock', $used);
+                    }
+                }
             }
 
             /*
@@ -146,6 +155,8 @@ class SaleCancellationService
                 'cancelled_at' => now(),
 
                 'cancellation_reason' => $reason,
+
+                'stock_deducted_at' => null,
 
             ]);
 

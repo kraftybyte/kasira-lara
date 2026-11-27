@@ -1403,6 +1403,9 @@ class POS extends Page
                         // Update existing bill to completed
                         $existingBill->update([
                             'status' => 'completed',
+                            'payment_status' => 'paid',
+                            'paid_at' => now(),
+                            'stock_deducted_at' => now(),
                             'payment_method' => $this->paymentMethod,
                             'paid_amount' => $paidAmount,
                             'change_amount' => $changeAmount,
@@ -1441,7 +1444,13 @@ class POS extends Page
 
                                 'invoice_number' => $invoiceNumber,
 
-                                'status' => 'open',
+                                'status' => 'completed',
+
+                                'payment_status' => 'paid',
+
+                                'paid_at' => now(),
+
+                                'stock_deducted_at' => now(),
 
                                 'source' => 'pos',
 
@@ -3306,43 +3315,8 @@ class POS extends Page
         try {
             $sale = $this->currentQrisSale;
 
-            // Update sale to completed
-            $sale->update([
-                'status' => 'completed',
-                'payment_status' => 'paid',
-                'paid_at' => now(),
-                'paid_amount' => $sale->grand_total,
-            ]);
-
-            // Create payment record
-            Payment::create([
-                'sale_id' => $sale->id,
-                'method' => 'qris',
-                'amount' => $sale->grand_total,
-                'reference' => $sale->paywuz_transaction_id,
-                'paid_at' => now(),
-                'notes' => $this->paymentNotes ?: null,
-            ]);
-
-            // DO NOT auto-set table to available after payment
-            // Table stays occupied until explicitly closed via Tables Overview
-            // This allows new customer orders to be added to the same table
-
-            // Reduce stock
-            foreach ($sale->items as $item) {
-                $product = Product::find($item->product_id);
-                if ($product && $product->rate_type !== 'duration') {
-                    $product->decrement('stock', $item->quantity);
-
-                    // Reduce ingredient stock
-                    foreach ($product->ingredients as $ingredient) {
-                        $ingredientQuantity = (float) $ingredient->pivot->quantity * $item->quantity;
-                        if ($ingredientQuantity > 0) {
-                            $ingredient->decrement('stock', $ingredientQuantity);
-                        }
-                    }
-                }
-            }
+            // Meja tetap terisi sampai ditutup lewat halaman Meja; markPaid mengurus status, Payment, dan stok.
+            $sale->markPaid('qris', $sale->paywuz_transaction_id, $this->paymentNotes ?: null);
 
             // Dispatch success event
             $receiptUrl = route('receipt.show', [
@@ -3788,43 +3762,8 @@ class POS extends Page
         try {
             $sale = $this->currentVaSale;
 
-            // Update sale to completed
-            $sale->update([
-                'status' => 'completed',
-                'payment_status' => 'paid',
-                'paid_at' => now(),
-                'paid_amount' => $sale->grand_total,
-            ]);
-
-            // Create payment record
-            Payment::create([
-                'sale_id' => $sale->id,
-                'method' => 'va',
-                'amount' => $sale->grand_total,
-                'reference' => $sale->paywuz_transaction_id,
-                'paid_at' => now(),
-                'notes' => $this->paymentNotes ?: null,
-            ]);
-
-            // DO NOT auto-set table to available after payment
-            // Table stays occupied until explicitly closed via Tables Overview
-            // This allows new customer orders to be added to the same table
-
-            // Reduce stock
-            foreach ($sale->items as $item) {
-                $product = Product::find($item->product_id);
-                if ($product && $product->rate_type !== 'duration') {
-                    $product->decrement('stock', $item->quantity);
-
-                    // Reduce ingredient stock
-                    foreach ($product->ingredients as $ingredient) {
-                        $ingredientQuantity = (float) $ingredient->pivot->quantity * $item->quantity;
-                        if ($ingredientQuantity > 0) {
-                            $ingredient->decrement('stock', $ingredientQuantity);
-                        }
-                    }
-                }
-            }
+            // Meja tetap terisi sampai ditutup lewat halaman Meja; markPaid mengurus status, Payment, dan stok.
+            $sale->markPaid('va', $sale->paywuz_transaction_id, $this->paymentNotes ?: null);
 
             // Dispatch success event
             $receiptUrl = route('receipt.show', [
