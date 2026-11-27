@@ -13,12 +13,16 @@ use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Pagination\Paginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Livewire\WithPagination;
 use UnitEnum;
 
 class SalesReport extends Page
 {
+    use WithPagination;
+
     protected string $view = 'filament.pages.reports.sales-report';
 
     protected static ?string $title = 'Laporan Penjualan';
@@ -60,8 +64,6 @@ class SalesReport extends Page
 
     public string $tableSearch = '';
 
-    protected $paginationTheme = 'bootstrap';
-
     /*
     |--------------------------------------------------------------------------
     | MOUNT
@@ -95,16 +97,13 @@ class SalesReport extends Page
         return Carbon::parse($this->endDate)->endOfDay();
     }
 
-    public function getSalesProperty(): Paginator
+    /**
+     * Semua transaksi dalam rentang dan filter aktif. Dipakai oleh tabel (dipaginasi) dan semua angka ringkasan (tanpa paginasi).
+     */
+    protected function salesQuery(): Builder
     {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
-            return new LengthAwarePaginator([], 0, 25);
-        }
-
         $query = Sale::query()
-            ->where('tenant_id', $tenant->id)
+            ->where('tenant_id', $this->tenant?->id ?? 0)
             ->whereBetween('created_at', [
                 $this->getStartDateTime(),
                 $this->getEndDateTime(),
@@ -133,34 +132,51 @@ class SalesReport extends Page
             });
         }
 
-        return $query->with(['customer', 'user', 'table', 'payments'])
+        return $query;
+    }
+
+    public function getSalesProperty(): Paginator
+    {
+        return $this->salesQuery()
+            ->with(['customer', 'user', 'table', 'payments'])
             ->orderByDesc('created_at')
             ->paginate(100);
     }
 
+    /**
+     * Angka ringkasan dari seluruh transaksi yang cocok, dalam satu query.
+     */
+    public function getTotalsProperty(): object
+    {
+        return $this->salesQuery()
+            ->toBase()
+            ->selectRaw('COUNT(*) AS sales_count, COALESCE(SUM(grand_total), 0) AS revenue, COALESCE(SUM(tax), 0) AS tax, COALESCE(SUM(discount), 0) AS discount, COALESCE(SUM(subtotal), 0) AS subtotal')
+            ->first();
+    }
+
     public function getTotalSalesProperty(): int
     {
-        return $this->sales->count();
+        return (int) $this->totals->sales_count;
     }
 
     public function getTotalRevenueProperty(): float
     {
-        return (float) $this->sales->sum('grand_total');
+        return (float) $this->totals->revenue;
     }
 
     public function getTotalTaxProperty(): float
     {
-        return (float) $this->sales->sum('tax');
+        return (float) $this->totals->tax;
     }
 
     public function getTotalDiscountProperty(): float
     {
-        return (float) $this->sales->sum('discount');
+        return (float) $this->totals->discount;
     }
 
     public function getTotalSubtotalProperty(): float
     {
-        return (float) $this->sales->sum('subtotal');
+        return (float) $this->totals->subtotal;
     }
 
     public function getAverageTransactionProperty(): float
@@ -175,21 +191,13 @@ class SalesReport extends Page
 
     public function getTotalProfitProperty(): float
     {
-        $tenant = $this->tenant;
-        if (! $tenant) {
+        if ($this->totalSales === 0) {
             return 0;
         }
 
-        $saleIds = $this->sales->pluck('id');
-        if ($saleIds->isEmpty()) {
-            return 0;
-        }
-
-        // Calculate profit using aggregate query with JOIN to avoid N+1
-        // Join with products table to get cost_price in one query
         $result = DB::table('sale_items as si')
             ->join('products as p', 'si.product_id', '=', 'p.id')
-            ->whereIn('si.sale_id', $saleIds->toArray())
+            ->whereIn('si.sale_id', $this->salesQuery()->select('id'))
             ->selectRaw('SUM(p.cost_price * si.quantity) as total_cost')
             ->first();
 
@@ -209,58 +217,40 @@ class SalesReport extends Page
 
     public function getSalesByPaymentMethodProperty(): array
     {
-        return [
-            'cash' => [
-                'label' => 'Tunai',
-                'icon' => 'banknotes',
-                'color' => 'emerald',
-                'count' => $this->sales->where('payment_method', 'cash')->count(),
-                'amount' => $this->sales->where('payment_method', 'cash')->sum('grand_total'),
-            ],
-            'qris' => [
-                'label' => 'QRIS Auto',
-                'icon' => 'qr-code',
-                'color' => 'blue',
-                'count' => $this->sales->where('payment_method', 'qris')->count(),
-                'amount' => $this->sales->where('payment_method', 'qris')->sum('grand_total'),
-            ],
-            'qris_manual' => [
-                'label' => 'QRIS Manual',
-                'icon' => 'qr-code',
-                'color' => 'purple',
-                'count' => $this->sales->where('payment_method', 'qris_manual')->count(),
-                'amount' => $this->sales->where('payment_method', 'qris_manual')->sum('grand_total'),
-            ],
-            'va' => [
-                'label' => 'Virtual Account',
-                'icon' => 'building-office',
-                'color' => 'indigo',
-                'count' => $this->sales->where('payment_method', 'va')->count(),
-                'amount' => $this->sales->where('payment_method', 'va')->sum('grand_total'),
-            ],
-            'transfer' => [
-                'label' => 'Transfer',
-                'icon' => 'building-library',
-                'color' => 'violet',
-                'count' => $this->sales->where('payment_method', 'transfer')->count(),
-                'amount' => $this->sales->where('payment_method', 'transfer')->sum('grand_total'),
-            ],
-            'transfer_manual' => [
-                'label' => 'Transfer Manual',
-                'icon' => 'building-library',
-                'color' => 'pink',
-                'count' => $this->sales->where('payment_method', 'transfer_manual')->count(),
-                'amount' => $this->sales->where('payment_method', 'transfer_manual')->sum('grand_total'),
-            ],
+        $byMethod = $this->salesQuery()
+            ->toBase()
+            ->selectRaw('payment_method, COUNT(*) AS sales_count, COALESCE(SUM(grand_total), 0) AS amount')
+            ->groupBy('payment_method')
+            ->get()
+            ->keyBy('payment_method');
+
+        $labels = [
+            'cash' => ['Tunai', 'banknotes', 'emerald'],
+            'qris' => ['QRIS Auto', 'qr-code', 'blue'],
+            'qris_manual' => ['QRIS Manual', 'qr-code', 'purple'],
+            'va' => ['Virtual Account', 'building-office', 'indigo'],
+            'transfer' => ['Transfer', 'building-library', 'violet'],
+            'transfer_manual' => ['Transfer Manual', 'building-library', 'pink'],
         ];
+
+        $result = [];
+        foreach ($labels as $method => [$label, $icon, $color]) {
+            $result[$method] = [
+                'label' => $label,
+                'icon' => $icon,
+                'color' => $color,
+                'count' => (int) ($byMethod[$method]->sales_count ?? 0),
+                'amount' => (float) ($byMethod[$method]->amount ?? 0),
+            ];
+        }
+
+        return $result;
     }
 
     public function getTopProductsProperty(): Collection
     {
-        $saleIds = $this->sales->pluck('id');
-
         return SaleItem::query()
-            ->whereIn('sale_id', $saleIds)
+            ->whereIn('sale_id', $this->salesQuery()->select('id'))
             ->selectRaw('product_name, SUM(quantity) as total_qty, SUM(total) as total_sales')
             ->groupBy('product_name')
             ->orderByDesc('total_sales')
@@ -288,36 +278,27 @@ class SalesReport extends Page
 
     public function getIngredientUsageProperty(): Collection
     {
-        $tenant = $this->tenant;
-
-        if (! $tenant) {
+        if (! $this->tenant) {
             return collect();
         }
 
-        $saleIds = $this->sales->pluck('id');
+        // Jumlah terjual per produk dalam satu query, lalu resep produk-produk itu dalam satu query lagi.
+        $qtyByProduct = SaleItem::query()
+            ->whereIn('sale_id', $this->salesQuery()->select('id'))
+            ->whereNotNull('product_id')
+            ->groupBy('product_id')
+            ->selectRaw('product_id, SUM(quantity) AS qty')
+            ->pluck('qty', 'product_id');
 
-        if ($saleIds->isEmpty()) {
+        if ($qtyByProduct->isEmpty()) {
             return collect();
         }
 
-        // Get products sold in this period
-        $soldProductIds = SaleItem::whereIn('sale_id', $saleIds)
-            ->pluck('product_id')
-            ->filter()
-            ->unique();
-
-        // Calculate ingredient usage
         $usage = [];
-        foreach ($soldProductIds as $productId) {
-            $product = Product::with('ingredients')->find($productId);
+        $products = Product::with('ingredients')->whereIn('id', $qtyByProduct->keys())->get();
 
-            if (! $product || $product->ingredients->isEmpty()) {
-                continue;
-            }
-
-            $totalQty = SaleItem::whereIn('sale_id', $saleIds)
-                ->where('product_id', $productId)
-                ->sum('quantity');
+        foreach ($products as $product) {
+            $totalQty = (float) $qtyByProduct[$product->id];
 
             foreach ($product->ingredients as $ingredient) {
                 $used = (float) $ingredient->pivot->quantity * $totalQty;
@@ -348,9 +329,17 @@ class SalesReport extends Page
     |--------------------------------------------------------------------------
     */
 
+    public function updated(string $property): void
+    {
+        if (in_array($property, ['startDate', 'endDate', 'statusFilter', 'paymentMethodFilter', 'tableSearch'], true)) {
+            $this->resetPage();
+        }
+    }
+
     public function setDateRange(string $range): void
     {
         $this->dateRange = $range;
+        $this->resetPage();
 
         switch ($range) {
             case 'today':

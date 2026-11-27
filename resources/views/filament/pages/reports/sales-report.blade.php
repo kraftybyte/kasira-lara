@@ -373,6 +373,8 @@
             </table>
         </div>
 
+        <div class="border-t border-gray-100 px-4 py-3 dark:border-gray-700">{{ $this->sales->links() }}</div>
+
     </div>
 
 </x-filament-panels::page>
