@@ -3,12 +3,14 @@
 use App\Filament\Pages\POS;
 use App\Models\Category;
 use App\Models\Product;
+use App\Models\ProductModifier;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
 use App\Models\Tenant;
 use App\Models\User;
 use Filament\Facades\Filament;
+use Livewire\Features\SupportLockedProperties\CannotUpdateLockedPropertyException;
 use Livewire\Livewire;
 use Spatie\Permission\Models\Role;
 
@@ -88,4 +90,29 @@ it('keeps every item when a table bill is paid at the POS', function () {
         ->and($nasi->fresh()->stock)->toBe(9)
         ->and($teh->fresh()->stock)->toBe(9)
         ->and($table->fresh()->status)->toBe('available');
+});
+
+it('rejects client-side changes to server-only POS state', function () {
+    posOwner();
+
+    expect(fn () => Livewire::test(POS::class)->set('currentBillId', 1))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
+
+    expect(fn () => Livewire::test(POS::class)->set('cart', ['1' => ['product_id' => 1, 'unit_price' => 1, 'quantity' => 1, 'total' => 1]]))
+        ->toThrow(CannotUpdateLockedPropertyException::class);
+});
+
+it('ignores a modifier that belongs to another product', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 15000);
+    $teh = posProduct($tenant, 'Teh', 8000);
+    $extraShot = ProductModifier::create(['product_id' => $teh->id, 'name' => 'Extra', 'type' => 'addon', 'price_adjustment' => 5000, 'is_active' => true]);
+
+    $component = Livewire::test(POS::class)
+        ->call('addToCartWithNotes', $kopi, 'catatan', [['id' => $extraShot->id]]);
+
+    $cart = $component->get('cart');
+    expect($cart)->toHaveCount(1)
+        ->and(array_values($cart)[0]['unit_price'])->toBe(15000.0)
+        ->and(array_values($cart)[0]['modifiers'])->toBe([]);
 });

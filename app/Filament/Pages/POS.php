@@ -25,6 +25,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
+use Livewire\Attributes\Locked;
 use Throwable;
 
 class POS extends Page
@@ -90,6 +91,7 @@ class POS extends Page
     |--------------------------------------------------------------------------
     */
 
+    #[Locked]
     public array $cart = [];
 
     public string $search = '';
@@ -116,23 +118,29 @@ class POS extends Page
 
     public ?string $tableId = null;
 
+    #[Locked]
     public ?string $activeTableId = null;
 
+    #[Locked]
     public ?int $currentBillId = null;
 
     public ?int $selectedCategoryId = null;
 
+    #[Locked]
     public ?int $reservationId = null;
 
     public bool $showModifierModal = false;
 
+    #[Locked]
     public ?int $modifierProductId = null;
 
+    #[Locked]
     public array $selectedModifiers = [];
 
     public string $modifierNotes = '';
 
     // QRIS Payment Properties
+    #[Locked]
     public ?string $qrisTransactionId = null;
 
     public ?string $qrisImageUrl = null;
@@ -141,9 +149,11 @@ class POS extends Page
 
     public bool $isCheckingPayment = false;
 
+    #[Locked]
     public ?Sale $currentQrisSale = null;
 
     // Virtual Account Payment Properties
+    #[Locked]
     public ?string $vaTransactionId = null;
 
     public ?string $vaAccountNumber = null;
@@ -160,6 +170,7 @@ class POS extends Page
 
     public bool $isCheckingVaPayment = false;
 
+    #[Locked]
     public ?Sale $currentVaSale = null;
 
     public bool $qrisPaymentConfirmed = false;
@@ -167,8 +178,10 @@ class POS extends Page
     public bool $vaPaymentConfirmed = false;
 
     // Bulk Counter Mode
+    #[Locked]
     public bool $isBulkCounterMode = false;
 
+    #[Locked]
     public array $bulkCounterSaleIds = [];
 
     /*
@@ -608,7 +621,7 @@ class POS extends Page
         $modifierData = [];
         if (! empty($modifiers)) {
             foreach ($modifiers as $mod) {
-                $modifier = ProductModifier::find($mod['id']);
+                $modifier = ProductModifier::where('product_id', $product->id)->find($mod['id']);
                 if ($modifier) {
                     $modifierTotal += (float) ($modifier->price_adjustment ?? 0);
                     $modifierData[] = [
@@ -1369,7 +1382,7 @@ class POS extends Page
                     $table = null;
 
                     if ($isTableCheckout) {
-                        $existingBill = Sale::where('id', $this->currentBillId)->first();
+                        $existingBill = Sale::where('id', $this->currentBillId)->where('tenant_id', $tenantId)->first();
                         if ($existingBill && $existingBill->table_id) {
                             $table = Table::where('id', $existingBill->table_id)->first();
                         }
@@ -1403,7 +1416,7 @@ class POS extends Page
 
                         $sale = $existingBill;
                     } else {
-                        $table_id = $this->tableId === 'takeaway' ? null : $this->tableId;
+                        $table_id = $this->selectedTable?->id;
 
                         // In bulk counter mode, always use activeTableId for table_id
                         // This ensures orders paid at counter retain their table association
@@ -1692,6 +1705,19 @@ class POS extends Page
                         );
                     }
 
+                    if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
+                        $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)
+                            ->where('tenant_id', $tenantId)
+                            ->where('payment_method', 'counter')
+                            ->lockForUpdate()
+                            ->get();
+
+                        foreach ($counterSales as $counterSale) {
+                            $counterSale->items()->delete();
+                            $counterSale->delete();
+                        }
+                    }
+
                     /*
                     |--------------------------------------------------------------------------
                     | RETURN TRANSACTION RESULT
@@ -1797,18 +1823,8 @@ class POS extends Page
             |--------------------------------------------------------------------------
             */
 
-            if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
-                // Delete the counter orders that were merged into this payment
-                $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)->get();
-                foreach ($counterSales as $counterSale) {
-                    $counterSale->items()->delete();
-                    $counterSale->delete();
-                }
-
-                // Reset bulk mode
-                $this->isBulkCounterMode = false;
-                $this->bulkCounterSaleIds = [];
-            }
+            $this->isBulkCounterMode = false;
+            $this->bulkCounterSaleIds = [];
 
         } catch (Throwable $e) {
 
@@ -2962,7 +2978,7 @@ class POS extends Page
             return null;
         }
 
-        return Reservation::find($this->reservationId);
+        return Reservation::where('tenant_id', Filament::getTenant()?->id)->find($this->reservationId);
     }
 
     public function seatReservation(): void
@@ -2971,7 +2987,7 @@ class POS extends Page
             return;
         }
 
-        $reservation = Reservation::find($this->reservationId);
+        $reservation = Reservation::where('tenant_id', Filament::getTenant()?->id)->find($this->reservationId);
 
         if (! $reservation) {
             return;
@@ -3094,8 +3110,8 @@ class POS extends Page
                 // Create sale with pending payment
                 $sale = Sale::create([
                     'tenant_id' => $tenantId,
-                    'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
-                    'customer_id' => $this->customerId ?: null,
+                    'table_id' => $this->selectedTable?->id,
+                    'customer_id' => $this->customerId ? Customer::where('tenant_id', $tenantId)->whereKey($this->customerId)->value('id') : null,
                     'reservation_id' => $this->reservationId,
                     'user_id' => Auth::id(),
                     'invoice_number' => $invoiceNumber,
@@ -3560,8 +3576,8 @@ class POS extends Page
                 // Create sale with pending payment
                 $sale = Sale::create([
                     'tenant_id' => $tenantId,
-                    'table_id' => $this->tableId === 'takeaway' ? null : $this->tableId,
-                    'customer_id' => $this->customerId ?: null,
+                    'table_id' => $this->selectedTable?->id,
+                    'customer_id' => $this->customerId ? Customer::where('tenant_id', $tenantId)->whereKey($this->customerId)->value('id') : null,
                     'reservation_id' => $this->reservationId,
                     'user_id' => Auth::id(),
                     'invoice_number' => $invoiceNumber,
