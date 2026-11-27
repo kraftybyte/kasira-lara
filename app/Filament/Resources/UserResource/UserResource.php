@@ -75,18 +75,7 @@ class UserResource extends Resource
                 Select::make('roles')
                     ->multiple()
                     ->relationship('roles', 'name')
-                    ->options(function () {
-                        // Filter roles based on user permissions
-                        $user = auth()->user();
-
-                        // Super admin can assign all roles
-                        if ($user && $user->hasRole('super_admin')) {
-                            return Role::pluck('name', 'id')->toArray();
-                        }
-
-                        // Owner can assign all roles except super_admin
-                        return Role::where('name', '!=', 'super_admin')->pluck('name', 'id')->toArray();
-                    }),
+                    ->options(fn () => static::assignableRoles()),
 
                 Select::make('tenants')
                     ->multiple()
@@ -113,6 +102,22 @@ class UserResource extends Resource
                     })
                     ->helperText('Assign this user to one or more tenants'),
             ]);
+    }
+
+    /**
+     * Role yang boleh diberikan user saat ini. Role bersifat global, jadi owner tidak boleh membuat owner atau super_admin baru.
+     *
+     * @return array<int, string>
+     */
+    public static function assignableRoles(): array
+    {
+        $user = auth()->user();
+
+        if ($user && $user->hasRole('super_admin')) {
+            return Role::pluck('name', 'id')->toArray();
+        }
+
+        return Role::whereNotIn('name', ['super_admin', 'owner'])->pluck('name', 'id')->toArray();
     }
 
     public static function table(Table $table): Table

@@ -83,6 +83,37 @@ class RoleResource extends Resource
         return 'Pengaturan';
     }
 
+    // Role berlaku global untuk semua tenant, jadi hanya super_admin yang boleh mengelolanya.
+    public static function canViewAny(): bool
+    {
+        return (bool) auth()->user()?->hasRole('super_admin');
+    }
+
+    public static function canCreate(): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canEdit($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canView($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canDelete($record): bool
+    {
+        return static::canViewAny();
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return static::canViewAny();
+    }
+
     /**
      * Bypass tenant scoping for roles - Spatie's Role model doesn't have tenant relationship.
      */
