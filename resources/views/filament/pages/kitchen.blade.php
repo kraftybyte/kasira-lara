@@ -34,7 +34,7 @@
                 <x-heroicon-o-fire class="h-6 w-6" />
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->getPendingOrders()->count() }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->pendingOrders->count() }}</p>
                 <p class="text-sm text-gray-500">Sedang Dimasak</p>
             </div>
         </div>
@@ -44,7 +44,7 @@
                 <x-heroicon-o-check-circle class="h-6 w-6" />
             </div>
             <div>
-                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->getReadyOrders()->count() }}</p>
+                <p class="text-2xl font-bold text-gray-900 dark:text-white">{{ $this->readyOrders->count() }}</p>
                 <p class="text-sm text-gray-500">Siap Disajikan</p>
             </div>
         </div>
@@ -57,21 +57,21 @@
                 <x-heroicon-o-fire class="h-5 w-5" />
             </div>
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">Sedang Dimasak</h2>
-            @if($this->getPendingOrders()->isNotEmpty())
+            @if($this->pendingOrders->isNotEmpty())
                 <span class="rounded-full bg-red-100 px-3 py-1 text-sm font-bold text-red-600 dark:bg-red-500/20 dark:text-red-400">
-                    {{ $this->getPendingOrders()->count() }}
+                    {{ $this->pendingOrders->count() }}
                 </span>
             @endif
         </div>
 
-        @if($this->getPendingOrders()->isEmpty())
+        @if($this->pendingOrders->isEmpty())
             <div class="rounded-2xl border border-gray-200 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800/50">
                 <x-heroicon-o-face-smile class="mx-auto h-12 w-12 text-gray-300" />
                 <p class="mt-4 text-sm font-medium text-gray-400">Tidak ada pesanan aktif</p>
             </div>
         @else
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                @foreach($this->getPendingOrders() as $order)
+                @foreach($this->pendingOrders as $order)
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}
                         <div class="bg-gradient-to-br from-red-500 to-orange-500 p-3 text-white">
@@ -155,20 +155,20 @@
                 <x-heroicon-o-check-circle class="h-5 w-5" />
             </div>
             <h2 class="text-xl font-bold text-gray-900 dark:text-white">Siap Disajikan</h2>
-            @if($this->getReadyOrders()->isNotEmpty())
+            @if($this->readyOrders->isNotEmpty())
                 <span class="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400">
-                    {{ $this->getReadyOrders()->count() }}
+                    {{ $this->readyOrders->count() }}
                 </span>
             @endif
         </div>
 
-        @if($this->getReadyOrders()->isEmpty())
+        @if($this->readyOrders->isEmpty())
             <div class="rounded-2xl border border-gray-200 bg-gray-50 p-12 text-center dark:border-gray-700 dark:bg-gray-800/50">
                 <p class="text-sm text-gray-400">Tidak ada pesanan siap disajikan</p>
             </div>
         @else
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-                @foreach($this->getReadyOrders() as $order)
+                @foreach($this->readyOrders as $order)
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}
                         <div class="bg-gradient-to-br from-emerald-500 to-teal-500 p-3 text-white">

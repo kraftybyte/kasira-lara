@@ -9,6 +9,7 @@ use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\Computed;
 use Throwable;
 
 class Kitchen extends Page
@@ -39,7 +40,11 @@ class Kitchen extends Page
         return Filament::getTenant();
     }
 
-    public function getPendingOrders(): Collection
+    /**
+     * Dihitung sekali per render; view memanggilnya berkali-kali.
+     */
+    #[Computed]
+    public function pendingOrders(): Collection
     {
         $tenant = $this->getTenant();
         if (! $tenant) {
@@ -52,12 +57,13 @@ class Kitchen extends Page
             ->whereNull('closed_at')
             ->whereNull('served_at')
             ->whereNull('kitchen_completed_at')
-            ->with(['items.modifiers', 'items.product', 'table', 'customer'])
+            ->with(['items.modifiers', 'table'])
             ->orderBy('created_at', 'asc')
             ->get();
     }
 
-    public function getReadyOrders(): Collection
+    #[Computed]
+    public function readyOrders(): Collection
     {
         $tenant = $this->getTenant();
         if (! $tenant) {
@@ -71,7 +77,7 @@ class Kitchen extends Page
             ->whereNull('closed_at')
             ->whereNotNull('served_at')
             ->whereNull('kitchen_completed_at')
-            ->with(['items.modifiers', 'items.product', 'table', 'customer'])
+            ->with(['items.modifiers', 'table'])
             ->orderBy('created_at', 'asc')
             ->get();
     }

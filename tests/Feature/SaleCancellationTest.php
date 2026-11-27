@@ -65,10 +65,10 @@ it('removes a cancelled sale from the kitchen screen', function () {
     $this->actingAs($owner);
     Filament::setTenant(Tenant::find($sale->tenant_id));
 
-    expect(Livewire::test(Kitchen::class)->instance()->getPendingOrders()->pluck('id')->all())->toBe([$sale->id]);
+    expect(Livewire::test(Kitchen::class)->instance()->pendingOrders->pluck('id')->all())->toBe([$sale->id]);
 
     app(SaleCancellationService::class)->cancel($sale, $owner->id, 'salah input');
 
     expect($sale->fresh()->closed_at)->not->toBeNull()
-        ->and(Livewire::test(Kitchen::class)->instance()->getPendingOrders())->toBeEmpty();
+        ->and(Livewire::test(Kitchen::class)->instance()->pendingOrders)->toBeEmpty();
 });
