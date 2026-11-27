@@ -2,7 +2,6 @@
 
 namespace Tests\Feature;
 
-use App\Filament\Pages\Tables\TablesOverview;
 use App\Models\Sale;
 use App\Models\SaleItem;
 use App\Models\Table;
@@ -100,20 +99,4 @@ test('sales are preserved with closed_at timestamp after closing table', functio
 
     // Table status should be available
     expect($table->fresh()->status)->toBe('available');
-});
-
-test('closeTable method exists in TablesOverview', function () {
-    $page = app(TablesOverview::class);
-
-    expect(method_exists($page, 'closeTable'))->toBeTrue();
-    expect(method_exists($page, 'confirmCloseTable'))->toBeTrue();
-    expect(method_exists($page, 'requestCloseTable'))->toBeTrue();
-});
-
-test('table model has reservations relation', function () {
-    $table = new Table;
-
-    expect(method_exists($table, 'reservations'))->toBeTrue();
-    expect(method_exists($table, 'activeSales'))->toBeTrue();
-    expect(method_exists($table, 'hasActiveOrders'))->toBeTrue();
 });

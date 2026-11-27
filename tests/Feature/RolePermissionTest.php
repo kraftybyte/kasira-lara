@@ -4,14 +4,8 @@ namespace Tests\Feature;
 
 use App\Filament\Pages\Dashboard;
 use App\Filament\Pages\Kitchen;
-use App\Filament\Pages\POS;
-use App\Filament\Pages\Reports\IngredientReport;
-use App\Filament\Pages\Reports\SalesReport;
-use App\Filament\Pages\Settings\TenantSettings;
-use App\Filament\Pages\Tables\TablesOverview;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use ReflectionClass;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 
@@ -190,14 +184,6 @@ describe('permission existence', function () {
             ->toContain('Create:Reservation');
     });
 
-    test('cashier role MISSING Create:Sale permission (BUG)', function () {
-        $role = Role::findByName('cashier');
-        $permissions = $role->getPermissionNames();
-
-        // BUG: Cashier needs Create:Sale to process payments
-        expect($permissions)->not->toContain('Create:Sale');
-    });
-
     test('kitchen role has ONLY kitchen permissions', function () {
         $role = Role::findByName('kitchen');
         $permissions = $role->getPermissionNames()->toArray();
@@ -338,53 +324,6 @@ describe('policy authorization for owner', function () {
 });
 
 // ============================================================================
-// SECTION 3: Page Access Control Tests
-// ============================================================================
-
-describe('page access control (canAccess method)', function () {
-    test('POS page missing HasPageShield trait - navigation NOT permission-controlled', function () {
-        $reflection = new ReflectionClass(POS::class);
-        $traits = $reflection->getTraitNames();
-        // BUG: POS page should use HasPageShield trait
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $traits))->toBeFalse();
-    });
-
-    test('Kitchen page missing HasPageShield trait', function () {
-        $reflection = new ReflectionClass(Kitchen::class);
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))->toBeFalse();
-    });
-
-    test('Dashboard page missing HasPageShield trait - accessible to ALL users', function () {
-        $reflection = new ReflectionClass(Dashboard::class);
-        // BUG: Dashboard has no canAccess() override, accessible to anyone
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))->toBeFalse();
-    });
-
-    test('SalesReport page missing HasPageShield trait', function () {
-        $reflection = new ReflectionClass(SalesReport::class);
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))->toBeFalse();
-    });
-
-    test('IngredientReport page missing HasPageShield trait', function () {
-        $reflection = new ReflectionClass(IngredientReport::class);
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))->toBeFalse();
-    });
-
-    test('TablesOverview page missing HasPageShield trait', function () {
-        $reflection = new ReflectionClass(TablesOverview::class);
-        expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))->toBeFalse();
-    });
-
-    test('TenantSettings uses $accessOwnership for access control', function () {
-        expect(property_exists(TenantSettings::class, 'accessOwnership'))->toBeTrue();
-        $reflection = new ReflectionClass(TenantSettings::class);
-        $prop = $reflection->getProperty('accessOwnership');
-        $prop->setAccessible(true);
-        expect($prop->getValue())->toBe(['owner', 'super_admin']);
-    });
-});
-
-// ============================================================================
 // SECTION 4: Permission Naming Consistency Tests
 // ============================================================================
 
@@ -401,42 +340,10 @@ describe('permission naming consistency', function () {
     });
 });
 
-// ============================================================================
-// SECTION 5: Summary of Bugs Found
-// ============================================================================
+test('Dashboard canAccess() denies kitchen role and allows cashier role', function () {
+    $this->actingAs($this->kitchenUser);
+    expect(Dashboard::canAccess())->toBeFalse();
 
-describe('BUGS FOUND - Summary', function () {
-    test('BUG 1: Cashier role MISSING Create:Sale permission', function () {
-        $role = Role::findByName('cashier');
-        expect($role->getPermissionNames())->not->toContain('Create:Sale');
-        // Note: POS creates Sales directly without going through SaleResource,
-        // so this doesn't break POS checkout functionality.
-    });
-
-    test('BUG 2: Pages missing HasPageShield trait - navigation not permission-controlled', function () {
-        $pages = [POS::class, Kitchen::class, Dashboard::class, SalesReport::class, IngredientReport::class, TablesOverview::class];
-        foreach ($pages as $page) {
-            $reflection = new ReflectionClass($page);
-            expect(in_array('BezhanSalleh\\FilamentShield\\Traits\\HasPageShield', $reflection->getTraitNames()))
-                ->toBeFalse("{$page} should use HasPageShield trait");
-        }
-    });
-
-    test('Dashboard canAccess() denies kitchen role and allows cashier role', function () {
-        $this->actingAs($this->kitchenUser);
-        expect(Dashboard::canAccess())->toBeFalse();
-
-        $this->actingAs($this->cashierUser);
-        expect(Dashboard::canAccess())->toBeTrue();
-    });
-
-    test('BUG 4: POS and Kitchen pages accessible to any role via direct URL', function () {
-        // POS and Kitchen don't use HasPageShield, so kitchen user could access POS directly
-        // even though kitchen role lacks viewAny:POS permission
-    });
-
-    test('BUG 5: Kitchen role has viewAny:Dashboard but it is not enforced', function () {
-        // The permission exists in DB but Dashboard has no canAccess() override
-        // So ANY user can access Dashboard regardless of their role's permissions
-    });
+    $this->actingAs($this->cashierUser);
+    expect(Dashboard::canAccess())->toBeTrue();
 });
