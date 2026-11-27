@@ -28,6 +28,9 @@ echo "== Hapus skrip debug publik lama"
 (cd public && rm -f clear-all-sessions.php deploy-extract.php fix-403.php fix-login.php laravel-bootstrap-test.php laravel-session-config-test.php laravel-session-test.php session-test.php test-login-fix.php test-login-flow.php test-login.php test-real-login.php test-session.php debug-session.php public-sync-hostinger.php test.html)
 echo "== Hapus skrip perbaikan lama di root"
 rm -f sync-hostinger.php test-login.php test-login-flow.php fix-login.php fix-403.php fix-session.php debug-session.php session-test.php test-modal.blade.php root-test.html clear-cache.php clear-cache.sh fix-hostinger.sh deploy-hostinger.sh fix-403-forbidden.sh hostinger-fix.sh HOSTINGER-403-FIX.md PLAN_RBAC.md PLAN_MODIFIERS.md deploy.zip
+echo "== Hapus sisa lama yang tidak lagi dilacak git"
+rm -rf deploy-temp .mcp.json .DS_Store lang/vendor/filament-shield
+find resources/views/vendor -name "*.blade.php" ! -path "*filament-panels/components/sidebar/item.blade.php" -delete 2>/dev/null || true
 echo "== Migrasi"
 php artisan migrate --force --no-interaction
 echo "== Storage publik"
