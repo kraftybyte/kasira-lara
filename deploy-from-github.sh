@@ -24,6 +24,8 @@ tar -xzf "$TMP/src.tgz" -C "$SITE" --strip-components=1 \
   --exclude='storage' --exclude='deploy-temp' --exclude='.DS_Store'
 
 cd "$SITE"
+echo "== Hapus skrip debug publik lama"
+(cd public && rm -f clear-all-sessions.php deploy-extract.php fix-403.php fix-login.php laravel-bootstrap-test.php laravel-session-config-test.php laravel-session-test.php session-test.php test-login-fix.php test-login-flow.php test-login.php test-real-login.php test-session.php debug-session.php public-sync-hostinger.php test.html)
 echo "== Migrasi"
 php artisan migrate --force --no-interaction
 echo "== Storage publik"

@@ -23,3 +23,7 @@ yarn-error.log
 /.zed
 
 .mcp.json
+
+# Hanya front controller yang boleh ada di public/
+public/*.php
+!public/index.php
