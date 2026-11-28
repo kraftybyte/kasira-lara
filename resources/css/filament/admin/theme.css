@@ -356,8 +356,21 @@ a.fi-ac-btn-action.fi-color-primary {
         margin-inline: 0;
         gap: 1.25rem;
     }
+    /* Tombol selebar tetap, diletakkan di tengah rel, bukan rata kiri */
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group,
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-group-items {
+        align-items: center;
+        gap: 0.375rem;
+    }
+    .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item {
+        width: 100%;
+    }
     .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-item-btn {
         flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        width: 4.5rem;
+        margin-inline: auto;
         gap: 0.3rem;
         padding: 0.625rem 0.25rem;
         border-radius: 0.75rem;
