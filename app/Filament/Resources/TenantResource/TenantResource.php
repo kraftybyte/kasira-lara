@@ -12,17 +12,21 @@ use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
+use Illuminate\Support\Str;
 use UnitEnum;
 
 class TenantResource extends Resource
 {
     protected static ?string $model = Tenant::class;
+
+    protected static ?string $slug = 'tenants';
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingOffice;
 
@@ -51,13 +55,22 @@ class TenantResource extends Resource
                         TextInput::make('name')
                             ->label('Nama Bisnis')
                             ->required()
-                            ->maxLength(255),
+                            ->maxLength(255)
+                            ->live(onBlur: true)
+                            ->afterStateUpdated(function (Set $set, ?string $state, string $operation): void {
+                                if ($operation === 'create') {
+                                    $set('slug', Str::slug((string) $state));
+                                }
+                            }),
 
                         TextInput::make('slug')
                             ->label('Slug')
                             ->required()
                             ->maxLength(100)
-                            ->helperText('Akan digunakan untuk URL pesanan customer: /order/{slug}'),
+                            ->regex('/^[a-z0-9]+(?:-[a-z0-9]+)*$/')
+                            ->validationMessages(['regex' => 'Slug hanya boleh huruf kecil, angka, dan tanda hubung.'])
+                            ->unique(ignoreRecord: true)
+                            ->helperText('Dipakai di URL pesanan pelanggan: /order/{slug}. Huruf kecil, angka, dan tanda hubung.'),
 
                         TextInput::make('email')
                             ->label('Email')
