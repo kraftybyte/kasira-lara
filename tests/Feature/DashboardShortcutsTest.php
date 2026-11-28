@@ -20,5 +20,6 @@ test('the dashboard header carries shortcut icons and the install button', funct
         ->assertSee('/admin/kasira-demo/tables-overview')
         ->assertSee('/admin/kasira-demo/kitchen?display=1')
         ->assertSee('kasira-install-btn')
-        ->assertSee('window.kasiraInstall()', false);
+        ->assertSee('window.kasiraInstall()', false)
+        ->assertSee("localStorage.setItem('_x_isOpen', 'false')", false);
 });

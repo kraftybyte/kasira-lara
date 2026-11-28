@@ -11,6 +11,15 @@
 <meta name="apple-mobile-web-app-title" content="{{ $pwaName }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ $pwaIcons[180] }}">
 <script>
+    // Sidebar rel ikon (mini) jadi bawaan di desktop. Kalau pengguna membukanya, pilihan itu tetap diingat Filament.
+    try {
+        if (window.innerWidth >= 1024 && localStorage.getItem('kasira.sidebar.v1') === null) {
+            localStorage.setItem('_x_isOpen', 'false');
+            localStorage.setItem('kasira.sidebar.v1', '1');
+        }
+    } catch (e) {}
+</script>
+<script>
     if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
     }
