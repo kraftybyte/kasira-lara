@@ -104,3 +104,20 @@ it('offers a bare display mode for the kitchen screen', function () {
     $this->get($url)->assertOk()->assertSee('fi-sidebar')->assertSee('Layar dapur');
     $this->get($url.'?display=1')->assertOk()->assertDontSee('fi-sidebar')->assertSee('Keluar mode layar')->assertSee('Sedang Dimasak');
 });
+
+it('shows a QRIS order on the board only once it is paid', function () {
+    Role::create(['name' => 'owner']);
+    $tenant = Tenant::factory()->create();
+    $owner = User::factory()->create();
+    $owner->assignRole('owner');
+    $owner->tenants()->attach($tenant->id, ['status' => 'active']);
+    $this->actingAs($owner);
+    Filament::setTenant($tenant);
+    $sale = Sale::create(['tenant_id' => $tenant->id, 'invoice_number' => 'INV-QR', 'status' => 'pending', 'source' => 'customer', 'payment_method' => 'qris', 'payment_status' => 'pending', 'grand_total' => 1000]);
+    Sale::create(['tenant_id' => $tenant->id, 'invoice_number' => 'INV-CTR', 'status' => 'pending', 'source' => 'customer', 'payment_method' => 'counter', 'payment_status' => 'pending', 'grand_total' => 1000]);
+
+    Livewire::test(Kitchen::class)->assertDontSee('INV-QR')->assertSee('INV-CTR');
+
+    $sale->update(['payment_status' => 'paid']);
+    Livewire::test(Kitchen::class)->assertSee('INV-QR');
+});

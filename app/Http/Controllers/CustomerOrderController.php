@@ -188,6 +188,11 @@ class CustomerOrderController extends Controller
             return $this->redirectToPayment($tenant, $table, $sale);
         }
 
+        // QRIS hanya kalau diaktifkan di Pengaturan (sama dengan tombol yang ditampilkan di halaman pesan)
+        if ($paywuz->isConfigured() && (! $paywuz->isEnabled() || ! ($tenantSetting?->table_qr_qris_auto ?? false))) {
+            return redirect()->back()->with('error', 'Pembayaran QRIS sedang tidak tersedia. Silakan pilih metode lain.');
+        }
+
         // QRIS via Paywuz: pelanggan membayar tagihan plus biaya gateway jika toko tidak menanggungnya.
         $sale = $this->createSale($tenant, $table, array_merge($attributes, [
             'grand_total' => $feeByMerchant ? $subtotal : $subtotal + $paywuzFee,
@@ -199,7 +204,7 @@ class CustomerOrderController extends Controller
             return $this->redirectToPayment($tenant, $table, $sale)->with('warning', 'Paywuz belum dikonfigurasi. Silakan bayar di kasir.');
         }
 
-        $response = $paywuz->createDynamicQr($sale->invoice_number, (float) $sale->grand_total, $tenant->name ?? 'KasirAja');
+        $response = $paywuz->createDynamicQr($sale->invoice_number, (float) $sale->grand_total, ['customerName' => $validated['customer_name'], 'phone' => $validated['customer_phone'] ?? null]);
 
         if (! ($response['success'] ?? false)) {
             Log::error('Paywuz QR Creation Failed', $response);
@@ -211,7 +216,7 @@ class CustomerOrderController extends Controller
 
         $sale->update([
             'paywuz_transaction_id' => $response['data']['id'] ?? null,
-            'paywuz_qr_url' => $response['data']['paymentUrl'] ?? null,
+            'paywuz_qr_url' => $response['data']['paymentNumber'] ?? $response['data']['paymentUrl'] ?? null,
             'paywuz_status' => 'pending',
         ]);
 
@@ -376,18 +381,8 @@ class CustomerOrderController extends Controller
             ]);
         }
 
-        // Get QR data if Paywuz transaction exists
-        $qrData = null;
-        if ($sale->paywuz_transaction_id && $sale->payment_method === 'qris') {
-            $paywuz = new PaywuzService;
-
-            // If no qr_url stored, try to get it
-            if (! $sale->paywuz_qr_url) {
-                $qrData = $sale->paywuz_qr_url;
-            } else {
-                $qrData = $sale->paywuz_qr_url;
-            }
-        }
+        // String QRIS dari Paywuz (dirender jadi QR di view)
+        $qrData = $sale->payment_method === 'qris' && $sale->paywuz_transaction_id ? $sale->paywuz_qr_url : null;
 
         // Get tenant settings for dynamic bank accounts
         $tenantSetting = TenantSetting::where('tenant_id', $tenant->id)->first();
@@ -437,7 +432,7 @@ class CustomerOrderController extends Controller
         // Check payment status via Paywuz if transaction exists
         if ($sale->paywuz_transaction_id) {
             $paywuz = new PaywuzService($tenant->id);
-            $status = $paywuz->inquiry($sale->paywuz_transaction_id);
+            $status = $paywuz->inquiry($sale->invoice_number);
 
             if (isset($status['data']['status'])) {
                 $paywuzStatus = $status['data']['status'];
@@ -447,8 +442,8 @@ class CustomerOrderController extends Controller
                     'paywuz_status' => $paywuzStatus,
                 ]);
 
-                if ($paywuzStatus === 'success') {
-                    $sale->markPaid('qris', $sale->paywuz_transaction_id);
+                if (in_array($paywuzStatus, ['success', 'paid', 'settlement'], true)) {
+                    $sale->markPaid($sale->payment_method ?: 'qris', $sale->paywuz_transaction_id);
 
                     // NOTE: Table stays occupied until kasir explicitly closes it
                     // DO NOT auto-release table after payment
@@ -466,7 +461,7 @@ class CustomerOrderController extends Controller
                     return redirect($redirectUrl)->with('success', 'Pembayaran berhasil!');
                 }
 
-                if ($paywuzStatus === 'expired' || $paywuzStatus === 'failed') {
+                if (in_array($paywuzStatus, ['expired', 'failed', 'cancelled'], true)) {
                     if ($request->expectsJson()) {
                         return response()->json(['success' => false, 'message' => 'Payment expired atau failed'], 400);
                     }

@@ -55,7 +55,8 @@ class OpsAlerts extends Component
             ->where('tenant_id', $tenant->id)
             ->where('status', '!=', 'cancelled')
             ->whereNull('closed_at')
-            ->whereNull('kitchen_completed_at');
+            ->whereNull('kitchen_completed_at')
+            ->where(fn ($q) => $q->whereNull('payment_method')->orWhereNotIn('payment_method', ['qris', 'va'])->orWhere('payment_status', 'paid'));
 
         $cooking = (clone $kitchen)->whereNull('served_at')->count();
         $late = (clone $kitchen)->whereNull('served_at')->where('created_at', '<=', now()->subMinutes($sop))->count();

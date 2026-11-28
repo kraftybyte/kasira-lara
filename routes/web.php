@@ -33,6 +33,7 @@ Route::get('/order/{tenant}/{table}/{sale}/payment', [CustomerOrderController::c
     ->name('customer.order.payment');
 
 Route::post('/order/{tenant}/{table}/{sale}/confirm', [CustomerOrderController::class, 'paymentConfirm'])
+    ->middleware('throttle:30,1')
     ->name('customer.order.payment.confirm');
 
 Route::get('/order/{tenant}/{table}/{sale}/success', [CustomerOrderController::class, 'success'])
@@ -75,6 +76,7 @@ Route::middleware(['auth'])
 */
 
 Route::post('/webhook/paywuz', [PaywuzWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1')
     ->name('webhook.paywuz');
 
 /*

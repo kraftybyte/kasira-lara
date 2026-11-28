@@ -3,6 +3,7 @@
 namespace App\Filament\Pages\Settings;
 
 use App\Models\TenantSetting;
+use App\Services\PaywuzService;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Forms\Components\FileUpload;
@@ -19,7 +20,6 @@ use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Tabs;
 use Filament\Schemas\Components\Tabs\Tab;
 use Filament\Schemas\Schema;
-use Illuminate\Support\Facades\Http;
 use Livewire\Attributes\Locked;
 use UnitEnum;
 
@@ -472,20 +472,22 @@ class TenantSettings extends Page implements HasForms
         }
 
         try {
-            $response = Http::withToken($apiKey)
-                ->timeout(10)
-                ->get('https://paywuz.id/api/v1/transaction/history');
+            $check = PaywuzService::checkApiKey($apiKey);
 
-            if ($response->successful()) {
+            if ($check['ok']) {
                 Notification::make()
                     ->title('Koneksi Berhasil')
-                    ->body('API Key valid dan koneksi berhasil.')
+                    ->body('API Key diterima Paywuz. Pastikan Webhook URL di dashboard Paywuz diisi: '.route('webhook.paywuz'))
                     ->success()
                     ->send();
             } else {
                 Notification::make()
                     ->title('Koneksi Gagal')
-                    ->body('API Key tidak valid atau sudah expire.')
+                    ->body(match ($check['status']) {
+                        401 => 'API Key ditolak Paywuz (HTTP 401). Salin ulang key dari halaman proyek di dashboard Paywuz (awalan pk_live_ untuk produksi, pk_sand_ untuk sandbox), tanpa spasi.',
+                        403 => 'Key diterima tapi proyek/akun Paywuz tidak aktif (HTTP 403).',
+                        default => 'Paywuz menjawab HTTP '.$check['status'].'. Coba lagi beberapa saat.',
+                    })
                     ->danger()
                     ->send();
             }

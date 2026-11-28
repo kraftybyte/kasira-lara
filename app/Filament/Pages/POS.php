@@ -941,14 +941,13 @@ class POS extends Page
 
     public function updatedPaymentMethod(): void
     {
-        // Reset QRIS state when payment method changes
+        // Ganti metode: transaksi gateway yang masih menunggu dibatalkan (dihapus) agar tidak jadi sale yatim
         if ($this->paymentMethod !== 'qris') {
-            $this->resetQrisState();
+            $this->currentQrisSale ? $this->cancelQrisPayment() : $this->resetQrisState();
         }
 
-        // Reset VA state when payment method changes
         if ($this->paymentMethod !== 'va') {
-            $this->resetVaState();
+            $this->currentVaSale ? $this->cancelVaPayment() : $this->resetVaState();
         }
 
         if (
@@ -2688,6 +2687,8 @@ class POS extends Page
                     'paid_amount' => 0,
                     'change_amount' => 0,
                     'payment_status' => 'pending',
+                    'paywuz_fee' => $this->paywuzFee,
+                    'paywuz_fee_by_merchant' => $this->paywuzFeeByMerchant,
                     'notes' => $this->paymentNotes ?: null,
                 ]);
 
@@ -2724,16 +2725,18 @@ class POS extends Page
                 return;
             }
 
+            $payer = $this->customerId ? Customer::where('tenant_id', $tenantId)->whereKey($this->customerId)->first() : null;
             $response = $paywuz->createDynamicQr(
                 $invoiceNumber,
                 $grandTotal,
-                $tenant->name ?? 'KasirAja'
+                ['customerName' => $payer?->name, 'phone' => $payer?->phone, 'email' => $payer?->email]
             );
 
             if (isset($response['success']) && $response['success']) {
                 $data = $response['data'] ?? [];
                 $transactionId = $data['id'] ?? null;
-                $paymentUrl = $data['paymentUrl'] ?? null;
+                // paymentNumber = string QRIS untuk dirender jadi QR; paymentUrl hanya halaman bayar hosted
+                $paymentUrl = $data['paymentNumber'] ?? $data['paymentUrl'] ?? null;
                 $paywuzStatus = $data['status'] ?? 'pending';
 
                 $sale->update([
@@ -2810,7 +2813,7 @@ class POS extends Page
 
             // Check status from Paywuz
             if ($this->currentQrisSale->paywuz_transaction_id && ! str_starts_with($this->currentQrisSale->paywuz_transaction_id, 'DEMO-')) {
-                $status = $paywuz->inquiry($this->currentQrisSale->paywuz_transaction_id);
+                $status = $paywuz->inquiry($this->currentQrisSale->invoice_number);
 
                 if (isset($status['data']['status'])) {
                     $this->currentQrisSale->update([
@@ -2823,9 +2826,9 @@ class POS extends Page
             $this->currentQrisSale = $this->currentQrisSale->fresh();
 
             // Check if paid
-            if ($this->currentQrisSale->paywuz_status === 'success' || $this->currentQrisSale->payment_status === 'paid') {
+            if (in_array($this->currentQrisSale->paywuz_status, ['success', 'paid', 'settlement'], true) || $this->currentQrisSale->payment_status === 'paid') {
                 $this->confirmQrisPayment();
-            } elseif ($this->currentQrisSale->paywuz_status === 'expired' || $this->currentQrisSale->paywuz_status === 'failed') {
+            } elseif (in_array($this->currentQrisSale->paywuz_status, ['expired', 'failed', 'cancelled'], true)) {
                 Notification::make()
                     ->title('QR Expired/Failed')
                     ->body('Silakan generate QR baru')
@@ -2857,8 +2860,17 @@ class POS extends Page
             return;
         }
 
+        // Hanya setelah gateway (webhook/inquiry) menyatakan lunas, atau mode demo; aksi ini bisa dipanggil dari browser
+        $fresh = $this->currentQrisSale->fresh();
+        $isDemo = str_starts_with((string) $fresh?->paywuz_transaction_id, 'DEMO-');
+        if (! $fresh || (! $isDemo && $fresh->payment_status !== 'paid' && ! in_array($fresh->paywuz_status, ['success', 'paid', 'settlement'], true))) {
+            Notification::make()->title('Pembayaran belum terkonfirmasi gateway')->warning()->send();
+
+            return;
+        }
+
         try {
-            $sale = $this->currentQrisSale;
+            $sale = $fresh;
 
             // Meja tetap terisi sampai ditutup lewat halaman Meja; markPaid mengurus status, Payment, dan stok.
             $sale->markPaid('qris', $sale->paywuz_transaction_id, $this->paymentNotes ?: null);
@@ -3114,7 +3126,7 @@ class POS extends Page
             $customerEmail = null;
             $customerPhone = null;
             if ($this->customerId) {
-                $customer = Customer::find($this->customerId);
+                $customer = Customer::where('tenant_id', $tenantId)->whereKey($this->customerId)->first();
                 if ($customer) {
                     $customerName = $customer->name;
                     $customerEmail = $customer->email;
@@ -3242,7 +3254,7 @@ class POS extends Page
 
             // Check status from Paywuz
             if ($this->currentVaSale->paywuz_transaction_id && ! str_starts_with($this->currentVaSale->paywuz_transaction_id, 'DEMO-')) {
-                $status = $paywuz->inquiry($this->currentVaSale->paywuz_transaction_id);
+                $status = $paywuz->inquiry($this->currentVaSale->invoice_number);
 
                 if (isset($status['data']['status'])) {
                     $this->currentVaSale->update([
@@ -3255,9 +3267,9 @@ class POS extends Page
             $this->currentVaSale = $this->currentVaSale->fresh();
 
             // Check if paid
-            if ($this->currentVaSale->paywuz_status === 'success' || $this->currentVaSale->payment_status === 'paid') {
+            if (in_array($this->currentVaSale->paywuz_status, ['success', 'paid', 'settlement'], true) || $this->currentVaSale->payment_status === 'paid') {
                 $this->confirmVaPayment();
-            } elseif ($this->currentVaSale->paywuz_status === 'expired' || $this->currentVaSale->paywuz_status === 'failed') {
+            } elseif (in_array($this->currentVaSale->paywuz_status, ['expired', 'failed', 'cancelled'], true)) {
                 Notification::make()
                     ->title('VA Expired/Failed')
                     ->body('Silakan generate VA baru')

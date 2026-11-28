@@ -18,6 +18,9 @@ class PaywuzService
 
     protected ?int $tenantId;
 
+    /** Kontak toko sebagai data pembayar bawaan (metadata wajib di API Paywuz) */
+    protected array $storeContact = [];
+
     public function __construct(?int $tenantId = null)
     {
         $this->baseUrl = config('services.paywuz.base_url', 'https://api.paywuz.id/v1');
@@ -40,6 +43,7 @@ class PaywuzService
             if ($settings) {
                 $this->apiKey = $settings->paywuz_api_key ?? '';
                 $this->merchantName = $settings->paywuz_merchant_name ?? 'KasirAja';
+                $this->storeContact = ['customerName' => $settings->store_name ?: $this->merchantName, 'phone' => $settings->phone, 'email' => $settings->email];
                 // Callback URL tenant-specific
             } else {
                 $this->apiKey = '';
@@ -119,7 +123,7 @@ class PaywuzService
      * Create dynamic QRIS payment
      * Uses POST /v1/transactions with QRIS payment method
      */
-    public function createDynamicQr(string $orderId, float $amount, ?string $cashierName = null): array
+    public function createDynamicQr(string $orderId, float $amount, array|string|null $customer = null): array
     {
         if (! $this->isConfigured()) {
             return [
@@ -141,8 +145,11 @@ class PaywuzService
             // Single standardized payload format (API Paywuz v1)
             $payload = [
                 'orderId' => $orderId,
-                'amount' => (int) $amount,
+                'amount' => (int) round($amount),
                 'paymentMethod' => 'QRIS',
+                // Biaya QRIS sudah dihitung dan dibebankan di sisi kita (calculateQrisFee); gateway jangan menambah lagi
+                'feeByMerchant' => true,
+                'metadata' => $this->customerMetadata($customer),
             ];
 
             $response = null;
@@ -264,10 +271,42 @@ class PaywuzService
     }
 
     /**
-     * Inquiry transaction status
-     * Uses GET /v1/transactions/:id
+     * Metadata pembayar yang diwajibkan Paywuz untuk QRIS; kalau pelanggan tidak dikenal, pakai kontak toko.
+     *
+     * @return array{customerName: string, phone?: string, email?: string}
      */
-    public function inquiry(string $transactionId): array
+    protected function customerMetadata(array|string|null $customer): array
+    {
+        $given = is_string($customer) ? ['customerName' => $customer] : ($customer ?? []);
+        $meta = ['customerName' => mb_substr((string) ($given['customerName'] ?: ($this->storeContact['customerName'] ?? $this->merchantName)), 0, 100)];
+
+        foreach (['phone', 'email'] as $key) {
+            $value = $given[$key] ?? $this->storeContact[$key] ?? null;
+
+            if (filled($value)) {
+                $meta[$key] = (string) $value;
+            }
+        }
+
+        return $meta;
+    }
+
+    /**
+     * Cek API key tanpa membuat transaksi: GET /payment-methods (401 = key ditolak, 403 = proyek nonaktif).
+     *
+     * @return array{ok: bool, status: int}
+     */
+    public static function checkApiKey(string $apiKey): array
+    {
+        $response = Http::withToken(trim($apiKey))->timeout(10)->get(rtrim(config('services.paywuz.base_url', 'https://api.paywuz.id/v1'), '/').'/payment-methods');
+
+        return ['ok' => $response->successful(), 'status' => $response->status()];
+    }
+
+    /**
+     * Status transaksi: GET /v1/transactions/:orderId (orderId = nomor invoice kita).
+     */
+    public function inquiry(string $orderId): array
     {
         if (! $this->isConfigured()) {
             return [
@@ -276,11 +315,8 @@ class PaywuzService
             ];
         }
 
-        $endpoints = [
-            "/transactions/{$transactionId}",
-            "/transaction/{$transactionId}",
-            "/transactions/{$transactionId}/status",
-        ];
+        $transactionId = $orderId;
+        $endpoints = ["/transactions/{$orderId}"];
 
         foreach ($endpoints as $endpoint) {
             try {

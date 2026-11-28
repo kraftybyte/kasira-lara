@@ -101,7 +101,7 @@ it('stores the gateway transaction id and QR url when a customer checks out with
     ]);
     Http::fake([
         'api.paywuz.id/v1/payment-methods' => Http::response(['data' => [['code' => 'QRIS', 'limits' => ['minIdr' => 1000]]]], 200),
-        'api.paywuz.id/v1/transactions' => Http::response(['data' => ['id' => 'TRX-9', 'paymentUrl' => 'https://pay.example/qr', 'status' => 'pending']], 201),
+        'api.paywuz.id/v1/transactions' => Http::response(['data' => ['id' => 'TRX-9', 'paymentNumber' => '00020101021226QRIS-STRING', 'paymentUrl' => 'https://pay.example/qr', 'status' => 'pending']], 201),
     ]);
 
     $this->post(route('customer.order.checkout', ['tenant' => $tenant->slug, 'table' => $table->id]), [
@@ -112,5 +112,29 @@ it('stores the gateway transaction id and QR url when a customer checks out with
 
     expect(Sale::first())
         ->paywuz_transaction_id->toBe('TRX-9')
-        ->paywuz_qr_url->toBe('https://pay.example/qr');
+        ->paywuz_qr_url->toBe('00020101021226QRIS-STRING');
+
+    // Payload sesuai dokumen Paywuz: biaya ditanggung di sisi kita, metadata pembayar wajib
+    Http::assertSent(fn ($request) => str_ends_with($request->url(), '/v1/transactions')
+        && $request['feeByMerchant'] === true
+        && $request['metadata']['customerName'] === 'Budi'
+        && $request['amount'] === (int) round(Sale::first()->grand_total));
+});
+
+it('refuses QRIS at checkout when the tenant switched it off, even with a key configured', function () {
+    [$tenant, $table] = qrisTenant();
+    TenantSetting::where('tenant_id', $tenant->id)->update(['table_qr_qris_auto' => false]);
+    $category = Category::create(['tenant_id' => $tenant->id, 'name' => 'Minuman', 'slug' => 'minuman']);
+    $product = Product::create(['tenant_id' => $tenant->id, 'category_id' => $category->id, 'sku' => 'ES-2', 'name' => 'Es Teh', 'selling_price' => 5000, 'stock' => 10, 'is_active' => true]);
+    Http::fake();
+
+    $this->from(route('customer.order', ['tenant' => $tenant->slug, 'table' => $table->id]))
+        ->post(route('customer.order.checkout', ['tenant' => $tenant->slug, 'table' => $table->id]), [
+            'items' => json_encode([['product_id' => $product->id, 'quantity' => 1, 'modifiers' => []]]),
+            'payment_method' => 'qris',
+            'customer_name' => 'Budi',
+        ])->assertRedirect()->assertSessionHas('error');
+
+    Http::assertNothingSent();
+    expect(Sale::count())->toBe(0);
 });

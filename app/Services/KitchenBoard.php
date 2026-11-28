@@ -33,6 +33,8 @@ class KitchenBoard
             ->where('tenant_id', $tenantId)
             ->whereNull('closed_at')
             ->whereNull('kitchen_completed_at')
+            // Pesanan QRIS/VA baru masuk dapur setelah lunas; yang kedaluwarsa tidak pernah muncul
+            ->where(fn (Builder $q) => $q->whereNull('payment_method')->orWhereNotIn('payment_method', ['qris', 'va'])->orWhere('payment_status', 'paid'))
             ->with(['items.modifiers', 'table'])
             ->orderBy('created_at');
     }

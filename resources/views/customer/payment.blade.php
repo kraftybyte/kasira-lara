@@ -139,7 +139,7 @@
                         {{-- QR Code from Paywuz or Generate --}}
                         @if($qrData)
                             <div class="bg-white rounded-2xl p-4 inline-block shadow-inner mb-4">
-                                <img src="{{ $qrData }}" alt="QRIS Payment" class="w-56 h-56 mx-auto">
+                                <img src="https://api.qrserver.com/v1/create-qr-code/?size=250x250&margin=2&data={{ urlencode($qrData) }}" alt="QRIS Payment" class="w-56 h-56 mx-auto">
                             </div>
                         @elseif($sale->paywuz_transaction_id)
                             <div class="bg-white rounded-2xl p-4 inline-block shadow-inner mb-4">
