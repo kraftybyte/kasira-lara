@@ -18,6 +18,9 @@
         :class="flash && 'rounded-2xl ring-4 ring-red-500'"
         class="transition-shadow"
     >
+    @if($display)
+        <style>html { font-size: 20px; }</style>
+    @endif
     {{-- Header --}}
     <div class="mb-6 flex items-center justify-between">
         <div>
@@ -34,6 +37,21 @@
                 <x-heroicon-o-arrow-path class="h-4 w-4" />
                 Refresh
             </button>
+            @if($display)
+                <button type="button" x-data x-show="! document.fullscreenElement" @click="document.documentElement.requestFullscreen?.()" class="btn btn-secondary btn-md">
+                    <x-heroicon-o-arrows-pointing-out class="h-4 w-4" />
+                    Layar penuh
+                </button>
+                <a href="{{ route('filament.admin.pages.kitchen', ['tenant' => $this->getTenant()?->getRouteKey()]) }}" class="btn btn-ghost btn-md">
+                    <x-heroicon-o-x-mark class="h-4 w-4" />
+                    Keluar mode layar
+                </a>
+            @else
+                <a href="{{ route('filament.admin.pages.kitchen', ['tenant' => $this->getTenant()?->getRouteKey(), 'display' => 1]) }}" target="_blank" rel="noopener" class="btn btn-primary btn-md">
+                    <x-heroicon-o-tv class="h-4 w-4" />
+                    Layar dapur
+                </a>
+            @endif
         </div>
     </div>
 

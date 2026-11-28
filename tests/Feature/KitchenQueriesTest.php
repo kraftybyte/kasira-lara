@@ -91,3 +91,16 @@ it('moves an order between columns in place without reloading the page', functio
 
     expect($sale->fresh()->kitchen_completed_at)->not->toBeNull();
 });
+
+it('offers a bare display mode for the kitchen screen', function () {
+    Role::create(['name' => 'owner']);
+    $tenant = Tenant::factory()->create();
+    $owner = User::factory()->create();
+    $owner->assignRole('owner');
+    $owner->tenants()->attach($tenant->id, ['status' => 'active']);
+    $this->actingAs($owner);
+    $url = route('filament.admin.pages.kitchen', ['tenant' => $tenant->slug]);
+
+    $this->get($url)->assertOk()->assertSee('fi-sidebar')->assertSee('Layar dapur');
+    $this->get($url.'?display=1')->assertOk()->assertDontSee('fi-sidebar')->assertSee('Keluar mode layar')->assertSee('Sedang Dimasak');
+});

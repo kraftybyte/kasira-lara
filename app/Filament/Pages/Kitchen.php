@@ -11,6 +11,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
+use Livewire\Attributes\Url;
 use Throwable;
 
 class Kitchen extends Page
@@ -44,6 +45,17 @@ class Kitchen extends Page
     /** @var array<int, int> */
     #[Locked]
     public array $seenOrderIds = [];
+
+    /**
+     * ?display=1: tanpa sidebar/header admin, huruf lebih besar, untuk TV atau tablet dapur.
+     */
+    #[Url]
+    public bool $display = false;
+
+    public function getLayout(): string
+    {
+        return $this->display ? 'filament-panels::components.layout.base' : parent::getLayout();
+    }
 
     public function mount(): void
     {
