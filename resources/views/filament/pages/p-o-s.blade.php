@@ -457,17 +457,29 @@
                         </div>
 
 
-                        {{-- ADD CUSTOMER --}}
-                        <button
-                            type="button"
-                            wire:click="openAddCustomer"
-                            @click.stop
-                            class="flex h-8 w-8 items-center justify-center rounded-xl text-primary-500 transition-all hover:bg-primary-50 dark:hover:bg-primary-500/10"
-                        >
-
-                            <x-heroicon-o-plus class="h-4 w-4" />
-
-                        </button>
+                        <div class="flex items-center gap-1">
+                            {{-- ADD CUSTOMER --}}
+                            <button
+                                type="button"
+                                wire:click="openAddCustomer"
+                                @click.stop
+                                class="flex h-8 w-8 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                                aria-label="Tambah pelanggan"
+                            >
+                                <x-heroicon-o-plus class="h-4 w-4" />
+                            </button>
+                            {{-- CLOSE PANEL --}}
+                            <button
+                                type="button"
+                                x-show="expanded"
+                                x-cloak
+                                @click.stop="expanded = false; open = false; search = ''"
+                                class="flex h-8 w-8 items-center justify-center rounded-xl text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-900 dark:hover:bg-gray-700 dark:hover:text-white"
+                                aria-label="Tutup pencarian pelanggan"
+                            >
+                                <x-heroicon-o-x-mark class="h-4 w-4" />
+                            </button>
+                        </div>
 
                     </div>
 
@@ -1286,6 +1298,9 @@
             <div x-show="show" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="scale-95 opacity-0" x-transition:enter-end="scale-100 opacity-100" class="w-full max-w-sm overflow-hidden rounded-3xl bg-white shadow-xl dark:bg-gray-900">
 
                 <div class="relative overflow-hidden px-6 pb-7 pt-8 text-center gradient-bg-soft">
+                    <button type="button" @click="skip()" class="absolute right-3 top-3 flex h-9 w-9 items-center justify-center rounded-lg text-gray-500 transition-colors hover:bg-white/60 hover:text-gray-900" aria-label="Tutup">
+                        <x-heroicon-o-x-mark class="h-5 w-5" />
+                    </button>
                     <div class="mx-auto flex h-16 w-16 items-center justify-center rounded-full text-white shadow-lg gradient-bg">
                         <x-heroicon-o-check class="h-8 w-8" />
                     </div>
