@@ -7,12 +7,18 @@ set -euo pipefail
 SITE="$1"
 COMMIT="$2"
 REPO="kraftybyte/kasira-lara"
-ARCHIVE="https://github.com/${REPO}/archive/${COMMIT}.tar.gz"
+# Repo privat: taruh token baca GitHub (fine-grained, Contents: read) di ~/.kasira-github-token. Tanpa file itu, unduh publik.
+ARCHIVE="https://api.github.com/repos/${REPO}/tarball/${COMMIT}"
 BACKUP="$HOME/kasira-backup-${COMMIT}.tgz"
 TMP="$(mktemp -d)"
+TOKEN_FILE="$HOME/.kasira-github-token"
+AUTH=()
+if [ -s "$TOKEN_FILE" ]; then
+  AUTH=(-H "Authorization: Bearer $(tr -d '[:space:]' < "$TOKEN_FILE")")
+fi
 
-echo "== Unduh ${ARCHIVE}"
-curl -fsSL "$ARCHIVE" -o "$TMP/src.tgz"
+echo "== Unduh ${ARCHIVE}$([ -s "$TOKEN_FILE" ] && echo ' (dengan token)')"
+curl -fsSL "${AUTH[@]}" -H "Accept: application/vnd.github+json" "$ARCHIVE" -o "$TMP/src.tgz"
 
 echo "== Backup file yang akan ditimpa ke ${BACKUP}"
 tar -tzf "$TMP/src.tgz" | sed 's#^[^/]*/##' | grep -v '/$' \
@@ -41,4 +47,6 @@ echo "== Bersihkan cache"
 php artisan optimize:clear --no-interaction
 php artisan filament:optimize-clear --no-interaction || true
 rm -rf "$TMP"
+# Simpan skrip versi ini di home: cron berikutnya cukup "bash ~/kd.sh" tanpa mengunduh skrip dari GitHub
+cp "$SITE/deploy-from-github.sh" "$HOME/kd.sh" 2>/dev/null || true
 echo "== Selesai: ${COMMIT}"
