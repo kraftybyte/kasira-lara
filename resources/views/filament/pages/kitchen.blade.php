@@ -19,7 +19,12 @@
         class="transition-shadow {{ $display ? 'dark min-h-screen bg-gray-950 p-6' : 'rounded-2xl' }}"
     >
     @if($display)
-        <style>html { font-size: 20px; }</style>
+        {{-- Latar body ikut gelap dan padding atas/bawah kontainer halaman Filament dibuang, supaya tidak ada pita terang --}}
+        <style>
+            html { font-size: 20px; }
+            body { background-color: #030712; }
+            .fi-page-header-main-ctn { padding: 0; }
+        </style>
     @endif
     {{-- Header --}}
     <div class="mb-6 flex items-center justify-between gap-4">
@@ -130,7 +135,7 @@
                         </div>
 
                         {{-- Items --}}
-                        <div class="max-h-48 overflow-y-auto p-3 space-y-2">
+                        <div class="{{ $display ? '' : 'max-h-48 overflow-y-auto' }} p-3 space-y-2">
                             @foreach($order->items as $item)
                                 <div class="flex items-start gap-2 rounded-lg bg-gray-50 p-2 dark:bg-gray-700/50">
                                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-red-100 text-xs font-bold text-red-600 dark:bg-red-500/30 dark:text-red-300">
@@ -228,7 +233,7 @@
                         </div>
 
                         {{-- Items --}}
-                        <div class="max-h-48 overflow-y-auto p-3 space-y-2">
+                        <div class="{{ $display ? '' : 'max-h-48 overflow-y-auto' }} p-3 space-y-2">
                             @foreach($order->items as $item)
                                 <div class="flex items-start gap-2 rounded-lg bg-emerald-50 p-2 dark:bg-emerald-500/10">
                                     <span class="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-emerald-200 text-xs font-bold text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-300">
