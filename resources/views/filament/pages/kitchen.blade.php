@@ -13,7 +13,7 @@
     @endonce
 
     <div
-        x-data="{ flash: false, beep() { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(ctx.currentTime + 0.3); } catch (e) {} } }"
+        x-data="{ flash: false, audio: null, enableSound() { try { this.audio = new (window.AudioContext || window.webkitAudioContext)(); this.audio.resume(); this.beep(); } catch (e) {} }, beep() { if (! this.audio) return; try { const osc = this.audio.createOscillator(); const gain = this.audio.createGain(); osc.connect(gain); gain.connect(this.audio.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(this.audio.currentTime + 0.3); } catch (e) {} } }"
         x-on:kitchen-new-order.window="flash = true; beep(); setTimeout(() => flash = false, 2000)"
         :class="flash && 'rounded-2xl ring-4 ring-red-500'"
         class="transition-shadow"
@@ -26,6 +26,10 @@
         </div>
         <div class="flex items-center gap-3">
             <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
+            <button type="button" x-show="! audio" x-cloak @click="enableSound()" class="btn btn-secondary btn-md">
+                <x-heroicon-o-bell-alert class="h-4 w-4" />
+                Aktifkan suara
+            </button>
             <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
                 <x-heroicon-o-arrow-path class="h-4 w-4" />
                 Refresh

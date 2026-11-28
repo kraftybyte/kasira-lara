@@ -1,6 +1,7 @@
 <?php
 
 use App\Filament\Resources\TenantResource\Pages\CreateTenant;
+use App\Filament\Resources\TenantResource\Pages\EditTenant;
 use App\Filament\Resources\TenantResource\TenantResource;
 use App\Models\Tenant;
 use App\Models\User;
@@ -66,4 +67,18 @@ test('only super admins see the tenant resource', function () {
 
     expect(TenantResource::canViewAny())->toBeFalse()
         ->and(TenantResource::canCreate())->toBeFalse();
+});
+
+test('renaming a tenant never changes its slug, so printed table QR codes stay valid', function () {
+    tenantAdmin();
+    $tenant = Tenant::where('slug', 'kasira-demo')->firstOrFail();
+
+    Livewire::test(EditTenant::class, ['record' => $tenant->slug])
+        ->fillForm(['name' => 'Kasira Demo Dua'])
+        ->call('save')
+        ->assertHasNoFormErrors();
+
+    $tenant->fresh()->update(['name' => 'Kasira Demo Tiga']);
+
+    expect($tenant->fresh())->name->toBe('Kasira Demo Tiga')->slug->toBe('kasira-demo');
 });

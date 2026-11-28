@@ -70,7 +70,8 @@ class TenantResource extends Resource
                             ->regex('/^[a-z0-9]+(?:-[a-z0-9]+)*$/')
                             ->validationMessages(['regex' => 'Slug hanya boleh huruf kecil, angka, dan tanda hubung.'])
                             ->unique(ignoreRecord: true)
-                            ->helperText('Dipakai di URL pesanan pelanggan: /order/{slug}. Huruf kecil, angka, dan tanda hubung.'),
+                            ->disabled(fn (string $operation): bool => $operation === 'edit')
+                            ->helperText('Dipakai di QR meja dan URL pesanan pelanggan: /order/{slug}. Tidak bisa diubah setelah dibuat.'),
 
                         TextInput::make('email')
                             ->label('Email')

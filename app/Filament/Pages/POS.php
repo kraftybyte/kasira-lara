@@ -599,10 +599,23 @@ class POS extends Page
 
     public function addFirstMatch(): void
     {
-        $product = $this->products->first();
+        if (! filled($this->search)) {
+            return;
+        }
 
-        if ($product) {
-            $this->addToCart($product);
+        $term = trim($this->search);
+        $products = $this->products;
+        $product = $products->first(fn (Product $product): bool => $product->barcode === $term || $product->sku === $term)
+            ?? $products->first();
+
+        if (! $product) {
+            return;
+        }
+
+        $cartBefore = $this->cart;
+        $this->addToCart($product);
+
+        if ($this->cart !== $cartBefore) {
             $this->search = '';
         }
     }

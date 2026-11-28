@@ -348,3 +348,38 @@ test('cash payment refocuses the search box for the next order', function () {
         ->assertDispatched('payment-success')
         ->assertDispatched('focus-search');
 });
+
+test('enter with an empty search box adds nothing', function () {
+    [$tenant] = posOwner();
+    posProduct($tenant, 'Aqua', 5000);
+
+    Livewire::test(POS::class)
+        ->set('search', '')
+        ->call('addFirstMatch')
+        ->assertSet('cart', [])
+        ->assertNotDispatched('cart-updated');
+});
+
+test('enter prefers the product whose barcode or sku matches exactly', function () {
+    [$tenant] = posOwner();
+    posProduct($tenant, 'Aqua Botol 1001', 5000);
+    $teh = posProduct($tenant, 'Teh Kotak', 7000);
+    $teh->update(['barcode' => '1001']);
+
+    Livewire::test(POS::class)
+        ->set('search', '1001')
+        ->call('addFirstMatch')
+        ->assertSet('search', '')
+        ->assertSet('cart.'.$teh->id.'.quantity', 1);
+});
+
+test('enter keeps the search text when the product could not be added', function () {
+    [$tenant] = posOwner();
+    posProduct($tenant, 'Kopi Habis', 10000, stock: 0);
+
+    Livewire::test(POS::class)
+        ->set('search', 'kopi')
+        ->call('addFirstMatch')
+        ->assertSet('cart', [])
+        ->assertSet('search', 'kopi');
+});

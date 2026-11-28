@@ -46,7 +46,7 @@ class Tenant extends Model
     }
 
     /**
-     * Boot the model and auto-generate slug from name.
+     * Slug dibuat sekali dari nama; tidak pernah diubah lagi karena dicetak di QR meja.
      */
     protected static function boot(): void
     {
@@ -54,12 +54,6 @@ class Tenant extends Model
 
         static::creating(function (self $tenant) {
             if (empty($tenant->slug) && ! empty($tenant->name)) {
-                $tenant->slug = Str::slug($tenant->name);
-            }
-        });
-
-        static::updating(function (self $tenant) {
-            if ($tenant->isDirty('name') && ! $tenant->isDirty('slug')) {
                 $tenant->slug = Str::slug($tenant->name);
             }
         });

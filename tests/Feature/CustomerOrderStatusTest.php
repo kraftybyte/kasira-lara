@@ -37,7 +37,14 @@ test('pay-at-counter orders show as cooking before payment and cancelled orders 
     $counter = Sale::create(['tenant_id' => $tenant->id, 'table_id' => $table->id, 'invoice_number' => 'ST-2', 'status' => 'pending', 'source' => 'customer', 'payment_method' => 'counter', 'payment_status' => 'pending', 'grand_total' => 10000]);
     $cancelled = Sale::create(['tenant_id' => $tenant->id, 'table_id' => $table->id, 'invoice_number' => 'ST-3', 'status' => 'cancelled', 'source' => 'customer', 'payment_method' => 'qris', 'grand_total' => 10000]);
 
-    $this->get(route('customer.order.status', [$tenant->slug, $table->id, $counter->id]))->assertSee('Sedang disiapkan')->assertSee('Bayar di kasir');
+    $counterUrl = route('customer.order.status', [$tenant->slug, $table->id, $counter->id]);
+    $this->get($counterUrl)->assertSee('Sedang disiapkan')->assertSee('Bayar di kasir');
+
+    $counter->update(['kitchen_completed_at' => now()]);
+    $this->get($counterUrl)->assertSee('Pesanan selesai')->assertSee('Bayar di kasir')->assertSee('http-equiv="refresh"', false);
+
+    $counter->update(['payment_status' => 'paid']);
+    $this->get($counterUrl)->assertDontSee('Bayar di kasir')->assertDontSee('http-equiv="refresh"', false);
     $this->get(route('customer.order.status', [$tenant->slug, $table->id, $cancelled->id]))->assertSee('Pesanan dibatalkan');
 });
 

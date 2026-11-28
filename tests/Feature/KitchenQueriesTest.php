@@ -66,5 +66,6 @@ it('shows waiting minutes and escalates the colour after 15 minutes', function (
         ->assertSee('20 mnt')
         ->assertSee('2 mnt')
         ->assertSee('bg-red-600')
-        ->assertDontSee('bg-amber-500');
+        ->assertDontSee('bg-amber-500')
+        ->assertSee('Aktifkan suara');
 });

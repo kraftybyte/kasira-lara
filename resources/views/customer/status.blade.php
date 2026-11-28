@@ -1,10 +1,14 @@
+@php
+    $paid = $sale->payment_status === 'paid';
+    $live = $stage !== 'cancelled' && ($stage !== 'done' || ! $paid);
+@endphp
 <!DOCTYPE html>
 <html lang="id">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Status Pesanan - {{ $tenant->name }}</title>
-    @if(! in_array($stage, ['done', 'cancelled']))
+    @if($live)
         <meta http-equiv="refresh" content="10">
     @endif
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,7 +25,7 @@
             'cancelled' => 'Pesanan dibatalkan',
         ][$stage];
         $steps = [
-            ['Dibayar', in_array($stage, ['cooking', 'ready', 'done'])],
+            ['Dibayar', $paid],
             ['Disiapkan dapur', in_array($stage, ['ready', 'done'])],
             ['Diantar ke meja', $stage === 'done'],
         ];
@@ -37,9 +41,9 @@
                     <p class="text-sm text-amber-800">Pesanan baru diproses setelah pembayaran diterima.</p>
                     <a href="{{ route('customer.order.payment', [$tenant->getRouteKey(), $table->id, $sale->id]) }}" class="mt-3 block w-full py-3 bg-amber-500 text-white text-center rounded-lg font-semibold">Bayar Sekarang</a>
                 </div>
-            @elseif($stage === 'cooking' && $sale->payment_status !== 'paid')
-                <div class="mt-6 rounded-xl bg-gray-50 border border-gray-200 p-4">
-                    <p class="text-sm text-gray-700">Bayar di kasir saat pesanan selesai.</p>
+            @elseif(! $paid && $stage !== 'cancelled')
+                <div class="mt-6 rounded-xl bg-amber-50 border border-amber-200 p-4">
+                    <p class="text-sm text-amber-800">Belum dibayar. Bayar di kasir saat pesanan selesai.</p>
                 </div>
             @endif
 
@@ -76,7 +80,7 @@
                 </div>
             </div>
 
-            @if(! in_array($stage, ['done', 'cancelled']))
+            @if($live)
                 <p class="mt-6 text-center text-xs text-gray-400">Halaman ini diperbarui otomatis tiap 10 detik.</p>
             @endif
         </div>
