@@ -4,6 +4,7 @@ use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PaywuzWebhookController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReportExportController;
+use App\Livewire\KitchenDisplay;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/admin/login', 301)->name('home');
@@ -38,6 +39,10 @@ Route::get('/order/{tenant}/{table}/{sale}/success', [CustomerOrderController::c
 
 Route::get('/order/{tenant}/{table}/{sale}/status', [CustomerOrderController::class, 'status'])
     ->name('customer.order.status');
+
+// Layar pantau dapur tanpa login (token dari halaman Dapur)
+Route::get('/kitchen-display/{tenant}/{token}', KitchenDisplay::class)
+    ->name('kitchen.display');
 
 /*
 |--------------------------------------------------------------------------

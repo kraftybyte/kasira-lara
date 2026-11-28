@@ -4,6 +4,7 @@ namespace App\Filament\Pages;
 
 use App\Models\Sale;
 use App\Models\TenantSetting;
+use App\Services\KitchenBoard;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -12,6 +13,7 @@ use Filament\Support\Icons\Heroicon;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
 use Livewire\Attributes\Url;
@@ -103,7 +105,49 @@ class Kitchen extends Page
     #[Computed]
     public function sopMinutes(): int
     {
-        return max(1, (int) (TenantSetting::where('tenant_id', $this->getTenant()?->id)->value('kitchen_sop_minutes') ?? 15));
+        $tenant = $this->getTenant();
+
+        return $tenant ? KitchenBoard::sopMinutes((int) $tenant->id) : 15;
+    }
+
+    /**
+     * Tautan layar pantau bertoken; hanya untuk peran yang boleh membagikannya.
+     */
+    #[Computed]
+    public function displayUrl(): ?string
+    {
+        $tenant = $this->getTenant();
+
+        if (! $tenant || ! $this->canShareDisplay()) {
+            return null;
+        }
+
+        $setting = TenantSetting::getOrCreateForTenant((int) $tenant->id);
+
+        if (blank($setting->kitchen_display_token)) {
+            $setting->update(['kitchen_display_token' => Str::random(40)]);
+        }
+
+        return route('kitchen.display', ['tenant' => $tenant->getRouteKey(), 'token' => $setting->kitchen_display_token]);
+    }
+
+    public function regenerateDisplayToken(): void
+    {
+        $tenant = $this->getTenant();
+
+        if (! $tenant || ! $this->canShareDisplay()) {
+            return;
+        }
+
+        TenantSetting::getOrCreateForTenant((int) $tenant->id)->update(['kitchen_display_token' => Str::random(40)]);
+        unset($this->displayUrl);
+
+        Notification::make()->title('Tautan layar pantau baru dibuat; tautan lama tidak berlaku.')->success()->send();
+    }
+
+    protected function canShareDisplay(): bool
+    {
+        return (bool) auth()->user()?->hasAnyRole(['super_admin', 'owner', 'kepala_toko', 'cashier']);
     }
 
     /**
@@ -113,39 +157,16 @@ class Kitchen extends Page
     public function pendingOrders(): Collection
     {
         $tenant = $this->getTenant();
-        if (! $tenant) {
-            return collect();
-        }
 
-        // Orders that need cooking: not yet served, not kitchen completed
-        return Sale::query()
-            ->where('tenant_id', $tenant->id)
-            ->whereNull('closed_at')
-            ->whereNull('served_at')
-            ->whereNull('kitchen_completed_at')
-            ->with(['items.modifiers', 'table'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+        return $tenant ? KitchenBoard::pending((int) $tenant->id) : collect();
     }
 
     #[Computed]
     public function readyOrders(): Collection
     {
         $tenant = $this->getTenant();
-        if (! $tenant) {
-            return collect();
-        }
 
-        // Orders that are marked as served - show regardless of payment status
-        // Not kitchen completed yet
-        return Sale::query()
-            ->where('tenant_id', $tenant->id)
-            ->whereNull('closed_at')
-            ->whereNotNull('served_at')
-            ->whereNull('kitchen_completed_at')
-            ->with(['items.modifiers', 'table'])
-            ->orderBy('created_at', 'asc')
-            ->get();
+        return $tenant ? KitchenBoard::ready((int) $tenant->id) : collect();
     }
 
     /**

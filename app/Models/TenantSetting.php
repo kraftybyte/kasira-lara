@@ -57,6 +57,7 @@ class TenantSetting extends Model
         'payment_cash',
         'payment_edc',
         'kitchen_sop_minutes',
+        'kitchen_display_token',
 
         // QR Meja Payment Methods
         'table_qr_qris_auto',
