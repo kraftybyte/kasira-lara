@@ -4,6 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="robots" content="noindex">
+    @include('partials.pwa-head', ['pwaStart' => request()->getRequestUri()])
     <title>{{ $title ?? 'Layar Dapur' }}</title>
     @vite('resources/css/filament/admin/theme.css')
     <style>

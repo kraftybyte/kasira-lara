@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\CustomerOrderController;
 use App\Http\Controllers\PaywuzWebhookController;
+use App\Http\Controllers\PwaController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\ReportExportController;
 use App\Livewire\KitchenDisplay;
@@ -39,6 +40,9 @@ Route::get('/order/{tenant}/{table}/{sale}/success', [CustomerOrderController::c
 
 Route::get('/order/{tenant}/{table}/{sale}/status', [CustomerOrderController::class, 'status'])
     ->name('customer.order.status');
+
+// Manifest PWA (ikon di layar utama iOS/Android)
+Route::get('/manifest.webmanifest', [PwaController::class, 'manifest'])->name('pwa.manifest');
 
 // Layar pantau dapur tanpa login (token dari halaman Dapur)
 Route::get('/kitchen-display/{tenant}/{token}', KitchenDisplay::class)

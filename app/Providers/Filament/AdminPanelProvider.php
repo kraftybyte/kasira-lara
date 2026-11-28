@@ -70,6 +70,9 @@ class AdminPanelProvider extends PanelProvider
             // Disable global search in sidebar
             ->globalSearch(false)
 
+            // PWA: manifest, ikon layar utama, service worker
+            ->renderHook(PanelsRenderHook::HEAD_END, fn (): string => view('partials.pwa-head')->render())
+
             // Pil pemberitahuan operasional di kiri avatar
             ->renderHook(PanelsRenderHook::USER_MENU_BEFORE, fn (): string => Blade::render("@livewire('ops-alerts')"))
 
