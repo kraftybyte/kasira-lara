@@ -454,3 +454,6 @@ a.fi-ac-btn-action.fi-color-primary {
 .ops-strip::-webkit-scrollbar { height: 4px; }
 .ops-strip::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 9999px; }
 @media (prefers-reduced-motion: reduce) { .ops-bell-ring { animation: none; } }
+
+/* Tombol pasang aplikasi hanya muncul kalau browser bisa memasang (kelas diberi oleh skrip di pwa-head) */
+html:not(.kasira-can-install) .kasira-install-btn { display: none; }

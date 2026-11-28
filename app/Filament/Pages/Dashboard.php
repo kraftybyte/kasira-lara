@@ -7,6 +7,7 @@ use App\Models\SaleItem;
 use App\Models\Tenant;
 use BackedEnum;
 use Carbon\CarbonInterface;
+use Filament\Actions\Action;
 use Filament\Facades\Filament;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
@@ -29,6 +30,25 @@ class Dashboard extends Page
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedHome;
 
     public int $days = 30;
+
+    /**
+     * Ikon pintasan di kanan judul: Kasir, Meja, Dapur, Layar dapur, dan pasang aplikasi (tampil kalau browser mendukung).
+     *
+     * @return array<int, Action>
+     */
+    protected function getHeaderActions(): array
+    {
+        $slug = Filament::getTenant()?->getRouteKey();
+        $url = fn (string $path): string => url("/admin/{$slug}/{$path}");
+
+        return [
+            Action::make('pos')->label('Kasir')->tooltip('Kasir')->iconButton()->icon(Heroicon::OutlinedShoppingCart)->color('gray')->url($url('pos')),
+            Action::make('tables')->label('Meja')->tooltip('Meja')->iconButton()->icon(Heroicon::OutlinedTableCells)->color('gray')->url($url('tables-overview')),
+            Action::make('kitchen')->label('Dapur')->tooltip('Dapur')->iconButton()->icon(Heroicon::OutlinedFire)->color('gray')->url($url('kitchen')),
+            Action::make('kitchenDisplay')->label('Layar dapur')->tooltip('Layar dapur')->iconButton()->icon(Heroicon::OutlinedTv)->color('gray')->url($url('kitchen?display=1'))->openUrlInNewTab(),
+            Action::make('install')->label('Pasang aplikasi')->tooltip('Pasang aplikasi di layar utama')->iconButton()->icon(Heroicon::OutlinedArrowDownTray)->color('primary')->alpineClickHandler('window.kasiraInstall()')->extraAttributes(['class' => 'kasira-install-btn']),
+        ];
+    }
 
     public static function canAccess(): bool
     {
