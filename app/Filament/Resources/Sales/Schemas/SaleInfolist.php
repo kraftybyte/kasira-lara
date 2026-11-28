@@ -177,6 +177,7 @@ class SaleInfolist
                 'transfer', 'bank_transfer' => ['icon' => '🏦', 'label' => 'Transfer'],
                 'debit' => ['icon' => '💳', 'label' => 'Debit'],
                 'credit', 'credit_card' => ['icon' => '💳', 'label' => 'Credit'],
+                'edc' => ['icon' => '💳', 'label' => 'EDC'],
                 'counter' => ['icon' => '🏪', 'label' => 'Counter'],
                 default => ['icon' => '💰', 'label' => ucfirst($method)],
             };

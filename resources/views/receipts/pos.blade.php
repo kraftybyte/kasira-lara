@@ -350,6 +350,8 @@
         'credit',
         'credit_card' => 'Credit Card',
 
+        'edc' => 'EDC',
+
         default => $payment?->method
             ? ucfirst(
                 str_replace(

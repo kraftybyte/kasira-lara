@@ -232,6 +232,7 @@ class SalesReport extends Page
             'va' => ['Virtual Account', 'building-office', 'indigo'],
             'transfer' => ['Transfer', 'building-library', 'violet'],
             'transfer_manual' => ['Transfer Manual', 'building-library', 'pink'],
+            'edc' => ['EDC', 'credit-card', 'purple'],
         ];
 
         $result = [];

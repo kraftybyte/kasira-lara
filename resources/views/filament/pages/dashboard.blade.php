@@ -152,7 +152,7 @@
     </div>
 
     {{-- Payment Methods --}}
-    <div class="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-3">
+    <div class="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div class="card-hover p-4 flex items-center gap-4">
             <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-emerald-500 text-white">
                 <x-heroicon-o-banknotes class="h-6 w-6" />
@@ -180,6 +180,16 @@
             <div class="flex-1">
                 <p class="text-xs text-gray-500">Transfer</p>
                 <p class="text-xl font-bold text-gray-900">Rp {{ number_format($this->paymentSummary['transfer'] ?? 0, 0, ',', '.') }}</p>
+            </div>
+        </div>
+
+        <div class="card-hover p-4 flex items-center gap-4">
+            <div class="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-500 text-white">
+                <x-heroicon-o-credit-card class="h-6 w-6" />
+            </div>
+            <div class="flex-1">
+                <p class="text-xs text-gray-500">EDC</p>
+                <p class="text-xl font-bold text-gray-900">Rp {{ number_format($this->paymentSummary['edc'] ?? 0, 0, ',', '.') }}</p>
             </div>
         </div>
     </div>

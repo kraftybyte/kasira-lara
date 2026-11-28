@@ -116,6 +116,7 @@ class TenantSettings extends Page implements HasForms
             'payment_transfer' => $this->settings->payment_transfer ?? true,
             'payment_qris_manual' => $this->settings->payment_qris_manual ?? true,
             'payment_cash' => $this->settings->payment_cash ?? true,
+            'payment_edc' => $this->settings->payment_edc ?? true,
 
             // QR Meja Payment Methods
             'table_qr_qris_auto' => $this->settings->table_qr_qris_auto ?? true,
@@ -274,6 +275,9 @@ class TenantSettings extends Page implements HasForms
 
                                         Toggle::make('payment_cash')
                                             ->label('Cash / Tunai'),
+
+                                        Toggle::make('payment_edc')
+                                            ->label('EDC (kartu debit/kredit)'),
                                     ])->columns(2),
 
                                 Section::make('QR Meja')

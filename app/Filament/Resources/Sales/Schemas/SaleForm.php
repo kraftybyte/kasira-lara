@@ -2,14 +2,11 @@
 
 namespace App\Filament\Resources\Sales\Schemas;
 
-use App\Models\Sale;
-use Filament\Forms\Components\DateTimePicker;
 use Filament\Forms\Components\Radio;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
 use Filament\Schemas\Schema;
 
 class SaleForm
@@ -39,6 +36,7 @@ class SaleForm
                                 'transfer' => '🏦 Transfer Bank',
                                 'debit' => '💳 Debit',
                                 'credit' => '💳 Credit Card',
+                                'edc' => '💳 EDC',
                                 'va' => '🏧 Virtual Account',
                                 'counter' => '🏪 Bayar di Kasir',
                             ]),

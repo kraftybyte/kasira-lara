@@ -114,6 +114,7 @@
                                                             'transfer' => 'bg-purple-100 text-purple-700',
                                                             'counter' => 'bg-amber-100 text-amber-700',
                                                             'cash' => 'bg-green-100 text-green-700',
+                                                            'edc' => 'bg-indigo-100 text-indigo-700',
                                                             default => 'bg-gray-100 text-gray-600',
                                                         };
                                                     @endphp
@@ -190,6 +191,7 @@
                                                     'transfer' => 'bg-purple-100 text-purple-700',
                                                     'counter' => 'bg-amber-100 text-amber-700',
                                                     'cash' => 'bg-green-100 text-green-700',
+                                                            'edc' => 'bg-indigo-100 text-indigo-700',
                                                     default => 'bg-gray-100 text-gray-600',
                                                 };
                                             @endphp

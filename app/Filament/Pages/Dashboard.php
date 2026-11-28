@@ -115,6 +115,7 @@ class Dashboard extends Page
                 'cash' => 0,
                 'qris' => 0,
                 'transfer' => 0,
+                'edc' => 0,
                 'total' => 0,
             ];
         }
@@ -139,6 +140,7 @@ class Dashboard extends Page
             'cash' => (float) ($summary['cash'] ?? 0),
             'qris' => (float) ($summary['qris'] ?? 0),
             'transfer' => (float) ($summary['transfer'] ?? 0),
+            'edc' => (float) ($summary['edc'] ?? 0),
             'total' => array_sum($summary),
         ];
     }

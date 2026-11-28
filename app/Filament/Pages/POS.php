@@ -390,6 +390,13 @@ class POS extends Page
         return $settings?->payment_cash ?? true;
     }
 
+    public function getIsPaymentEdcEnabledProperty(): bool
+    {
+        $settings = TenantSetting::where('tenant_id', Filament::getTenant()?->id)->first();
+
+        return $settings?->payment_edc ?? true;
+    }
+
     /*
     |--------------------------------------------------------------------------
     | MODIFIER MODAL
@@ -1193,6 +1200,16 @@ class POS extends Page
                         }
                     }
 
+                    // Bayar di kasir: pesanan pelanggan tertua dipakai sebagai tagihan dan diperbarui di tempat,
+                    // supaya kartu dapur (waktu masuk, tanda siap) tidak hilang; pesanan tambahan dilebur lalu dihapus.
+                    $mergedCounterSales = collect();
+                    if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds) && $counterSales->isNotEmpty()) {
+                        $counterSales = $counterSales->sortBy('id')->values();
+                        $existingBill = $counterSales->first();
+                        $mergedCounterSales = $counterSales->slice(1);
+                        $isTableCheckout = true;
+                    }
+
                     $customerId = null;
                     if ($this->customerId) {
                         $customerId = Customer::query()->where('tenant_id', $tenantId)->whereKey($this->customerId)->value('id');
@@ -1217,6 +1234,9 @@ class POS extends Page
                         // Update existing bill to completed
                         $existingBill->update([
                             'customer_id' => $customerId ?? $existingBill->customer_id,
+                            'subtotal' => $subtotal,
+                            'tax' => $taxAmount,
+                            'grand_total' => $grandTotal,
                             'status' => 'completed',
                             'payment_status' => 'paid',
                             'paid_at' => now(),
@@ -1386,17 +1406,9 @@ class POS extends Page
 
                     $pointsEarned = $sale->awardLoyalty();
 
-                    if ($this->isBulkCounterMode && ! empty($this->bulkCounterSaleIds)) {
-                        $counterSales = Sale::whereIn('id', $this->bulkCounterSaleIds)
-                            ->where('tenant_id', $tenantId)
-                            ->where('payment_method', 'counter')
-                            ->lockForUpdate()
-                            ->get();
-
-                        foreach ($counterSales as $counterSale) {
-                            $counterSale->items()->delete();
-                            $counterSale->delete();
-                        }
+                    foreach ($mergedCounterSales as $counterSale) {
+                        $counterSale->items()->delete();
+                        $counterSale->delete();
                     }
 
                     /*

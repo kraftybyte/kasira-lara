@@ -129,6 +129,7 @@ class SalesTable
                                 'qris_manual' => 'warning',
                                 'va', 'virtual_account' => 'primary',
                                 'transfer', 'bank_transfer' => 'gray',
+                                'edc' => 'warning',
                                 default => 'gray',
                             };
                         }
@@ -152,6 +153,8 @@ class SalesTable
                             'credit' => '💳 Credit Card',
 
                             'credit_card' => '💳 Credit Card',
+
+                            'edc' => '💳 EDC',
 
                             'va', 'virtual_account' => '🏧 VA',
 
@@ -252,6 +255,9 @@ class SalesTable
                         'cash' => 'Tunai',
                         'qris' => 'QRIS',
                         'va' => 'Virtual Account',
+                        'transfer' => 'Transfer',
+                        'qris_manual' => 'QRIS Manual',
+                        'edc' => 'EDC',
                     ]),
 
                 SelectFilter::make('order_type')

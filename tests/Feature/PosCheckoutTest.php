@@ -3,6 +3,7 @@
 use App\Filament\Pages\POS;
 use App\Models\Category;
 use App\Models\Customer;
+use App\Models\Payment;
 use App\Models\Product;
 use App\Models\ProductModifier;
 use App\Models\Sale;
@@ -382,4 +383,53 @@ test('enter keeps the search text when the product could not be added', function
         ->call('addFirstMatch')
         ->assertSet('cart', [])
         ->assertSet('search', 'kopi');
+});
+
+it('pays counter orders in place so the kitchen card keeps its id, timer, and ready mark', function () {
+    [$tenant] = posOwner();
+    TenantSetting::create(['tenant_id' => $tenant->id, 'table_qr_pay_at_counter' => true]);
+    $nasi = posProduct($tenant, 'Nasi Goreng', 20000);
+    $teh = posProduct($tenant, 'Es Teh', 5000);
+    $table = Table::create(['tenant_id' => $tenant->id, 'name' => 'Meja 7', 'slug' => 'meja-7', 'status' => 'available', 'is_active' => true]);
+    test()->post(route('customer.order.checkout', ['tenant' => $tenant->slug, 'table' => $table->id]), [
+        'items' => json_encode([['product_id' => $nasi->id, 'quantity' => 1]]),
+        'payment_method' => 'counter',
+        'customer_name' => 'Budi',
+    ]);
+    $first = Sale::where('payment_method', 'counter')->firstOrFail();
+    $first->update(['served_at' => now()]);
+    $second = Sale::create(['tenant_id' => $tenant->id, 'table_id' => $table->id, 'invoice_number' => 'C-2', 'status' => 'pending', 'source' => 'customer', 'payment_method' => 'counter', 'payment_status' => 'pending', 'subtotal' => 5000, 'grand_total' => 5000]);
+    openBillItem($second, $teh);
+
+    $page = Livewire::withQueryParams(['bulk' => 'counter', 'table' => (string) $table->id, 'sale_ids' => $first->id.','.$second->id])->test(POS::class);
+    $total = (float) $page->instance()->total;
+    $page->set('paymentMethod', 'cash')->set('paidAmount', 100000)->call('processPayment')->assertDispatched('payment-success');
+
+    $first->refresh();
+    expect($first->status)->toBe('completed')
+        ->and($first->payment_status)->toBe('paid')
+        ->and($first->served_at)->not->toBeNull()
+        ->and((float) $first->grand_total)->toBe($total)
+        ->and($first->items()->count())->toBe(2)
+        ->and(Sale::find($second->id))->toBeNull()
+        ->and(Sale::where('source', 'pos')->count())->toBe(0);
+});
+
+test('edc payment records the full amount with no change', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 10000);
+
+    Livewire::test(POS::class)
+        ->call('addToCart', $kopi)
+        ->call('openCheckout')
+        ->assertSee('EDC')
+        ->set('paymentMethod', 'edc')
+        ->call('processPayment')
+        ->assertDispatched('payment-success');
+
+    $sale = Sale::where('source', 'pos')->firstOrFail();
+    expect($sale->payment_method)->toBe('edc')
+        ->and((float) $sale->paid_amount)->toBe((float) $sale->grand_total)
+        ->and((float) $sale->change_amount)->toBe(0.0)
+        ->and(Payment::where('sale_id', $sale->id)->value('method'))->toBe('edc');
 });
