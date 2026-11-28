@@ -487,6 +487,7 @@
                                 <input
                                     type="text"
                                     x-model="search"
+                                    x-ref="customerSearch"
                                     @focus="open = true"
                                     placeholder="Cari nama atau nomor HP..."
                                     class="block w-full rounded-lg border border-gray-200 bg-white px-3 py-2.5 pl-9 pr-9 text-sm text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-red-500 focus:ring-1 focus:ring-red-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white dark:placeholder:text-gray-500"
