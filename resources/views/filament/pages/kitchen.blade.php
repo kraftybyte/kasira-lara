@@ -21,13 +21,13 @@
     @if($display)
         {{-- Latar body ikut gelap dan padding atas/bawah kontainer halaman Filament dibuang, supaya tidak ada pita terang --}}
         <style>
-            html { font-size: 20px; }
+            @media (min-width: 1024px) { html { font-size: 20px; } }
             body { background-color: #030712; }
             .fi-page-header-main-ctn { padding: 0; }
         </style>
     @endif
     {{-- Header --}}
-    <div class="mb-6 flex items-center justify-between gap-4">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dapur</h1>
             <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
@@ -38,7 +38,7 @@
             </p>
         </div>
         <div class="flex items-center gap-2">
-            <span class="{{ $display ? 'mr-2 text-2xl font-bold text-white' : 'text-sm font-medium text-gray-500 dark:text-gray-400' }}">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
+            <span class="whitespace-nowrap {{ $display ? 'mr-2 text-2xl font-bold text-white' : 'text-sm font-medium text-gray-500 dark:text-gray-400' }}">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
             <button type="button" x-show="! audio" x-cloak @click="enableSound()" class="btn btn-secondary btn-md">
                 <x-heroicon-o-bell-alert class="h-4 w-4" />
                 Aktifkan suara
@@ -65,13 +65,17 @@
 
     @if(! $display && $this->displayUrl)
         {{-- Tautan layar pantau bertoken: tanpa login, hanya tampilan --}}
-        <div x-data="{ copied: false }" class="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-800">
-            <x-heroicon-o-tv class="h-5 w-5 shrink-0 text-gray-500" />
-            <span class="font-semibold text-gray-900 dark:text-white">Tautan layar pantau</span>
-            <span class="text-xs text-gray-500">tanpa login, hanya tampilan, untuk TV atau monitor dapur</span>
+        <div x-data="{ copied: false }" class="mb-6 rounded-2xl border border-gray-200 bg-white px-4 py-3 text-sm dark:border-gray-700 dark:bg-gray-800">
+            <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <x-heroicon-o-tv class="h-5 w-5 shrink-0 text-gray-500" />
+                <span class="font-semibold text-gray-900 dark:text-white">Tautan layar pantau</span>
+                <span class="text-xs text-gray-500">tanpa login, hanya tampilan, untuk TV atau monitor dapur</span>
+            </div>
+            <div class="mt-2 flex flex-wrap items-center gap-2">
             <input type="text" readonly value="{{ $this->displayUrl }}" @focus="$el.select()" class="min-w-0 flex-1 rounded-lg border-gray-200 bg-gray-50 px-3 py-1.5 text-xs text-gray-700 dark:border-gray-700 dark:bg-gray-900 dark:text-gray-200">
             <button type="button" @click="navigator.clipboard.writeText('{{ $this->displayUrl }}').then(() => { copied = true; setTimeout(() => copied = false, 1500) })" class="btn btn-secondary btn-sm" x-text="copied ? 'Tersalin' : 'Salin'"></button>
             <button type="button" wire:click="regenerateDisplayToken" wire:confirm="Tautan lama akan berhenti bekerja. Lanjutkan?" class="btn btn-ghost btn-sm">Buat tautan baru</button>
+            </div>
         </div>
     @endif
 

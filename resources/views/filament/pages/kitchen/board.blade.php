@@ -30,7 +30,7 @@
                 <p class="mt-4 text-sm font-medium text-gray-400">Tidak ada pesanan aktif</p>
             </div>
         @else
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div class="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
                 @foreach($pendingOrders as $order)
                     @php
                         $waitMinutes = max(0, (int) $order->created_at->diffInMinutes());
@@ -134,7 +134,7 @@
                 <p class="text-sm text-gray-400">Tidak ada pesanan siap disajikan</p>
             </div>
         @else
-            <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
+            <div class="grid gap-4 grid-cols-[repeat(auto-fill,minmax(min(100%,17rem),1fr))]">
                 @foreach($readyOrders as $order)
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}

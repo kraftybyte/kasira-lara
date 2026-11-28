@@ -7,7 +7,7 @@
     <title>{{ $title ?? 'Layar Dapur' }}</title>
     @vite('resources/css/filament/admin/theme.css')
     <style>
-        html { font-size: 20px; }
+        @media (min-width: 1024px) { html { font-size: 20px; } }
         body { background-color: #030712; }
     </style>
 </head>
