@@ -8,6 +8,8 @@ use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
 use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
+use Illuminate\Contracts\Support\Htmlable;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Locked;
@@ -51,6 +53,24 @@ class Kitchen extends Page
      */
     #[Url]
     public bool $display = false;
+
+    /**
+     * Judul dan breadcrumb bawaan Filament dimatikan; view punya header sendiri.
+     */
+    public function getHeader(): ?View
+    {
+        return null;
+    }
+
+    public function getHeading(): string|Htmlable|null
+    {
+        return null;
+    }
+
+    public function getBreadcrumbs(): array
+    {
+        return [];
+    }
 
     public function getLayout(): string
     {

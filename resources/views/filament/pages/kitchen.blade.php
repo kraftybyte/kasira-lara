@@ -15,38 +15,41 @@
     <div
         x-data="{ flash: false, audio: null, enableSound() { try { this.audio = new (window.AudioContext || window.webkitAudioContext)(); this.audio.resume(); this.beep(); } catch (e) {} }, beep() { if (! this.audio) return; try { const osc = this.audio.createOscillator(); const gain = this.audio.createGain(); osc.connect(gain); gain.connect(this.audio.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(this.audio.currentTime + 0.3); } catch (e) {} } }"
         x-on:kitchen-new-order.window="flash = true; beep(); setTimeout(() => flash = false, 2000)"
-        :class="flash && 'rounded-2xl ring-4 ring-red-500'"
-        class="transition-shadow"
+        :class="flash && 'ring-4 ring-inset ring-red-500'"
+        class="transition-shadow {{ $display ? 'dark min-h-screen bg-gray-950 p-6' : 'rounded-2xl' }}"
     >
     @if($display)
         <style>html { font-size: 20px; }</style>
     @endif
     {{-- Header --}}
-    <div class="mb-6 flex items-center justify-between">
+    <div class="mb-6 flex items-center justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-900 dark:text-white">Dapur</h1>
-            <p class="mt-1 text-sm text-gray-500">{{ $this->getTenant()?->name }}</p>
+            <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                {{ $this->getTenant()?->name }}
+                @if($display)
+                    &middot; {{ $this->pendingOrders->count() }} dimasak &middot; {{ $this->readyOrders->count() }} siap
+                @endif
+            </p>
         </div>
-        <div class="flex items-center gap-3">
-            <span class="text-sm font-medium text-gray-500 dark:text-gray-400">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
+        <div class="flex items-center gap-2">
+            <span class="{{ $display ? 'mr-2 text-2xl font-bold text-white' : 'text-sm font-medium text-gray-500 dark:text-gray-400' }}">{{ $this->getTenant()?->now()->format('H:i') }} {{ $this->getTenant()?->timezoneLabel() }}</span>
             <button type="button" x-show="! audio" x-cloak @click="enableSound()" class="btn btn-secondary btn-md">
                 <x-heroicon-o-bell-alert class="h-4 w-4" />
                 Aktifkan suara
             </button>
-            <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
-                <x-heroicon-o-arrow-path class="h-4 w-4" />
-                Refresh
-            </button>
             @if($display)
-                <button type="button" x-data x-show="! document.fullscreenElement" @click="document.documentElement.requestFullscreen?.()" class="btn btn-secondary btn-md">
+                <button type="button" @click="document.documentElement.requestFullscreen?.()" class="btn btn-secondary btn-md" aria-label="Layar penuh" title="Layar penuh">
                     <x-heroicon-o-arrows-pointing-out class="h-4 w-4" />
-                    Layar penuh
                 </button>
-                <a href="{{ route('filament.admin.pages.kitchen', ['tenant' => $this->getTenant()?->getRouteKey()]) }}" class="btn btn-ghost btn-md">
+                <a href="{{ route('filament.admin.pages.kitchen', ['tenant' => $this->getTenant()?->getRouteKey()]) }}" class="btn btn-secondary btn-md" aria-label="Keluar mode layar" title="Keluar mode layar">
                     <x-heroicon-o-x-mark class="h-4 w-4" />
-                    Keluar mode layar
                 </a>
             @else
+                <button wire:click="$refresh" class="btn btn-secondary btn-md" aria-label="Refresh halaman">
+                    <x-heroicon-o-arrow-path class="h-4 w-4" />
+                    Refresh
+                </button>
                 <a href="{{ route('filament.admin.pages.kitchen', ['tenant' => $this->getTenant()?->getRouteKey(), 'display' => 1]) }}" target="_blank" rel="noopener" class="btn btn-primary btn-md">
                     <x-heroicon-o-tv class="h-4 w-4" />
                     Layar dapur
@@ -55,6 +58,7 @@
         </div>
     </div>
 
+    @unless($display)
     {{-- Quick Stats --}}
     <div class="mb-8 grid grid-cols-2 gap-4">
         <div class="card-hover flex items-center gap-4 rounded-2xl bg-white p-5 shadow-sm dark:bg-gray-800">
@@ -77,6 +81,7 @@
             </div>
         </div>
     </div>
+    @endunless
 
     {{-- Orders in Progress --}}
     <div class="mb-12">
