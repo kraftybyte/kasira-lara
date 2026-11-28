@@ -36,7 +36,7 @@ class SaleForm
                                 'transfer' => '🏦 Transfer Bank',
                                 'debit' => '💳 Debit',
                                 'credit' => '💳 Credit Card',
-                                'edc' => '💳 EDC',
+                                'edc' => '💳 EDC (Kartu/QR)',
                                 'va' => '🏧 Virtual Account',
                                 'counter' => '🏪 Bayar di Kasir',
                             ]),

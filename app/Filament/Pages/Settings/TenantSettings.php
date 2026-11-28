@@ -277,7 +277,7 @@ class TenantSettings extends Page implements HasForms
                                             ->label('Cash / Tunai'),
 
                                         Toggle::make('payment_edc')
-                                            ->label('EDC (kartu debit/kredit)'),
+                                            ->label('EDC (kartu debit/kredit dan QR lewat mesin EDC)'),
                                     ])->columns(2),
 
                                 Section::make('QR Meja')

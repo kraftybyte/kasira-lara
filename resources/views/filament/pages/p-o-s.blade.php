@@ -813,7 +813,7 @@
                                         <div class="flex h-11 w-11 items-center justify-center rounded-xl transition-all duration-200 {{ $paymentMethod === 'edc' ? 'bg-green-500 text-white shadow-lg' : 'bg-gray-100 text-gray-600 group-hover:bg-green-100 dark:bg-gray-700 dark:text-gray-300 dark:group-hover:text-green-400' }}">
                                             <x-heroicon-o-credit-card class="h-5 w-5" />
                                         </div>
-                                        <span class="text-xs font-bold {{ $paymentMethod === 'edc' ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300' }}">EDC</span>
+                                        <span class="text-xs font-bold {{ $paymentMethod === 'edc' ? 'text-green-600 dark:text-green-400' : 'text-gray-700 dark:text-gray-300' }}">EDC (Kartu/QR)</span>
                                         @if ($paymentMethod === 'edc')
                                             <div class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-green-500">
                                                 <x-heroicon-o-check class="h-3 w-3 text-white" />
