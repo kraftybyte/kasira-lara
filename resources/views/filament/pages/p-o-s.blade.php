@@ -431,15 +431,16 @@
                 <div
                     class="overflow-visible rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-900"
                     x-data="{
+                        expanded: false,
                         open: false,
                         search: ''
                     }"
-                    @click.outside="open = false"
+                    @click.outside="open = false; expanded = false"
                 >
 
                     @php $selectedCustomerName = $customerId ? $this->customers->firstWhere('id', $customerId)?->name : null; @endphp
                     {{-- HEADER: satu baris, klik untuk membuka pencarian --}}
-                    <div class="flex cursor-pointer items-center justify-between px-4 py-3" :class="open && 'border-b border-gray-100 dark:border-gray-700'" @click="open = ! open">
+                    <div class="flex cursor-pointer items-center justify-between px-4 py-3" :class="expanded && 'border-b border-gray-100 dark:border-gray-700'" @click="expanded = ! expanded; if (expanded) $nextTick(() => $refs.customerSearch.focus())">
 
                         <div class="flex items-center gap-2.5">
 
@@ -472,7 +473,7 @@
 
 
                     {{-- CUSTOMER CONTENT --}}
-                    <div class="space-y-2.5 p-3" x-show="open" x-cloak>
+                    <div class="space-y-2.5 p-3" x-show="expanded" x-cloak>
 
 
                         {{-- =================================================
@@ -516,14 +517,14 @@
                                 x-transition:enter="transition ease-out duration-100"
                                 x-transition:enter-start="opacity-0 -translate-y-1"
                                 x-transition:enter-end="opacity-100 translate-y-0"
-                                class="absolute left-0 right-0 top-full z-50 mt-1 overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
+                                class="absolute left-0 right-0 bottom-full z-50 mb-1 overflow-hidden rounded-xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800"
                             >
 
                                 {{-- WALK IN --}}
                                 <button
                                     type="button"
                                     wire:click="$set('customerId', null)"
-                                    @click="search = ''; open = false"
+                                    @click="search = ''; open = false; expanded = false"
                                     class="flex w-full items-center gap-3 border-b border-gray-100 px-3 py-2.5 text-left transition hover:bg-gray-50 dark:border-gray-700 dark:hover:bg-gray-700"
                                 >
 
@@ -567,7 +568,7 @@
                                                 '{{ strtolower($customer->phone ?? '') }}'.includes(search.toLowerCase())
                                             "
                                             wire:click="$set('customerId', {{ $customer->id }})"
-                                            @click="search = ''; open = false"
+                                            @click="search = ''; open = false; expanded = false"
                                             class="flex w-full items-center gap-3 px-3 py-2.5 text-left transition hover:bg-red-50 dark:hover:bg-red-500/10"
                                         >
 
