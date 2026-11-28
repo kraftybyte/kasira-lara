@@ -346,7 +346,7 @@ test('cash payment refocuses the search box for the next order', function () {
         ->set('paymentMethod', 'cash')
         ->set('paidAmount', 10000)
         ->call('processPayment')
-        ->assertDispatched('payment-success')
+        ->assertDispatched('payment-success', fn (string $event, array $params): bool => count($params['receipt']['w32']) > 5 && count($params['receipt']['w48']) > 5 && $params['paymentMethod'] === 'cash')
         ->assertDispatched('focus-search');
 });
 

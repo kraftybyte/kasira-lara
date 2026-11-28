@@ -1285,8 +1285,11 @@
     @endif
     {{-- SUCCESS POPUP --}}
     <div x-data="{
-        show: false, countdown: 5, invoice: '-', total: 0, change: 0, pointsEarned: 0, customerPoints: 0, receiptUrl: null, timer: null,
+        show: false, countdown: 5, invoice: '-', total: 0, change: 0, pointsEarned: 0, customerPoints: 0, receiptUrl: null, timer: null, receipt: null, method: null,
+        thermal() { return window.KasiraPrinter && window.KasiraPrinter.connected() && this.receipt; },
         openPopup(data) {
+            this.receipt = data.receipt ?? null;
+            this.method = data.paymentMethod ?? null;
             this.invoice = data.invoice ?? data.invoice_number ?? data.uuid ?? '-';
             this.total = Number(data.total ?? data.grand_total ?? 0);
             this.change = Number(data.change ?? data.change_amount ?? 0);
@@ -1301,6 +1304,12 @@
         },
         printReceipt() {
             if (this.timer) clearInterval(this.timer), this.timer = null;
+            if (this.thermal()) {
+                const p = window.KasiraPrinter;
+                const lines = this.receipt[p.width() === 48 ? 'w48' : 'w32'] ?? this.receipt.w32;
+                p.print(lines, { drawer: this.method === 'cash' }).catch(() => { if (this.receiptUrl) window.open(this.receiptUrl, '_blank', 'width=420,height=700,scrollbars=yes,resizable=yes'); });
+                this.show = false; return;
+            }
             if (!this.receiptUrl) { this.show = false; return; }
             window.open(this.receiptUrl, '_blank', 'width=420,height=700,scrollbars=yes,resizable=yes');
             this.show = false;
@@ -1347,7 +1356,7 @@
                 </div>
 
                 <div class="px-5 pt-5 text-center">
-                    <p class="text-xs text-gray-500">Struk terbuka dalam <span x-text="countdown" class="font-bold text-gray-900 dark:text-white"></span> detik</p>
+                    <p class="text-xs text-gray-500"><span x-text="thermal() ? 'Dicetak ke ' + window.KasiraPrinter.name + ' dalam' : 'Struk terbuka dalam'"></span> <span x-text="countdown" class="font-bold text-gray-900 dark:text-white"></span> detik</p>
                 </div>
 
                 <div class="flex gap-3 p-5">
@@ -1509,4 +1518,91 @@
     {{-- Order Details Modal --}}
     @livewire(\App\Livewire\OrderDetailsModal::class)
 
+    {{-- Printer termal: WebUSB / Web Bluetooth, ESC/POS. Perangkat yang pernah diizinkan tersambung lagi otomatis. --}}
+    @once
+    @push('scripts')
+    <script>
+        window.KasiraPrinter = {
+            usb: null, usbOut: null, ble: null, bleChar: null, name: null,
+            usbFilters: [{ classCode: 7 }, { vendorId: 0x04b8 }, { vendorId: 0x0483 }, { vendorId: 0x0416 }, { vendorId: 0x1fc9 }, { vendorId: 0x28e9 }, { vendorId: 0x0dd4 }, { vendorId: 0x1504 }, { vendorId: 0x0fe6 }, { vendorId: 0x6868 }],
+            bleServices: ['000018f0-0000-1000-8000-00805f9b34fb', '0000ff00-0000-1000-8000-00805f9b34fb', '49535343-fe7d-4ae5-8fa9-9fafd205e455', 'e7810a71-73ae-499d-8c15-faa9aef0c3f2'],
+            width() { return Number(localStorage.getItem('kasira.printer.width') || 32); },
+            setWidth(w) { localStorage.setItem('kasira.printer.width', String(w)); },
+            connected() { return !!(this.usbOut || this.bleChar); },
+            async autoConnect() {
+                try { if (navigator.usb) { for (const d of await navigator.usb.getDevices()) { if (await this.openUsb(d)) return true; } } } catch (e) {}
+                try { if (navigator.bluetooth && navigator.bluetooth.getDevices) { for (const d of await navigator.bluetooth.getDevices()) { if (await this.openBle(d)) return true; } } } catch (e) {}
+                return false;
+            },
+            async pairUsb() {
+                if (!navigator.usb) throw new Error('Browser ini tidak mendukung WebUSB. Pakai Chrome atau Edge.');
+                return this.openUsb(await navigator.usb.requestDevice({ filters: this.usbFilters }));
+            },
+            async openUsb(d) {
+                try {
+                    await d.open();
+                    if (d.configuration === null) await d.selectConfiguration(1);
+                    for (const iface of d.configuration.interfaces) {
+                        const alt = iface.alternates[0];
+                        const out = alt.endpoints.find(e => e.direction === 'out' && e.type === 'bulk');
+                        if (!out) continue;
+                        await d.claimInterface(iface.interfaceNumber);
+                        this.usb = d; this.usbOut = out.endpointNumber; this.name = d.productName || 'Printer USB';
+                        navigator.usb.addEventListener('disconnect', ev => { if (ev.device === this.usb) this.reset(); });
+                        this.notify(); return true;
+                    }
+                } catch (e) { console.warn('printer usb', e); }
+                return false;
+            },
+            async pairBle() {
+                if (!navigator.bluetooth) throw new Error('Browser ini tidak mendukung Web Bluetooth. Pakai Chrome atau Edge.');
+                return this.openBle(await navigator.bluetooth.requestDevice({ acceptAllDevices: true, optionalServices: this.bleServices }));
+            },
+            async openBle(d) {
+                try {
+                    const server = await d.gatt.connect();
+                    for (const s of await server.getPrimaryServices()) {
+                        const c = (await s.getCharacteristics()).find(c => c.properties.writeWithoutResponse || c.properties.write);
+                        if (!c) continue;
+                        this.ble = d; this.bleChar = c; this.name = d.name || 'Printer Bluetooth';
+                        d.addEventListener('gattserverdisconnected', () => this.reset());
+                        this.notify(); return true;
+                    }
+                } catch (e) { console.warn('printer ble', e); }
+                return false;
+            },
+            disconnect() {
+                try { this.usb && this.usb.close(); } catch (e) {}
+                try { this.ble && this.ble.gatt.disconnect(); } catch (e) {}
+                this.reset();
+            },
+            reset() { this.usb = this.usbOut = this.ble = this.bleChar = this.name = null; this.notify(); },
+            notify() { window.dispatchEvent(new CustomEvent('printer-changed', { detail: { connected: this.connected(), name: this.name } })); },
+            bytes(lines, opts) {
+                const enc = new TextEncoder();
+                const ascii = s => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^\x20-\x7e]/g, '?');
+                const parts = [[0x1b, 0x40]];
+                for (const l of lines) parts.push(Array.from(enc.encode(ascii(l) + '\n')));
+                parts.push([0x1b, 0x64, 0x03, 0x1d, 0x56, 0x42, 0x00]);
+                if (opts && opts.drawer) parts.push([0x1b, 0x70, 0x00, 0x19, 0xfa]);
+                return new Uint8Array(parts.flat());
+            },
+            async print(lines, opts) {
+                const data = this.bytes(lines, opts || {});
+                if (this.usbOut) { await this.usb.transferOut(this.usbOut, data); return true; }
+                if (this.bleChar) {
+                    for (let i = 0; i < data.length; i += 100) {
+                        const chunk = data.slice(i, i + 100);
+                        this.bleChar.properties.writeWithoutResponse ? await this.bleChar.writeValueWithoutResponse(chunk) : await this.bleChar.writeValue(chunk);
+                    }
+                    return true;
+                }
+                throw new Error('Printer tidak terhubung');
+            },
+        };
+        const kasiraPrinterBoot = () => window.KasiraPrinter.autoConnect();
+        document.readyState === 'loading' ? document.addEventListener('DOMContentLoaded', kasiraPrinterBoot) : kasiraPrinterBoot();
+    </script>
+    @endpush
+    @endonce
 </x-filament-panels::page>

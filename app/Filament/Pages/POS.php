@@ -14,6 +14,7 @@ use App\Models\SaleItemModifier;
 use App\Models\Table;
 use App\Models\TenantSetting;
 use App\Services\PaywuzService;
+use App\Services\ReceiptText;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -603,6 +604,16 @@ class POS extends Page
     | ADD TO CART
     |--------------------------------------------------------------------------
     */
+
+    /**
+     * Struk teks untuk printer termal, 58 mm (32 kolom) dan 80 mm (48 kolom); perangkat memilih lebarnya.
+     *
+     * @return array{w32: array<int, string>, w48: array<int, string>}
+     */
+    protected function receiptPayload(Sale $sale): array
+    {
+        return ['w32' => ReceiptText::lines($sale, 32), 'w48' => ReceiptText::lines($sale, 48)];
+    }
 
     public function addFirstMatch(): void
     {
@@ -1509,7 +1520,9 @@ class POS extends Page
 
                 receiptUrl: $receiptUrl,
 
-                pointsEarned: $pointsEarned
+                pointsEarned: $pointsEarned,
+                receipt: $this->receiptPayload($sale),
+                paymentMethod: (string) $sale->payment_method
             );
 
             /*
@@ -2862,7 +2875,9 @@ class POS extends Page
                 total: $sale->grand_total,
                 change: 0,
                 receiptUrl: $receiptUrl,
-                pointsEarned: 0
+                pointsEarned: 0,
+                receipt: $this->receiptPayload($sale),
+                paymentMethod: (string) $sale->payment_method
             );
 
             // Reset POS
@@ -3282,7 +3297,9 @@ class POS extends Page
                 total: $sale->grand_total,
                 change: 0,
                 receiptUrl: $receiptUrl,
-                pointsEarned: 0
+                pointsEarned: 0,
+                receipt: $this->receiptPayload($sale),
+                paymentMethod: (string) $sale->payment_method
             );
 
             // Reset POS
