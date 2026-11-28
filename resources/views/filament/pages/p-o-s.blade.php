@@ -727,13 +727,13 @@
                     <div class="space-y-4 p-6">
 
                         {{-- TOTAL --}}
-                        <div class="overflow-hidden rounded-2xl bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900 p-6 text-white shadow-xl">
+                        <div class="overflow-hidden rounded-2xl p-6 text-white gradient-bg-shadow">
                             <div class="flex items-center justify-between">
                                 <div>
-                                    <p class="text-xs font-medium uppercase tracking-wider text-gray-400">Total Pembayaran</p>
+                                    <p class="text-xs font-medium uppercase tracking-wider text-white/80">Total Pembayaran</p>
                                     <p class="mt-2 text-4xl font-black tracking-tight">Rp {{ number_format($this->total, 0, ',', '.') }}</p>
                                 </div>
-                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl gradient-bg shadow-lg">
+                                <div class="flex h-14 w-14 items-center justify-center rounded-2xl bg-white/20">
                                     <x-heroicon-o-shopping-cart class="h-7 w-7 text-white" />
                                 </div>
                             </div>
@@ -1209,8 +1209,8 @@
 
                         {{-- SUMMARY --}}
                         <div class="overflow-hidden rounded-2xl border border-gray-200 bg-white dark:border-gray-700 dark:bg-gray-800">
-                            <div class="bg-gradient-to-r from-gray-800 to-gray-900 px-4 py-3">
-                                <p class="text-xs font-semibold uppercase tracking-wider text-gray-400">Ringkasan</p>
+                            <div class="px-4 py-3 gradient-bg">
+                                <p class="text-xs font-semibold uppercase tracking-wider text-white/90">Ringkasan</p>
                             </div>
                             <div class="divide-y divide-gray-100 dark:divide-gray-700">
                                 <div class="flex items-center justify-between px-4 py-3">
