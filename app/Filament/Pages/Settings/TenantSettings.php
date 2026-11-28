@@ -117,6 +117,7 @@ class TenantSettings extends Page implements HasForms
             'payment_qris_manual' => $this->settings->payment_qris_manual ?? true,
             'payment_cash' => $this->settings->payment_cash ?? true,
             'payment_edc' => $this->settings->payment_edc ?? true,
+            'kitchen_sop_minutes' => $this->settings->kitchen_sop_minutes ?? 15,
 
             // QR Meja Payment Methods
             'table_qr_qris_auto' => $this->settings->table_qr_qris_auto ?? true,
@@ -292,6 +293,19 @@ class TenantSettings extends Page implements HasForms
                                         Toggle::make('table_qr_pay_at_counter')
                                             ->label('Bayar di Kasir'),
                                     ])->columns(3),
+
+                                Section::make('Dapur')
+                                    ->description('Batas waktu pesanan menunggu di dapur')
+                                    ->schema([
+                                        TextInput::make('kitchen_sop_minutes')
+                                            ->label('SOP waktu pesanan')
+                                            ->numeric()
+                                            ->minValue(1)
+                                            ->maxValue(240)
+                                            ->suffix('menit')
+                                            ->required()
+                                            ->helperText('Pesanan yang menunggu lebih lama dari ini jadi merah di Dapur dan muncul sebagai pemberitahuan di atas.'),
+                                    ])->columns(3),
                             ]),
 
                         Tab::make('bank')
@@ -413,6 +427,8 @@ class TenantSettings extends Page implements HasForms
             $this->settings->payment_transfer = $data['payment_transfer'] ?? false;
             $this->settings->payment_qris_manual = $data['payment_qris_manual'] ?? false;
             $this->settings->payment_cash = $data['payment_cash'] ?? false;
+            $this->settings->payment_edc = $data['payment_edc'] ?? false;
+            $this->settings->kitchen_sop_minutes = max(1, (int) ($data['kitchen_sop_minutes'] ?? 15));
 
             // QR Meja Payment Methods
             $this->settings->table_qr_qris_auto = $data['table_qr_qris_auto'] ?? false;

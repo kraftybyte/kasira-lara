@@ -3,6 +3,7 @@
 namespace App\Filament\Pages;
 
 use App\Models\Sale;
+use App\Models\TenantSetting;
 use BackedEnum;
 use Filament\Facades\Filament;
 use Filament\Notifications\Notification;
@@ -94,6 +95,15 @@ class Kitchen extends Page
         }
 
         $this->seenOrderIds = $currentIds;
+    }
+
+    /**
+     * Batas menit pesanan menunggu sebelum jadi merah; dari Pengaturan tenant.
+     */
+    #[Computed]
+    public function sopMinutes(): int
+    {
+        return max(1, (int) (TenantSetting::where('tenant_id', $this->getTenant()?->id)->value('kitchen_sop_minutes') ?? 15));
     }
 
     /**

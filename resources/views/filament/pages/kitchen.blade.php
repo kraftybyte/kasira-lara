@@ -112,7 +112,8 @@
                 @foreach($this->pendingOrders as $order)
                     @php
                         $waitMinutes = max(0, (int) $order->created_at->diffInMinutes());
-                        $urgency = $waitMinutes >= 15 ? 'bg-red-600' : ($waitMinutes >= 10 ? 'bg-amber-500' : 'bg-gray-800 dark:bg-gray-700');
+                        $sop = $this->sopMinutes;
+                        $urgency = $waitMinutes >= $sop ? 'bg-red-600' : ($waitMinutes >= max(1, $sop - 5) ? 'bg-amber-500' : 'bg-gray-800 dark:bg-gray-700');
                     @endphp
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}

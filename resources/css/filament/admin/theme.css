@@ -405,3 +405,15 @@ a.fi-ac-btn-action.fi-color-primary {
     --color-900: var(--primary-900) !important;
     --color-950: var(--primary-950) !important;
 }
+
+/* ==================== OPS ALERTS BELL ==================== */
+@keyframes ops-ring {
+    0%, 60%, 100% { transform: rotate(0); }
+    10% { transform: rotate(14deg); }
+    20% { transform: rotate(-12deg); }
+    30% { transform: rotate(9deg); }
+    40% { transform: rotate(-6deg); }
+    50% { transform: rotate(3deg); }
+}
+.ops-bell-ring { animation: ops-ring 2.4s ease-in-out infinite; transform-origin: top center; }
+@media (prefers-reduced-motion: reduce) { .ops-bell-ring { animation: none; } }

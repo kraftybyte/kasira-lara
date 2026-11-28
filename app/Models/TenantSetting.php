@@ -56,6 +56,7 @@ class TenantSetting extends Model
         'payment_qris_manual',
         'payment_cash',
         'payment_edc',
+        'kitchen_sop_minutes',
 
         // QR Meja Payment Methods
         'table_qr_qris_auto',
@@ -94,6 +95,7 @@ class TenantSetting extends Model
         'payment_qris_manual' => 'boolean',
         'payment_cash' => 'boolean',
         'payment_edc' => 'boolean',
+        'kitchen_sop_minutes' => 'integer',
 
         // QR Meja Payment Methods
         'table_qr_qris_auto' => 'boolean',
