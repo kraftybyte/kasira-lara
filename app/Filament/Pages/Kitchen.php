@@ -106,6 +106,14 @@ class Kitchen extends Page
             ->get();
     }
 
+    /**
+     * Render ulang di tempat, bukan memuat ulang halaman: izin suara dan daftar pesanan yang sudah dilihat tetap tersimpan.
+     */
+    protected function refreshBoard(): void
+    {
+        unset($this->pendingOrders, $this->readyOrders);
+    }
+
     public function markAsServed(int $saleId): void
     {
         try {
@@ -119,9 +127,7 @@ class Kitchen extends Page
                 ->body('Pesanan ditandai siap disajikan.')
                 ->success()
                 ->send();
-
-            // Refresh the page
-            $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
+            $this->refreshBoard();
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -144,9 +150,7 @@ class Kitchen extends Page
                 ->body('Pesanan dikembalikan ke daftar masak.')
                 ->success()
                 ->send();
-
-            // Refresh the page
-            $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
+            $this->refreshBoard();
         } catch (Throwable $e) {
             Notification::make()
                 ->title('Gagal')
@@ -174,9 +178,7 @@ class Kitchen extends Page
                     ->body('Pesanan ditutup dari dapur.')
                     ->success()
                     ->send();
-
-                // Refresh the page
-                $this->redirect(route('filament.admin.pages.kitchen', ['tenant' => $tenant?->getRouteKey()]), navigate: true);
+                $this->refreshBoard();
             } else {
                 Notification::make()
                     ->title('Gagal')

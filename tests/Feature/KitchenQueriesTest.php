@@ -69,3 +69,25 @@ it('shows waiting minutes and escalates the colour after 15 minutes', function (
         ->assertDontSee('bg-amber-500')
         ->assertSee('Aktifkan suara');
 });
+
+it('moves an order between columns in place without reloading the page', function () {
+    Role::create(['name' => 'owner']);
+    $tenant = Tenant::factory()->create();
+    $owner = User::factory()->create();
+    $owner->assignRole('owner');
+    $owner->tenants()->attach($tenant->id, ['status' => 'active']);
+    $this->actingAs($owner);
+    Filament::setTenant($tenant);
+    $sale = Sale::create(['tenant_id' => $tenant->id, 'invoice_number' => 'INV-MOVE', 'status' => 'pending', 'grand_total' => 1000]);
+
+    Livewire::test(Kitchen::class)
+        ->call('markAsServed', $sale->id)
+        ->assertNoRedirect()
+        ->assertSee('INV-MOVE')
+        ->assertSee('siap')
+        ->call('markAsCompleted', $sale->id)
+        ->assertNoRedirect()
+        ->assertDontSee('INV-MOVE');
+
+    expect($sale->fresh()->kitchen_completed_at)->not->toBeNull();
+});
