@@ -10,6 +10,7 @@ use Filament\Pages\Page;
 use Filament\Support\Icons\Heroicon;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Locked;
 use Throwable;
 
 class Kitchen extends Page
@@ -38,6 +39,29 @@ class Kitchen extends Page
     public function getTenant()
     {
         return Filament::getTenant();
+    }
+
+    /** @var array<int, int> */
+    #[Locked]
+    public array $seenOrderIds = [];
+
+    public function mount(): void
+    {
+        $this->seenOrderIds = $this->pendingOrders->pluck('id')->all();
+    }
+
+    /**
+     * Dipanggil tiap 5 detik dari view; beri tahu dapur kalau ada pesanan masuk.
+     */
+    public function poll(): void
+    {
+        $currentIds = $this->pendingOrders->pluck('id')->all();
+
+        if (array_diff($currentIds, $this->seenOrderIds) !== []) {
+            $this->dispatch('kitchen-new-order');
+        }
+
+        $this->seenOrderIds = $currentIds;
     }
 
     /**

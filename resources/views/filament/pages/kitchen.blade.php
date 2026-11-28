@@ -1,17 +1,23 @@
 <x-filament-panels::page>
-    {{-- Auto-refresh using JavaScript every 5 seconds --}}
+    {{-- Poll tiap 5 detik; server kirim kitchen-new-order kalau ada pesanan baru --}}
     @once
     @push('scripts')
     <script>
         document.addEventListener('livewire:init', function() {
             setInterval(function() {
-                @this.$refresh();
+                @this.call('poll');
             }, 5000);
         });
     </script>
     @endpush
     @endonce
 
+    <div
+        x-data="{ flash: false, beep() { try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const osc = ctx.createOscillator(); const gain = ctx.createGain(); osc.connect(gain); gain.connect(ctx.destination); osc.frequency.value = 880; gain.gain.value = 0.2; osc.start(); osc.stop(ctx.currentTime + 0.3); } catch (e) {} } }"
+        x-on:kitchen-new-order.window="flash = true; beep(); setTimeout(() => flash = false, 2000)"
+        :class="flash && 'rounded-2xl ring-4 ring-red-500'"
+        class="transition-shadow"
+    >
     {{-- Header --}}
     <div class="mb-6 flex items-center justify-between">
         <div>
@@ -72,21 +78,26 @@
         @else
             <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
                 @foreach($this->pendingOrders as $order)
+                    @php
+                        $waitMinutes = max(0, (int) $order->created_at->diffInMinutes());
+                        $urgency = $waitMinutes >= 15 ? 'bg-red-600' : ($waitMinutes >= 10 ? 'bg-amber-500' : 'bg-gray-800 dark:bg-gray-700');
+                    @endphp
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}
-                        <div class="bg-gradient-to-br from-red-500 to-orange-500 p-3 text-white">
+                        <div class="{{ $urgency }} p-3 text-white">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
                                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20">
                                         <x-heroicon-o-archive-box class="h-4 w-4" />
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="truncate text-xs font-bold text-red-100" title="{{ $order->invoice_number }}">{{ $order->invoice_number }}</p>
-                                        <p class="truncate text-[11px] text-red-200">{{ $order->table?->name ?? 'Tanpa Meja' }}@if ($order->customer_name) &middot; {{ $order->customer_name }}@endif</p>
+                                        <p class="truncate text-xs font-bold text-white/90" title="{{ $order->invoice_number }}">{{ $order->invoice_number }}</p>
+                                        <p class="truncate text-[11px] text-white/70">{{ $order->table?->name ?? 'Tanpa Meja' }}@if ($order->customer_name) &middot; {{ $order->customer_name }}@endif</p>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 ml-2">
-                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone($this->getTenant()?->timezone ?? config('app.timezone'))->format('H:i') }}</p>
+                                    <p class="text-lg font-bold leading-none">{{ $waitMinutes }} mnt</p>
+                                    <p class="text-[10px] text-white/70">menunggu</p>
                                 </div>
                             </div>
                         </div>
@@ -171,19 +182,20 @@
                 @foreach($this->readyOrders as $order)
                     <div class="card-hover overflow-hidden rounded-2xl bg-white shadow-sm dark:bg-gray-800">
                         {{-- Header --}}
-                        <div class="bg-gradient-to-br from-emerald-500 to-teal-500 p-3 text-white">
+                        <div class="bg-emerald-600 p-3 text-white">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
                                     <div class="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-white/20">
                                         <x-heroicon-o-archive-box class="h-4 w-4" />
                                     </div>
                                     <div class="min-w-0 flex-1">
-                                        <p class="truncate text-xs font-bold text-emerald-100" title="{{ $order->invoice_number }}">{{ $order->invoice_number }}</p>
-                                        <p class="truncate text-[11px] text-emerald-200">{{ $order->table?->name ?? 'Tanpa Meja' }}</p>
+                                        <p class="truncate text-xs font-bold text-white/90" title="{{ $order->invoice_number }}">{{ $order->invoice_number }}</p>
+                                        <p class="truncate text-[11px] text-white/70">{{ $order->table?->name ?? 'Tanpa Meja' }}</p>
                                     </div>
                                 </div>
                                 <div class="text-right shrink-0 ml-2">
-                                    <p class="text-lg font-bold leading-none">{{ $order->created_at->setTimezone($this->getTenant()?->timezone ?? config('app.timezone'))->format('H:i') }}</p>
+                                    <p class="text-lg font-bold leading-none">{{ max(0, (int) ($order->served_at ?? $order->created_at)->diffInMinutes()) }} mnt</p>
+                                    <p class="text-[10px] text-white/70">siap</p>
                                 </div>
                             </div>
                         </div>
@@ -249,5 +261,6 @@
                 @endforeach
             </div>
         @endif
+    </div>
     </div>
 </x-filament-panels::page>
