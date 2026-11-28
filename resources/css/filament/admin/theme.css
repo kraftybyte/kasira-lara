@@ -2,6 +2,7 @@
 
 @source '../../../../app/Filament/**/*';
 @source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/livewire/**/*';
 
 /* ==================== GRADIENT ==================== */
 .gradient-bg {
@@ -416,4 +417,8 @@ a.fi-ac-btn-action.fi-color-primary {
     50% { transform: rotate(3deg); }
 }
 .ops-bell-ring { animation: ops-ring 2.4s ease-in-out infinite; transform-origin: top center; }
+/* Strip pemberitahuan mengisi ruang kosong topbar, menu user tetap di ujung kanan */
+.fi-topbar-end { flex: 1 1 auto; min-width: 0; }
+.ops-strip::-webkit-scrollbar { height: 4px; }
+.ops-strip::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 9999px; }
 @media (prefers-reduced-motion: reduce) { .ops-bell-ring { animation: none; } }
