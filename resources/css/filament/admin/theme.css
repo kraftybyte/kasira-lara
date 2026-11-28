@@ -346,6 +346,17 @@ a.fi-ac-btn-action.fi-color-primary {
 @media (min-width: 1024px) {
     .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) {
         width: var(--collapsed-sidebar-width);
+        /* Rel terlihat batasnya, jadi ikon tampak di tengah rel, bukan mengambang di ruang kosong */
+        background-color: #fff;
+        border-inline-end: 1px solid #e5e7eb;
+    }
+    .dark .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) {
+        background-color: #111827;
+        border-inline-end-color: #1f2937;
+    }
+    /* Saat rel dilipat, konten mengisi lebar penuh: tidak ada celah kosong antara rel dan konten */
+    .fi-body-has-sidebar-collapsible-on-desktop:has(.fi-sidebar:not(.fi-sidebar-open)) .fi-main {
+        max-width: none;
     }
     .fi-body-has-sidebar-collapsible-on-desktop .fi-sidebar:not(.fi-sidebar-open) .fi-sidebar-nav {
         padding: 1rem 0.625rem;
