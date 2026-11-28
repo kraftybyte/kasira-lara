@@ -20,5 +20,6 @@ test('owner can open the POS page with the single-screen layout', function () {
     Livewire::test(POS::class)
         ->assertOk()
         ->assertSee('pos-screen')
-        ->assertSee('Point of Sale');
+        ->assertSee('Kasir')
+        ->assertDontSee('Point of Sale');
 });

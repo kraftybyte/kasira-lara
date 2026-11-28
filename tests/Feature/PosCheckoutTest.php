@@ -310,3 +310,41 @@ it('refuses to pay merged counter orders that changed after the cashier loaded t
         ->and($counter->items()->count())->toBe(2)
         ->and(Sale::where('source', 'pos')->count())->toBe(0);
 });
+
+test('enter in the search box adds the top match and clears the search without a toast', function () {
+    [$tenant] = posOwner();
+    posProduct($tenant, 'Teh Manis', 5000);
+    $kopi = posProduct($tenant, 'Kopi Susu', 15000);
+
+    Livewire::test(POS::class)
+        ->set('search', 'kopi')
+        ->call('addFirstMatch')
+        ->assertSet('search', '')
+        ->assertDispatched('cart-updated')
+        ->assertNotDispatched('notificationsSent')
+        ->assertSet('cart.'.$kopi->id.'.quantity', 1);
+});
+
+test('enter with no matching product leaves the cart untouched', function () {
+    [$tenant] = posOwner();
+    posProduct($tenant, 'Teh Manis', 5000);
+
+    Livewire::test(POS::class)
+        ->set('search', 'tidak ada')
+        ->call('addFirstMatch')
+        ->assertSet('cart', [])
+        ->assertNotDispatched('cart-updated');
+});
+
+test('cash payment refocuses the search box for the next order', function () {
+    [$tenant] = posOwner();
+    $kopi = posProduct($tenant, 'Kopi', 10000);
+
+    Livewire::test(POS::class)
+        ->call('addToCart', $kopi)
+        ->set('paymentMethod', 'cash')
+        ->set('paidAmount', 10000)
+        ->call('processPayment')
+        ->assertDispatched('payment-success')
+        ->assertDispatched('focus-search');
+});

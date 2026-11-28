@@ -18,7 +18,7 @@
                     </div>
                     <div>
                         @if($this->tableId === 'takeaway')
-                            <p class="text-lg font-bold text-gray-900 dark:text-white">Take Away</p>
+                            <p class="text-lg font-bold text-gray-900 dark:text-white">Bawa pulang</p>
                             <p class="text-sm text-primary-600 dark:text-primary-400">Bawa Pulang</p>
                         @elseif($this->reservation && $this->reservation->status !== 'seated')
                             <p class="text-lg font-bold text-gray-900 dark:text-white">Reservasi</p>
@@ -121,12 +121,16 @@
             {{-- Search & Category Filter --}}
             <div class="mb-3 space-y-3">
                 {{-- Search Bar --}}
-                <div class="relative">
+                <div class="relative" x-data x-on:focus-search.window="$refs.search?.focus()">
                     <x-filament::input.wrapper>
                         <x-filament::input
                             type="search"
+                            x-ref="search"
+                            autofocus
                             wire:model.live.debounce.300ms="search"
-                            placeholder="Cari produk atau SKU..."
+                            wire:keydown.enter="addFirstMatch"
+                            wire:keydown.escape="$set('search', '')"
+                            placeholder="Cari produk, SKU, atau scan barcode. Enter untuk menambah"
                             class="pl-10 py-2.5 text-sm"
                         />
                         <x-slot name="prefix">
@@ -140,7 +144,7 @@
                     <button
                         type="button"
                         wire:click="$set('selectedCategoryId', null)"
-                        class="{{ is_null($this->selectedCategoryId) ? 'gradient-bg text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:shadow-md"
+                        class="{{ is_null($this->selectedCategoryId) ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors"
                     >
                         Semua
                     </button>
@@ -148,7 +152,7 @@
                         <button
                             type="button"
                             wire:click="$set('selectedCategoryId', {{ $category->id }})"
-                            class="{{ $this->selectedCategoryId === $category->id ? 'gradient-bg text-white shadow-lg' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-all hover:shadow-md"
+                            class="{{ $this->selectedCategoryId === $category->id ? 'bg-gray-900 text-white dark:bg-white dark:text-gray-900' : 'bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700' }} shrink-0 rounded-full px-4 py-2 text-xs font-semibold transition-colors"
                         >
                             {{ $category->name }}
                         </button>
@@ -177,24 +181,24 @@
                                 class="group flex flex-col overflow-hidden rounded-2xl border border-gray-100 bg-white shadow-sm transition-all hover:shadow-lg hover:-translate-y-1 disabled:cursor-wait disabled:opacity-50 dark:border-gray-700 dark:bg-gray-800"
                             >
                                 {{-- Image (Square) --}}
-                                <div class="relative aspect-square w-full shrink-0 overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-700 dark:to-gray-600">
+                                <div class="relative aspect-square w-full shrink-0 overflow-hidden bg-gray-100 dark:bg-gray-700">
                                     @if ($product->image)
                                         <img src="{{ Storage::disk('public')->url($product->image) }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
                                     @else
-                                        <div class="flex h-full w-full items-center justify-center">
-                                            <span class="text-2xl font-bold uppercase text-gray-300 dark:text-gray-500">{{ substr($product->name, 0, 2) }}</span>
+                                        <div class="flex h-full w-full items-center justify-center p-2">
+                                            <span class="text-center text-sm font-semibold leading-snug text-gray-500 line-clamp-3 dark:text-gray-300">{{ $product->name }}</span>
                                         </div>
                                     @endif
 
                                     {{-- Badge --}}
                                     @if ($product->rate_type === 'duration')
                                         <div class="absolute left-2 top-2">
-                                            <span class="rounded-full gradient-bg px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">Per Jam</span>
+                                            <span class="rounded-full bg-amber-500 px-2 py-0.5 text-[10px] font-bold text-white">Per Jam</span>
                                         </div>
                                     @endif
                                     @if ($product->rate_type !== 'duration' && (float) $product->stock <= 0)
                                         <div class="absolute left-2 top-2">
-                                            <span class="rounded-full bg-gradient-to-r from-red-500 to-red-600 px-2 py-0.5 text-[10px] font-bold text-white shadow-lg">Habis</span>
+                                            <span class="rounded-full bg-red-600 px-2 py-0.5 text-[10px] font-bold text-white">Habis</span>
                                         </div>
                                     @endif
                                 </div>
@@ -207,7 +211,7 @@
                                             <p class="mt-1 text-[10px] leading-tight text-gray-500 dark:text-gray-400 line-clamp-2">{{ $product->description }}</p>
                                         @endif
                                         <p class="mt-1 flex flex-col items-center gap-0.5 text-sm font-bold">
-                                            <span class="text-primary-600 dark:text-primary-400">Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
+                                            <span class="text-gray-900 dark:text-white">Rp {{ number_format((float) $product->selling_price, 0, ',', '.') }}</span>
                                             @if($product->rate_type === 'duration')
                                                 @if((float) $product->rate >= 60)
                                                     <span class="text-[10px] font-medium text-amber-600 dark:text-amber-400">/ Jam</span>
@@ -216,11 +220,6 @@
                                                 @endif
                                             @endif
                                         </p>
-                                    </div>
-                                    <div class="mt-2 flex justify-center">
-                                        <span class="flex h-8 w-8 items-center justify-center rounded-full gradient-bg text-xs font-bold text-white shadow-lg transition-transform duration-200 group-hover:scale-110">
-                                            +
-                                        </span>
                                     </div>
                                 </div>
                             </button>
@@ -237,6 +236,195 @@
         <div class="pos-grow lg:col-span-4">
             <div class="pos-grow flex flex-col gap-4">
 
+                {{-- CART --}}
+                <div class="pos-grow overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
+                    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                        <div class="flex items-center gap-2">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
+                                <x-heroicon-o-shopping-cart class="h-4 w-4" />
+                            </div>
+                            <span class="text-sm font-semibold text-gray-900 dark:text-white">Keranjang</span>
+                            @if ($this->cartCount > 0)
+                                <span x-data="{ bump: false }" x-on:cart-updated.window="bump = true; setTimeout(() => bump = false, 250)" :class="bump && 'scale-125'" class="flex h-6 min-w-6 items-center justify-center rounded-full bg-gray-900 px-1.5 text-xs font-bold text-white transition-transform dark:bg-white dark:text-gray-900">{{ $this->cartCount }}</span>
+                            @endif
+                        </div>
+                        @if (count($cart) > 0)
+                            <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-gray-500 transition-colors hover:text-gray-900 dark:hover:text-white">Hapus semua</button>
+                        @endif
+                    </div>
+                    {{-- Meja / bawa pulang: selalu terlihat di atas keranjang --}}
+                    <div class="flex items-center gap-2 border-b border-gray-100 px-4 py-2 dark:border-gray-700">
+                        <x-heroicon-o-archive-box class="h-4 w-4 shrink-0 text-gray-400" />
+                        @if($this->activeTableId)
+                            <span class="text-sm font-medium text-gray-900 dark:text-white">{{ $this->selectedTable?->name ?? 'Meja aktif' }}</span>
+                        @else
+                            <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-lg border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-900 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
+                                <option value="">Pilih meja</option>
+                                @if(!$this->cartHasDurationProducts)
+                                    <option value="takeaway">Bawa pulang</option>
+                                @endif
+                                @foreach($this->availableTables as $table)
+                                    <option value="{{ $table->id }}">{{ $table->name }}</option>
+                                @endforeach
+                            </select>
+                        @endif
+                    </div>
+                    @if($this->cartHasDurationProducts && ! $this->tableId && ! $this->activeTableId)
+                        <div class="mx-4 mt-2 flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                            <x-heroicon-o-information-circle class="h-4 w-4 shrink-0" />
+                            <span>Produk durasi wajib pilih meja</span>
+                        </div>
+                    @endif
+                    <div class="pos-scroll p-4 overflow-y-auto">
+                        @forelse ($cart as $productId => $item)
+                            @php
+                                // Handle variant keys (e.g., "1_1699999999")
+                                $baseProductId = is_numeric($productId) ? $productId : explode('_', $productId)[0];
+                                $cartProduct = \App\Models\Product::find($baseProductId);
+                                $isDuration = $item['is_duration'] ?? false;
+                                $modifiers = $item['modifiers'] ?? [];
+                                $hasModifiers = !empty($modifiers);
+                                $hasNotes = !empty($item['notes']);
+                                $isVariant = $item['is_variant'] ?? false;
+                                $isCompleted = $item['is_completed'] ?? false;
+                            @endphp
+                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-3 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }} {{ $isCompleted ? 'border-primary-200 dark:border-primary-700/50 bg-primary-50/30 dark:bg-primary-500/10' : '' }}">
+                                <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl {{ $isDuration ? 'gradient-bg' : 'bg-gray-100 dark:bg-gray-700' }}">
+                                    @if($cartProduct?->image)
+                                        <img src="{{ Storage::disk('public')->url($cartProduct->image) }}" alt="{{ $item['product_name'] }}" class="h-full w-full object-cover">
+                                    @else
+                                        <x-heroicon-o-clock class="h-5 w-5 {{ $isDuration ? 'text-white' : 'text-gray-400' }}" />
+                                    @endif
+                                </div>
+                                <div class="min-w-0 flex-1">
+                                    <div class="flex items-start justify-between gap-2">
+                                        <div class="flex-1 min-w-0">
+                                            <div class="flex items-center gap-1">
+                                                <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
+                                                    {{ $item['product_name'] }}
+                                                </p>
+                                                @if($isVariant)
+                                                    <span class="text-[10px] text-blue-500">(custom)</span>
+                                                @endif
+                                                @if($isCompleted)
+                                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-400">LUNAS</span>
+                                                @endif
+                                            </div>
+                                            <p class="text-[11px] text-gray-500">
+                                                @if($isDuration)
+                                                    <span class="text-amber-600 dark:text-amber-400">{{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
+                                                @else
+                                                    Rp {{ number_format($item['unit_price'], 0, ',', '.') }} × {{ $item['quantity'] }}
+                                                @endif
+                                            </p>
+                                            {{-- Show modifiers badge --}}
+                                            @if($hasModifiers || $hasNotes)
+                                                <div class="mt-1 flex flex-wrap items-center gap-1">
+                                                    @foreach($modifiers as $modifier)
+                                                        <span class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
+                                                            {{ $modifier['name'] }}
+                                                        </span>
+                                                    @endforeach
+                                                    @if($hasNotes)
+                                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
+                                                            {{ Str::limit($item['notes'], 20) }}
+                                                        </span>
+                                                    @endif
+                                                </div>
+                                            @endif
+                                        </div>
+                                        @if(!$isCompleted)
+                                            <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
+                                                <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
+                                            </button>
+                                        @endif
+                                    </div>
+                                </div>
+                                @if(!$isCompleted)
+                                <div class="flex items-center gap-2">
+                                    <button type="button" wire:click="decrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
+                                        <x-heroicon-o-minus class="h-3.5 w-3.5" />
+                                    </button>
+                                    <span class="w-8 text-center text-sm font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
+                                    <button type="button" wire:click="incrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
+                                        <x-heroicon-o-plus class="h-3.5 w-3.5" />
+                                    </button>
+                                </div>
+                                @endif
+                            </div>
+                        @empty
+                            <div class="py-10 text-center">
+                                <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
+                                    <x-heroicon-o-shopping-cart class="h-7 w-7 text-gray-400" />
+                                </div>
+                                <p class="text-sm text-gray-500 dark:text-gray-400">Keranjang kosong</p>
+                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Pilih produk untuk memulai</p>
+                            </div>
+                        @endforelse
+                    </div>
+                    <div class="border-t border-gray-100/80 px-4 py-3 dark:border-gray-700/50">
+                        <div class="space-y-2">
+                            <div class="flex items-center justify-between">
+                                <span class="text-xs text-gray-500">Subtotal (Sebelum PPN)</span>
+                                <span class="text-sm font-medium text-gray-900 dark:text-white">Rp {{ number_format($this->subtotalBeforeTax, 0, ',', '.') }}</span>
+                            </div>
+                            @if($this->showTax && $this->taxAmount > 0)
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-500">PPN ({{ $this->taxRate }}%)</span>
+                                    <span class="text-sm font-medium text-green-600 dark:text-green-400">+ Rp {{ number_format($this->taxAmount, 0, ',', '.') }}</span>
+                                </div>
+                            @endif
+                            @if($this->paywuzFee > 0)
+                                <div class="flex items-center justify-between">
+                                    <span class="text-xs text-gray-500">
+                                        Biaya Layanan
+                                        @if($this->paywuzFeeByMerchant)
+                                            <span class="text-green-600">(ditanggung toko)</span>
+                                        @else
+                                            <span class="text-orange-500">(ditanggung Anda)</span>
+                                        @endif
+                                    </span>
+                                    <span class="text-sm font-medium {{ $this->paywuzFeeByMerchant ? 'text-green-600 dark:text-green-400' : 'text-orange-500' }}">
+                                        {{ $this->paywuzFeeByMerchant ? '-' : '+' }} Rp {{ number_format($this->paywuzFee, 0, ',', '.') }}
+                                    </span>
+                                </div>
+                            @endif
+                            <div class="flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-700">
+                                <span class="text-sm font-semibold text-gray-900 dark:text-white">Total</span>
+                                <span class="text-lg font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                        @if($this->activeTableId)
+                            {{-- Checkout Button for Active Table --}}
+                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-credit-card class="h-5 w-5" />
+                                Bayar Sekarang
+                            </button>
+                        @elseif(count($cart) > 0 && $this->tableId)
+                            {{-- Save & Pay Button (same style as Bayar Sekarang --}}
+                            <button type="button" wire:click="saveToTable" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-check-circle class="h-5 w-5" />
+                                Simpan & Bayar
+                            </button>
+                        @elseif(count($cart) > 0)
+                            {{-- Need Table Selection for Duration Products --}}
+                            <button type="button" disabled class="btn btn-primary btn-lg w-full opacity-50 shadow-lg">
+                                <x-heroicon-o-information-circle class="h-5 w-5" />
+                                Pilih Meja Dulu
+                            </button>
+                        @else
+                            {{-- Regular Checkout Button --}}
+                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
+                                <x-heroicon-o-credit-card class="h-5 w-5" />
+                                Bayar Sekarang
+                            </button>
+                        @endif
+                        </div>
+                    </div>
+                </div>
+
                 {{-- ====================================================
                     CUSTOMER
                 ===================================================== --}}
@@ -249,19 +437,20 @@
                     @click.outside="open = false"
                 >
 
-                    {{-- HEADER --}}
-                    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
+                    @php $selectedCustomerName = $customerId ? $this->customers->firstWhere('id', $customerId)?->name : null; @endphp
+                    {{-- HEADER: satu baris, klik untuk membuka pencarian --}}
+                    <div class="flex cursor-pointer items-center justify-between px-4 py-3" :class="open && 'border-b border-gray-100 dark:border-gray-700'" @click="open = ! open">
 
                         <div class="flex items-center gap-2.5">
 
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
+                            <div class="flex h-9 w-9 items-center justify-center rounded-xl bg-gray-100 text-gray-600 dark:bg-gray-700 dark:text-gray-300">
 
                                 <x-heroicon-o-user class="h-4 w-4" />
 
                             </div>
 
                             <span class="text-sm font-semibold text-gray-900 dark:text-white">
-                                Customer
+                                Pelanggan: {{ $selectedCustomerName ?? 'Umum' }}
                             </span>
 
                         </div>
@@ -271,6 +460,7 @@
                         <button
                             type="button"
                             wire:click="openAddCustomer"
+                            @click.stop
                             class="flex h-8 w-8 items-center justify-center rounded-xl text-primary-500 transition-all hover:bg-primary-50 dark:hover:bg-primary-500/10"
                         >
 
@@ -282,7 +472,7 @@
 
 
                     {{-- CUSTOMER CONTENT --}}
-                    <div class="space-y-2.5 p-3">
+                    <div class="space-y-2.5 p-3" x-show="open" x-cloak>
 
 
                         {{-- =================================================
@@ -346,7 +536,7 @@
                                     <div class="min-w-0 flex-1">
 
                                         <p class="text-xs font-semibold text-gray-900 dark:text-white">
-                                            Walk-in Customer
+                                            Pelanggan umum
                                         </p>
 
                                         <p class="text-[11px] text-gray-500 dark:text-gray-400">
@@ -478,7 +668,7 @@
                                     @if ($selectedCustomer->is_member)
 
                                         <span class="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:bg-amber-500/20 dark:text-amber-400">
-                                            ★ Member
+                                            Member
                                         </span>
 
                                     @endif
@@ -491,193 +681,6 @@
 
                     </div>
 
-                </div>
-
-                {{-- CART --}}
-                <div class="pos-grow overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-sm dark:border-gray-700 dark:bg-gray-900">
-                    <div class="flex items-center justify-between border-b border-gray-100 px-4 py-3 dark:border-gray-700">
-                        <div class="flex items-center gap-2">
-                            <div class="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg text-white shadow-lg">
-                                <x-heroicon-o-shopping-cart class="h-4 w-4" />
-                            </div>
-                            <span class="text-sm font-semibold text-gray-900 dark:text-white">Keranjang</span>
-                            @if ($this->cartCount > 0)
-                                <span class="flex h-6 min-w-6 items-center justify-center rounded-full bg-white/20 px-1.5 text-xs font-bold text-white">{{ $this->cartCount }}</span>
-                            @endif
-                        </div>
-                        @if (count($cart) > 0)
-                            <button type="button" wire:click="clearCart" wire:confirm="Yakin ingin menghapus semua item dari keranjang?" class="text-xs font-medium text-primary-500 transition-colors hover:text-primary-600">Hapus semua</button>
-                        @endif
-                    </div>
-                    <div class="pos-scroll p-4 overflow-y-auto">
-                        @forelse ($cart as $productId => $item)
-                            @php
-                                // Handle variant keys (e.g., "1_1699999999")
-                                $baseProductId = is_numeric($productId) ? $productId : explode('_', $productId)[0];
-                                $cartProduct = \App\Models\Product::find($baseProductId);
-                                $isDuration = $item['is_duration'] ?? false;
-                                $modifiers = $item['modifiers'] ?? [];
-                                $hasModifiers = !empty($modifiers);
-                                $hasNotes = !empty($item['notes']);
-                                $isVariant = $item['is_variant'] ?? false;
-                                $isCompleted = $item['is_completed'] ?? false;
-                            @endphp
-                            <div wire:key="cart-item-{{ $productId }}" class="mb-2 flex items-start gap-3 rounded-2xl border border-gray-100 bg-gray-50/50 p-3 dark:border-gray-700/50 dark:bg-gray-800/50 {{ $isDuration ? 'border-amber-200 dark:border-amber-700/50' : '' }} {{ $isCompleted ? 'border-primary-200 dark:border-primary-700/50 bg-primary-50/30 dark:bg-primary-500/10' : '' }}">
-                                <div class="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl {{ $isDuration ? 'gradient-bg' : 'bg-gray-100 dark:bg-gray-700' }}">
-                                    @if($cartProduct?->image)
-                                        <img src="{{ Storage::disk('public')->url($cartProduct->image) }}" alt="{{ $item['product_name'] }}" class="h-full w-full object-cover">
-                                    @else
-                                        <x-heroicon-o-clock class="h-5 w-5 {{ $isDuration ? 'text-white' : 'text-gray-400' }}" />
-                                    @endif
-                                </div>
-                                <div class="min-w-0 flex-1">
-                                    <div class="flex items-start justify-between gap-2">
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex items-center gap-1">
-                                                <p class="truncate text-xs font-medium text-gray-900 dark:text-white">
-                                                    {{ $item['product_name'] }}
-                                                </p>
-                                                @if($isVariant)
-                                                    <span class="text-[10px] text-blue-500">(custom)</span>
-                                                @endif
-                                                @if($isCompleted)
-                                                    <span class="inline-flex items-center rounded-full bg-emerald-100 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:bg-emerald-500/30 dark:text-emerald-400">LUNAS</span>
-                                                @endif
-                                            </div>
-                                            <p class="text-[11px] text-gray-500">
-                                                @if($isDuration)
-                                                    <span class="text-amber-600 dark:text-amber-400">⏱ {{ number_format($item['unit_price'], 0, ',', '.') }}/jam</span>
-                                                @else
-                                                    Rp {{ number_format($item['unit_price'], 0, ',', '.') }} × {{ $item['quantity'] }}
-                                                @endif
-                                            </p>
-                                            {{-- Show modifiers badge --}}
-                                            @if($hasModifiers || $hasNotes)
-                                                <div class="mt-1 flex flex-wrap items-center gap-1">
-                                                    @foreach($modifiers as $modifier)
-                                                        <span class="inline-flex items-center rounded-full bg-blue-100 px-1.5 py-0.5 text-[10px] font-medium text-blue-700 dark:bg-blue-500/20 dark:text-blue-400">
-                                                            {{ $modifier['name'] }}
-                                                        </span>
-                                                    @endforeach
-                                                    @if($hasNotes)
-                                                        <span class="inline-flex items-center rounded-full bg-amber-100 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:bg-amber-500/20 dark:text-amber-400">
-                                                            📝 {{ Str::limit($item['notes'], 20) }}
-                                                        </span>
-                                                    @endif
-                                                </div>
-                                            @endif
-                                        </div>
-                                        @if(!$isCompleted)
-                                            <button type="button" wire:click="openModifierModal({{ $baseProductId }})" class="shrink-0 rounded-xl p-2 text-gray-400 transition-all hover:bg-gray-100 hover:text-gray-600 dark:hover:bg-gray-700">
-                                                <x-heroicon-o-adjustments-horizontal class="h-4 w-4" />
-                                            </button>
-                                        @endif
-                                    </div>
-                                </div>
-                                @if(!$isCompleted)
-                                <div class="flex items-center gap-2">
-                                    <button type="button" wire:click="decrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Kurangi jumlah {{ $item['product_name'] }}">
-                                        <x-heroicon-o-minus class="h-3.5 w-3.5" />
-                                    </button>
-                                    <span class="w-8 text-center text-sm font-semibold text-gray-900 dark:text-white">{{ $item['quantity'] }}</span>
-                                    <button type="button" wire:click="incrementQuantity('{{ $productId }}')" class="btn-qty" aria-label="Tambah jumlah {{ $item['product_name'] }}">
-                                        <x-heroicon-o-plus class="h-3.5 w-3.5" />
-                                    </button>
-                                </div>
-                                @endif
-                            </div>
-                        @empty
-                            <div class="py-10 text-center">
-                                <div class="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-gray-100 dark:bg-gray-800">
-                                    <x-heroicon-o-shopping-cart class="h-7 w-7 text-gray-400" />
-                                </div>
-                                <p class="text-sm text-gray-500 dark:text-gray-400">Keranjang kosong</p>
-                                <p class="text-xs text-gray-400 dark:text-gray-500 mt-1">Pilih produk untuk memulai</p>
-                            </div>
-                        @endforelse
-                    </div>
-                    <div class="border-t border-gray-100/80 px-4 py-3 dark:border-gray-700/50">
-                        {{-- Table Selection - Required for Duration Products --}}
-                        @if(!$this->activeTableId && count($cart) > 0)
-                            <div class="mb-3">
-                                @if($this->cartHasDurationProducts)
-                                    <div class="mb-2 flex items-center gap-2 rounded-lg bg-amber-50 p-2 text-xs text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
-                                        <x-heroicon-o-information-circle class="h-4 w-4 shrink-0" />
-                                        <span>Produk durasi wajib pilih meja</span>
-                                    </div>
-                                @endif
-                                <select wire:model.live="tableId" class="block w-full cursor-pointer rounded-xl border-gray-200 bg-white px-4 py-2.5 text-sm text-gray-900 transition-colors focus:border-primary-500 dark:border-gray-700 dark:bg-gray-800 dark:text-white">
-                                    <option value="">Pilih Meja</option>
-                                @if(!$this->cartHasDurationProducts)
-                                    <option value="takeaway">Take Away / Bawa Pulang</option>
-                                @endif
-                                    @foreach($this->availableTables as $table)
-                                        <option value="{{ $table->id }}">{{ $table->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
-                        @endif
-
-                        <div class="space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-xs text-gray-500">Subtotal (Sebelum PPN)</span>
-                                <span class="text-sm font-medium text-gray-900 dark:text-white">Rp {{ number_format($this->subtotalBeforeTax, 0, ',', '.') }}</span>
-                            </div>
-                            @if($this->showTax && $this->taxAmount > 0)
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">PPN ({{ $this->taxRate }}%)</span>
-                                    <span class="text-sm font-medium text-green-600 dark:text-green-400">+ Rp {{ number_format($this->taxAmount, 0, ',', '.') }}</span>
-                                </div>
-                            @endif
-                            @if($this->paywuzFee > 0)
-                                <div class="flex items-center justify-between">
-                                    <span class="text-xs text-gray-500">
-                                        Biaya Layanan
-                                        @if($this->paywuzFeeByMerchant)
-                                            <span class="text-green-600">(ditanggung toko)</span>
-                                        @else
-                                            <span class="text-orange-500">(ditanggung Anda)</span>
-                                        @endif
-                                    </span>
-                                    <span class="text-sm font-medium {{ $this->paywuzFeeByMerchant ? 'text-green-600 dark:text-green-400' : 'text-orange-500' }}">
-                                        {{ $this->paywuzFeeByMerchant ? '-' : '+' }} Rp {{ number_format($this->paywuzFee, 0, ',', '.') }}
-                                    </span>
-                                </div>
-                            @endif
-                            <div class="flex items-center justify-between border-t border-gray-100 pt-2 dark:border-gray-700">
-                                <span class="text-sm font-semibold text-gray-900 dark:text-white">Total</span>
-                                <span class="text-lg font-bold text-gray-900 dark:text-white">Rp {{ number_format($this->total, 0, ',', '.') }}</span>
-                            </div>
-                        </div>
-
-                        <div class="mt-4">
-                        @if($this->activeTableId)
-                            {{-- Checkout Button for Active Table --}}
-                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
-                                <x-heroicon-o-credit-card class="h-5 w-5" />
-                                Bayar Sekarang
-                            </button>
-                        @elseif(count($cart) > 0 && $this->tableId)
-                            {{-- Save & Pay Button (same style as Bayar Sekarang --}}
-                            <button type="button" wire:click="saveToTable" class="btn btn-primary btn-lg w-full shadow-lg">
-                                <x-heroicon-o-check-circle class="h-5 w-5" />
-                                Simpan & Bayar
-                            </button>
-                        @elseif(count($cart) > 0)
-                            {{-- Need Table Selection for Duration Products --}}
-                            <button type="button" disabled class="btn btn-primary btn-lg w-full opacity-50 shadow-lg">
-                                <x-heroicon-o-information-circle class="h-5 w-5" />
-                                Pilih Meja Dulu
-                            </button>
-                        @else
-                            {{-- Regular Checkout Button --}}
-                            <button type="button" wire:click="openCheckout" class="btn btn-primary btn-lg w-full shadow-lg">
-                                <x-heroicon-o-credit-card class="h-5 w-5" />
-                                Bayar Sekarang
-                            </button>
-                        @endif
-                        </div>
-                    </div>
                 </div>
 
             </div>
@@ -803,7 +806,10 @@
                                         <x-filament::input type="number" wire:model.live="paidAmount" min="0" step="1000" placeholder="0" class="text-2xl font-bold" />
                                     </x-filament::input.wrapper>
                                 </div>
-                                <div class="mb-4 grid grid-cols-4 gap-2">
+                                <div class="mb-4 grid grid-cols-5 gap-2">
+                                    <button type="button" wire:click="$set('paidAmount', {{ (int) ceil($this->total) }})" class="rounded-xl border-2 border-gray-900 bg-gray-900 py-3 text-center text-sm font-bold text-white transition hover:bg-gray-800 dark:border-white dark:bg-white dark:text-gray-900">
+                                        Uang pas
+                                    </button>
                                     @foreach ([20000, 50000, 100000, 200000] as $amount)
                                         <button type="button" wire:click="$set('paidAmount', {{ $amount }})" class="rounded-xl border-2 border-gray-200 bg-gray-50 py-3 text-center text-sm font-bold text-gray-700 transition hover:border-green-500 hover:bg-green-50 dark:border-gray-600 dark:bg-gray-700 dark:text-gray-300 dark:hover:border-green-500">
                                             Rp {{ number_format($amount/1000, 0, '', '.') }}K
@@ -1139,12 +1145,12 @@
 
                         {{-- CUSTOMER SELECT --}}
                         <div class="rounded-2xl border border-gray-200 bg-white p-4 dark:border-gray-700 dark:bg-gray-800">
-                            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Customer</label>
+                            <label class="mb-2 block text-sm font-semibold text-gray-900 dark:text-white">Pelanggan</label>
                             <x-filament::input.wrapper>
                                 <x-filament::input.select wire:model="customerId">
-                                    <option value="">👤 Walk-in Customer</option>
+                                    <option value="">Pelanggan umum</option>
                                     @foreach ($this->customers as $customer)
-                                        <option value="{{ $customer->id }}">{{ $customer->name }}@if ($customer->is_member) ⭐@endif</option>
+                                        <option value="{{ $customer->id }}">{{ $customer->name }}@if ($customer->is_member) (member)@endif</option>
                                     @endforeach
                                 </x-filament::input.select>
                             </x-filament::input.wrapper>

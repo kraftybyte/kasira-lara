@@ -1,11 +1,11 @@
 <div class="flex items-center justify-between gap-4">
     {{-- Left: Title --}}
     <div class="flex items-center gap-3">
-        <div class="flex h-10 w-10 items-center justify-center rounded-xl gradient-bg-shadow">
-            <x-heroicon-o-shopping-cart class="h-5 w-5 text-white" />
+        <div class="flex h-10 w-10 items-center justify-center rounded-xl bg-gray-100 dark:bg-gray-800">
+            <x-heroicon-o-shopping-cart class="h-5 w-5 text-gray-600 dark:text-gray-300" />
         </div>
         <div>
-            <h1 class="text-xl font-bold text-gray-900 dark:text-white">Point of Sale</h1>
+            <h1 class="text-xl font-bold text-gray-900 dark:text-white">Kasir</h1>
             <p class="text-xs text-gray-500 dark:text-gray-400">{{ filament()->getTenant()?->name ?? 'Kasir' }}</p>
         </div>
     </div>
@@ -35,12 +35,13 @@
 
         {{-- Quick Actions --}}
         <div class="flex items-center gap-2">
-            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview') }}" class="gradient-bg text-white btn btn-md">
+            <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/tables-overview') }}" class="btn btn-secondary btn-md">
                 <x-heroicon-o-archive-box class="h-4 w-4" />
                 <span class="hidden sm:inline">Cek Meja</span>
             </a>
             <a href="{{ url('/admin/' . filament()->getTenant()?->slug . '/pos') }}" class="btn btn-ghost btn-md">
                 <x-heroicon-o-arrow-uturn-left class="h-4 w-4" />
+                <span class="hidden sm:inline">Mulai baru</span>
             </a>
         </div>
     </div>

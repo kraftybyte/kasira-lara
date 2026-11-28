@@ -42,11 +42,6 @@ class POS extends Page
 
     protected static BackedEnum|string|null $navigationIcon = Heroicon::OutlinedShoppingCart;
 
-    // Notification debounce settings
-    protected static int $notificationDebounceMs = 500; // Minimum ms between notifications
-
-    protected ?int $lastCartNotificationAt = null;
-
     public static function canAccess(): bool
     {
         $user = auth()->user();
@@ -217,42 +212,6 @@ class POS extends Page
         if ($tableId) {
             $this->selectTable((int) $tableId);
         }
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | NOTIFICATION HELPERS
-    |--------------------------------------------------------------------------
-    */
-
-    /**
-     * Send notification with debouncing to prevent spam
-     */
-    protected function sendCartNotification(string $title, ?string $body = null, string $type = 'success'): void
-    {
-        $now = now()->timestamp * 1000; // milliseconds
-        $debounceMs = static::$notificationDebounceMs;
-
-        // Skip if notification was sent recently
-        if ($this->lastCartNotificationAt && ($now - $this->lastCartNotificationAt) < $debounceMs) {
-            return;
-        }
-
-        $this->lastCartNotificationAt = $now;
-
-        $notification = Notification::make()->title($title);
-
-        if ($body) {
-            $notification->body($body);
-        }
-
-        match ($type) {
-            'danger' => $notification->danger(),
-            'warning' => $notification->warning(),
-            default => $notification->success(),
-        };
-
-        $notification->send();
     }
 
     /*
@@ -600,7 +559,7 @@ class POS extends Page
                     'modifiers' => $modifierData,
                     'is_variant' => true,
                 ];
-                $this->sendCartNotification('Ditambahkan', "+1 {$product->name}");
+                $this->dispatch('cart-updated');
 
                 return;
             }
@@ -608,7 +567,7 @@ class POS extends Page
             // Just increment quantity if existing has no notes/mods
             $this->cart[$productId]['quantity'] += 1;
             $this->recalculateCartItem($productId);
-            $this->sendCartNotification('Ditambahkan', "+1 {$product->name}");
+            $this->dispatch('cart-updated');
 
             return;
         }
@@ -629,7 +588,7 @@ class POS extends Page
             'modifiers' => $modifierData,
             'is_variant' => false,
         ];
-        $this->sendCartNotification('Ditambahkan', "+1 {$product->name}");
+        $this->dispatch('cart-updated');
     }
 
     /*
@@ -637,6 +596,16 @@ class POS extends Page
     | ADD TO CART
     |--------------------------------------------------------------------------
     */
+
+    public function addFirstMatch(): void
+    {
+        $product = $this->products->first();
+
+        if ($product) {
+            $this->addToCart($product);
+            $this->search = '';
+        }
+    }
 
     public function addToCart(Product $product): void
     {
@@ -742,6 +711,7 @@ class POS extends Page
                 $currentQuantity + 1;
 
             $this->recalculateCartItem($productId);
+            $this->dispatch('cart-updated');
 
             return;
         }
@@ -780,6 +750,7 @@ class POS extends Page
             'rate' => (float) $product->rate,
 
         ];
+        $this->dispatch('cart-updated');
     }
 
     /*
@@ -1488,6 +1459,8 @@ class POS extends Page
             $this->activeTableId = null;
 
             $this->currentBillId = null;
+
+            $this->dispatch('focus-search');
 
             /*
             |--------------------------------------------------------------------------
