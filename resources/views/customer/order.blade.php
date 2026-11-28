@@ -130,6 +130,9 @@
                     <a href="{{ route('customer.order.payment', ['tenant' => $tenant->getRouteKey(), 'table' => $table->id, 'sale' => $pendingSale->id]) }}" class="block w-full py-2.5 bg-amber-500 text-white text-center rounded-lg font-semibold hover:bg-amber-600 transition-colors">
                         Bayar Sekarang
                     </a>
+                    <a href="{{ route('customer.order.status', [$tenant->getRouteKey(), $table->id, $pendingSale->id]) }}" class="text-sm font-semibold text-amber-700 underline">
+                        Lihat status pesanan
+                    </a>
                 </div>
             </div>
         @endif

@@ -36,6 +36,9 @@ Route::post('/order/{tenant}/{table}/{sale}/confirm', [CustomerOrderController::
 Route::get('/order/{tenant}/{table}/{sale}/success', [CustomerOrderController::class, 'success'])
     ->name('customer.order.success');
 
+Route::get('/order/{tenant}/{table}/{sale}/status', [CustomerOrderController::class, 'status'])
+    ->name('customer.order.status');
+
 /*
 |--------------------------------------------------------------------------
 | POS Receipt

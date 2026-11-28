@@ -595,4 +595,33 @@ class CustomerOrderController extends Controller
             'sale' => $sale,
         ]);
     }
+
+    /**
+     * Halaman status pesanan untuk pelanggan; muat ulang sendiri sampai pesanan selesai.
+     */
+    public function status(string $tenantSlug, Table $table, Sale $sale)
+    {
+        $tenant = Tenant::findBySlug($tenantSlug) ?? Tenant::findBySlugOrId($tenantSlug);
+
+        abort_unless($tenant, 404, 'Tenant tidak ditemukan');
+
+        if ($table->tenant_id !== $tenant->id || $sale->table_id !== $table->id) {
+            abort(404);
+        }
+
+        $stage = match (true) {
+            $sale->status === 'cancelled' => 'cancelled',
+            $sale->kitchen_completed_at !== null || $sale->closed_at !== null => 'done',
+            $sale->served_at !== null => 'ready',
+            $sale->payment_status === 'paid' || $sale->payment_method === 'counter' => 'cooking',
+            default => 'unpaid',
+        };
+
+        return view('customer.status', [
+            'tenant' => $tenant,
+            'table' => $table,
+            'sale' => $sale,
+            'stage' => $stage,
+        ]);
+    }
 }

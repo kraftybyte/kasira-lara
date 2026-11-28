@@ -41,12 +41,11 @@
         <div class="flex-1 flex flex-col items-center justify-center px-6 py-12">
             {{-- Success Animation --}}
             <div class="relative mb-8">
-                <div class="w-28 h-28 rounded-full bg-green-100 flex items-center justify-center animate-bounce">
+                <div class="w-28 h-28 rounded-full bg-green-100 flex items-center justify-center">
                     <svg class="w-16 h-16 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
                     </svg>
                 </div>
-                <div class="absolute -top-2 -right-2 w-10 h-10 rounded-full bg-green-500 flex items-center justify-center animate-ping opacity-25"></div>
             </div>
 
             <h1 class="text-2xl font-bold text-gray-900 mb-2">Pesanan Berhasil!</h1>
@@ -96,6 +95,9 @@
 
         {{-- Bottom Actions --}}
         <div class="p-4 border-t border-gray-100 space-y-3">
+            <a href="{{ route('customer.order.status', [$tenant->getRouteKey(), $table->id, $sale->id]) }}" class="block w-full py-4 bg-gray-900 text-white font-bold rounded-xl text-center hover:bg-gray-800 transition-colors">
+                Lihat Status Pesanan
+            </a>
             <button onclick="window.print()" class="w-full py-4 bg-gray-100 text-gray-700 font-bold rounded-xl text-center hover:bg-gray-200 transition-colors flex items-center justify-center gap-2">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"/>
